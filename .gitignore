@@ -1,3 +1,6 @@
+# Sublime Project Files
+*.sublime-*
+
 # Prerequisites
 *.d
 

@@ -1,2 +1,1 @@
-# tim
-Telnet Instant Messenger
+# tim, TELNET Instant Messenger
