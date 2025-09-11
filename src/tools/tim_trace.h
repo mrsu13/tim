@@ -3,6 +3,7 @@
 #include "tim_severity.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 
@@ -10,12 +11,12 @@
     tim_tracef(Tim##severity, __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 
-void tim_vtracef(tim_severity_t severity,
+bool tim_vtracef(tim_severity_t severity,
                  const char *file_name, size_t line,
                  const char *function,
                  const char *format, va_list args);
 
-void tim_tracef(tim_severity_t severity,
+bool tim_tracef(tim_severity_t severity,
                 const char *file_name, size_t line,
                 const char *function,
                 const char *format, ...)

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 
-void tim_vtracef(tim_severity_t severity,
+bool tim_vtracef(tim_severity_t severity,
                  const char *file_name, size_t line,
                  const char *function,
                  const char *format, va_list args)
@@ -28,15 +28,18 @@ void tim_vtracef(tim_severity_t severity,
     vfprintf(stderr, format, args_copy);
     va_end(args_copy);
     fprintf(stderr, "%s", "\n");
+
+    return severity != TimError;
 }
 
-void tim_tracef(tim_severity_t severity,
+bool tim_tracef(tim_severity_t severity,
                 const char *file_name, size_t line,
                 const char *function,
                 const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    tim_vtracef(severity, file_name, line, function, format, args);
+    const bool res = tim_vtracef(severity, file_name, line, function, format, args);
     va_end(args);
+    return res;
 }
