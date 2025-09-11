@@ -1,11 +1,13 @@
 #pragma once
 
+#include "mongoose.h"
+
 #include <stdbool.h>
 
 
 typedef struct tim_app
 {
     bool quit;
-    void (*banner)(void * /* data */);
-    void (*status)(void * /* data */);
+
+    struct mg_mgr mg;
 } tim_app_t;
