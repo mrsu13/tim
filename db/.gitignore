@@ -1,0 +1,5 @@
+# DB files
+*.db
+
+# DB Scheme Diagram
+*.dot

@@ -6,6 +6,9 @@ BUILD_TIME
 # Prerequisites
 *.d
 
+# The app itself
+tim
+
 # Object files
 *.o
 *.ko

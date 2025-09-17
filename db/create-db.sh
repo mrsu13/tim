@@ -73,11 +73,11 @@ function _banner()
 
 _banner
 
-_print "> Removing old databases..."
+_print "> Removing old databases ..."
 rm -f *.db *.db-shm *.db-wal
 _print "> Done!"
 
-_print "> Creating the database..."
+_print "> Creating the database ..."
 for i in `ls ??-*.sql`
 do
     _exec $SHELL -bail -batch -init $i -cmd .quit $DB
@@ -91,8 +91,13 @@ if [ `expr match "$ARGS" '.*\brelease\b.*'` -eq "0" ]; then
 fi
 
 # Set Schema Version
-_print "> Setting the database schema version..."
+_print "> Setting the database schema version ..."
 echo "PRAGMA user_version = $DB_SCHEMA_VERSION;" | _exec $SHELL -bail -batch $DB
+_print "> Done!"
+
+# Create Scheme Diagram
+_print "> Creating the database schema diagram ..."
+sqlite3 $DB -init sqlite-schema-diagram/sqlite-schema-diagram.sql "" > db-schema.dot
 _print "> Done!"
 
 _print "All Done!"
