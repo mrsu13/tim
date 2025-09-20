@@ -48,3 +48,10 @@ void tim_app_quit(tim_app_t *app)
 
     app->quit = true;
 }
+
+struct mg_mgr *tim_app_mongoose(tim_app_t *app)
+{
+    assert(app);
+
+    return &app->mg;
+}
