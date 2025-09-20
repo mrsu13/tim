@@ -1,6 +1,8 @@
 #include "tim_app.h"
 
 #include "tim_app_p.h"
+#include "tim_config.h"
+#include "tim_inetd.h"
 #include "tim_trace.h"
 #include "tim_version.h"
 
