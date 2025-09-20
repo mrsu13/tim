@@ -10,7 +10,7 @@ bool tim_vtracef(tim_severity_t severity,
                  const char *format, va_list args)
 {
 #ifdef TIM_DEBUG
-    fprintf(stderr, "%s %s:%d %s: ",
+    fprintf(stderr, "%s %s:%zu %s: ",
             tim_severity_title(severity),
             file_name,
             line,

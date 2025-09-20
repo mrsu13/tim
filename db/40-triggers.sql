@@ -53,18 +53,18 @@ END;
 
 -- Пользователи
 
-DROP TRIGGER IF EXISTS validate_user_name_insert;
-CREATE TRIGGER validate_user_name_insert BEFORE INSERT ON user
-    WHEN NEW.name NOT REGEXP (SELECT value FROM configuration WHERE name = '"asset.name.regexp"' LIMIT 1)
+DROP TRIGGER IF EXISTS validate_user_nick_name_insert;
+CREATE TRIGGER validate_user_nick_name_insert BEFORE INSERT ON user
+    WHEN NEW.nick_name NOT REGEXP (SELECT value FROM configuration WHERE name = '"nick_name.regexp"' LIMIT 1)
 BEGIN
-    SELECT RAISE(ROLLBACK, 'Invalid user name.');
+    SELECT RAISE(ROLLBACK, 'Invalid user nick name.');
 END;
 
-DROP TRIGGER IF EXISTS validate_user_name_update;
-CREATE TRIGGER validate_user_name_update BEFORE UPDATE ON user
-    WHEN NEW.name NOT REGEXP (SELECT value FROM configuration WHERE name = '"asset.name.regexp"' LIMIT 1)
+DROP TRIGGER IF EXISTS validate_user_nick_name_update;
+CREATE TRIGGER validate_user_nick_name_update BEFORE UPDATE ON user
+    WHEN NEW.nick_name NOT REGEXP (SELECT value FROM configuration WHERE name = '"nick_name.regexp"' LIMIT 1)
 BEGIN
-    SELECT RAISE(ROLLBACK, 'Invalid user name.');
+    SELECT RAISE(ROLLBACK, 'Invalid user nick name.');
 END;
 
 
@@ -81,11 +81,11 @@ BEGIN
 END;
 
 -- Сообщение
-DROP TRIGGER IF EXISTS message_update_id;
-CREATE TRIGGER message_update_id BEFORE UPDATE ON message
+DROP TRIGGER IF EXISTS post_update_id;
+CREATE TRIGGER post_update_id BEFORE UPDATE ON post
     WHEN NEW.id IS NOT NULL AND NEW.id != OLD.id
 BEGIN
-    SELECT RAISE(ROLLBACK, 'Message ID may not be changed.');
+    SELECT RAISE(ROLLBACK, 'Post ID may not be changed.');
 END;
 
 -- Комментарий

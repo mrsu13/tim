@@ -26,30 +26,14 @@ CREATE TABLE user
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
 
-    name VARCHAR UNIQUE COLLATE NOCASE NOT NULL, -- Имя для входа.
-
+    country INTEGER NOT NULL DEFAULT 7,
+    phone INTEGER UNIQUE NOT NULL CHECK(phone > 1000000000 AND phone < 9999999999),
+    nick_name VARCHAR UNIQUE,
     icon VARCHAR,
-
-    first_name VARCHAR,
-    middle_name VARCHAR,
-    last_name VARCHAR,
-
-    title VARCHAR,
-    motto VARCHAR,
-
-    email VARCHAR,
-    phone VARCHAR
+    motto VARCHAR
 );
-CREATE UNIQUE INDEX user_name ON user(name);
-
--- Пароли пользователей
-DROP TABLE IF EXISTS user_password;
-CREATE TABLE user_password
-(
-    user_id VARCHAR PRIMARY KEY NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-    password VARCHAR NOT NULL
-);
-CREATE INDEX user_password_user_id ON user_password(user_id);
+CREATE UNIQUE INDEX user_phone ON user(phone);
+CREATE UNIQUE INDEX user_nick_name ON user(nick_name);
 
 
 -- Подписки
@@ -64,8 +48,8 @@ CREATE INDEX subscription_subscriber_id ON subscription(subscriber_id);
 
 
 -- Сообщения пользователя
-DROP TABLE IF EXISTS message;
-CREATE TABLE message
+DROP TABLE IF EXISTS post;
+CREATE TABLE post
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
     user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
@@ -74,8 +58,8 @@ CREATE TABLE message
 
     text VARCHAR
 );
-CREATE INDEX message_user_id ON message(user_id);
-CREATE INDEX message_timestamp ON message(timestamp);
+CREATE INDEX post_user_id ON post(user_id);
+CREATE INDEX post_timestamp ON post(timestamp);
 
 
 -- Комментарии к сообщению
@@ -83,13 +67,13 @@ DROP TABLE IF EXISTS comment;
 CREATE TABLE comment
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
-    message_id VARCHAR NOT NULL REFERENCES message(id) ON DELETE CASCADE,
+    post_id VARCHAR NOT NULL REFERENCES post(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
 
     text VARCHAR
 );
-CREATE INDEX comment_message_id ON comment(message_id);
+CREATE INDEX comment_post_id ON comment(post_id);
 CREATE INDEX comment_timestamp ON comment(timestamp);
 
 
@@ -98,13 +82,13 @@ DROP TABLE IF EXISTS reaction;
 CREATE TABLE reaction
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
-    message_id VARCHAR NOT NULL REFERENCES message(id) ON DELETE CASCADE,
+    post_id VARCHAR NOT NULL REFERENCES post(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
 
     weight INTEGER DEFAULT 1
 );
-CREATE INDEX reaction_message_id ON reaction(message_id);
+CREATE INDEX reaction_post_id ON reaction(post_id);
 CREATE INDEX reaction_timestamp ON reaction(timestamp);
 
 COMMIT;

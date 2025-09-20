@@ -10,21 +10,29 @@
 typedef struct tim_user
 {
     tim_uuid_t id;
-    char *name;
+    tim_country_t country;
+    tim_phone_t phone;
+    char *nick_name;
+    const char *icon;
+    char *motto;
 } tim_user_t;
 
-tim_user_t *tim_user_new(void)
+tim_user_t *tim_user_new(tim_country_t country, tim_phone_t phone)
 {
+    assert(phone > 1000000000 && phone < 9999999999
+                && "Invalid phone number.");
+
     tim_user_t *user = (tim_user_t *)calloc(1, sizeof(tim_user_t));
     assert(user);
-    user->name = NULL;
+    user->country = country;
+    user->phone = phone;
     return user;
 }
 
 void tim_user_free(tim_user_t *user)
 {
     assert(user);
-    free(user->name);
+    free(user->nick_name);
     free(user);
 }
 
@@ -43,19 +51,19 @@ void tim_user_set_id(tim_user_t *user, const char *id)
         memset(user->id, 0, sizeof(user->id));
 }
 
-const char *tim_user_name(const tim_user_t *user)
+const char *tim_user_nick_name(const tim_user_t *user)
 {
     assert(user);
-    return user->name;
+    return user->nick_name;
 }
 
-void tim_user_set_name(tim_user_t *user, const char *name)
+void tim_user_set_nick_name(tim_user_t *user, const char *nick_name)
 {
     assert(user);
-    free(user->name);
-    if (name
-            && *name)
-        user->name = strdup(name);
+    free(user->nick_name);
+    if (nick_name
+            && *nick_name)
+        user->nick_name = strdup(nick_name);
     else
-        user->name = NULL;
+        user->nick_name = NULL;
 }

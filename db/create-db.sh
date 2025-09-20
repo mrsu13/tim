@@ -49,7 +49,7 @@ function _print()
 
 function _error()
 {
-    _errcho $ECHO_ESCAPE $TEXT_BG_RED$TEXT_FG_YELLOW" ERROR: $1 "$TEXT_NORM
+    _errcho $ECHO_ESCAPE $TEXT_BG_RED$TEXT_FG_YELLOW"> Error: $1 "$TEXT_NORM
 }
 
 function _exec()
