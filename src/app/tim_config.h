@@ -1,5 +1,4 @@
 #pragma once
 
-#include <stdint.h>
-
-const uint16_t TIM_CLIENT_PORT = 2323;
+#define TIM_CLIENT_PORT 2323
+#define TIM_LINE_SIZE   1024

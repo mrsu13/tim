@@ -30,6 +30,13 @@ void tim_inetd_service_destroy(tim_inetd_service_t *srv)
     tim_service_destroy(&srv->super);
 }
 
+struct mg_connection *tim_inetd_service_connection(tim_inetd_service_t *srv)
+{
+    assert(srv);
+
+    return srv->c;
+}
+
 bool tim_inetd_service_read(tim_inetd_service_t *srv)
 {
     assert(srv);
