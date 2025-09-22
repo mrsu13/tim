@@ -84,9 +84,18 @@ bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size)
         case TimLineEditFinished:
         {
             char *line = tim_line_edit_line(self->ledit);
+            tim_tcl_shell_write_data(self, "\n", 1);
             TIM_TRACE(Debug, "Command to process: '%s'", line);
+            if (tcl_eval(&self->tcl, line, strlen(line)) != FERROR)
+                tim_tcl_shell_write_data(self, tcl_string(self->tcl.result), tcl_length(self->tcl.result));
+            else
+            {
+                static const char ERROR_MSG[] = "TCL error.";
+                tim_tcl_shell_write_data(self, ERROR_MSG, sizeof(ERROR_MSG) - 1);
+            }
             free(line);
             tim_line_edit_new_line(self->ledit, tim_tcl_shell_prompt(self));
+            break;
         }
 
         case TimLineEditContinue:

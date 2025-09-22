@@ -151,7 +151,7 @@ void tim_line_edit_free(tim_line_edit_t *le)
  * Start line editing. It will:
  *
  * 1. Show the prompt.
- * 2. Return control to the user, that will have to call get_line()
+ * 2. Return control to the user, that will have to call tim_line_edit_get_line()
  *    each time there is some data coming from the input stream.
  *
  * Here is how you call the function. You call tim_line_edit_new_line(), then you
@@ -165,7 +165,7 @@ void tim_line_edit_free(tim_line_edit_t *le)
  * \return \c true in the case of success, and \c false if the output
  * writing failed.
  *
- * \sa tim_line_edit_get_line()
+ * \see tim_line_edit_get_line()
  */
 bool tim_line_edit_new_line(tim_line_edit_t *le, const char *prompt)
 {
@@ -802,13 +802,13 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
 {
     assert(le);
 
-    // const wchar_t *buf = le->buf;
+    const wchar_t *buf = le->buf;
     size_t len = le->len;
     size_t pos = le->pos;
 
     while (le->plen + pos >= le->cols)
     {
-        // ++buf;
+        ++buf;
         --len;
         --pos;
     }
@@ -826,7 +826,7 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
         if (le->mask_mode)
             tim_wcscat_fill(ws, '*', len);
         else
-            tim_wcsncat(ws, le->buf, len);
+            tim_wcsncat(ws, buf, len);
         /* Show hits if any. */
         tim_line_edit_refresh_show_hints(le, ws);
     }
@@ -843,6 +843,7 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
     {
         char *s = NULL;
         const size_t l = tim_from_ws(&s, tim_wcstr(ws));
+        TIM_TRACE(Debug, "AAAAAA '%s'", s);
         if (le->write(le->user_data, s, l) < 0)
         {
             /* Can't recover from write error. */
