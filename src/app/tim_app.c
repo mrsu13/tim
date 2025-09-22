@@ -3,6 +3,7 @@
 #include "tim_app_p.h"
 #include "tim_config.h"
 #include "tim_inetd.h"
+#include "tim_tcl_shell.h"
 #include "tim_trace.h"
 #include "tim_version.h"
 
@@ -22,8 +23,11 @@ tim_app_t *tim_app_new(int argc, char **argv)
 
     app->quit = false;
 
-    mg_log_set(MG_LL_VERBOSE);
+    // mg_log_set(MG_LL_VERBOSE);
     mg_mgr_init(&app->mg);
+
+    app->tcl_shell_inetd = tim_inetd_new(&app->mg, TIM_CLIENT_PORT, (tim_service_factory_t)&tim_tcl_shell_new);
+    assert(app->tcl_shell_inetd);
 
     return app;
 }
@@ -31,6 +35,8 @@ tim_app_t *tim_app_new(int argc, char **argv)
 void tim_app_free(tim_app_t *app)
 {
     assert(app);
+
+    tim_inetd_free(app->tcl_shell_inetd);
 
     mg_mgr_free(&app->mg);
     free(app);

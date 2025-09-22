@@ -59,6 +59,16 @@ tim_inetd_t *tim_inetd_new(struct mg_mgr *mg, uint16_t port, tim_service_factory
 
 void tim_inetd_free(tim_inetd_t *srv)
 {
+    assert(srv);
+
+    tim_inetd_connection_t *c, *tmp;
+
+    HASH_ITER(hh, srv->connections, c, tmp)
+    {
+        HASH_DEL(srv->connections, c);
+        free(c);
+    }
+
     tim_service_destroy(&srv->super);
     free(srv);
 }
@@ -71,7 +81,7 @@ tim_inetd_connection_t *tim_find_connection(tim_inetd_t *srv, struct mg_connecti
     assert(srv);
     assert(c);
     tim_inetd_connection_t *conn;
-    HASH_FIND_PTR(srv->connections, c, conn);
+    HASH_FIND_PTR(srv->connections, &c, conn);
     assert(conn);
     return conn;
 }
@@ -103,7 +113,7 @@ void tim_inetd_handle_events(struct mg_connection *c, int ev, void *ev_data)
             } */
 
 #ifndef NDEBUG
-            c->is_hexdumping = 1;
+//            c->is_hexdumping = 1;
 #endif
 
             tim_inetd_service_t *srv = self->factory(c);

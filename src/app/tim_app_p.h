@@ -12,5 +12,5 @@ typedef struct tim_app
     bool quit;
 
     struct mg_mgr mg;
-    tim_inetd_t *telnet_inetd;
+    tim_inetd_t *tcl_shell_inetd;
 } tim_app_t;

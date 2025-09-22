@@ -12,5 +12,6 @@ typedef struct tim_inetd_service
 {
     tim_service_t super;
     struct mg_connection *c;
-    bool (*read)(const char *data, size_t size, size_t *read);
+    bool (*ready_read)(void *srv, const char *data, size_t size, size_t *read);
+    bool (*ready_write)(void *srv, const char *data, size_t size, size_t *written);
 } tim_inetd_service_t;
