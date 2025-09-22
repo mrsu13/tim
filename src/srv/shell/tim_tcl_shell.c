@@ -78,69 +78,69 @@ bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size)
     assert(self);
     assert(data);
 
-    if (!tim_tcl_evaluating(self->tcl))
+    if (tim_tcl_evaluating(self->tcl))
+        return true;
+
+    if (self->new_line)
     {
-        if (self->new_line)
-        {
-            self->new_line = false;
-            tim_line_edit_new_line(self->ledit, tim_tcl_prompt(self->tcl));
-        }
+        self->new_line = false;
+        tim_line_edit_new_line(self->ledit, tim_tcl_prompt(self->tcl));
+    }
 
-        switch (tim_line_edit_get_line(self->ledit, data, size))
+    switch (tim_line_edit_get_line(self->ledit, data, size))
+    {
+        case TimLineEditFinished:
         {
-            case TimLineEditFinished:
+            self->new_line = true;
+            if (!tim_line_edit_empty(self->ledit))
             {
-                self->new_line = true;
-                if (!tim_line_edit_empty(self->ledit))
+                tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
+                char *line = tim_line_edit_line(self->ledit);
+                // _d->_ledit->history_save(_d->_history_path);
+
+                const char *res;
+                if (tim_tcl_eval(self->tcl, line, &res, self))
                 {
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                    char *line = tim_line_edit_line(self->ledit);
-                    // _d->_ledit->history_save(_d->_history_path);
-
-                    const char *res;
-                    if (tim_tcl_eval(self->tcl, line, &res, self))
-                    {
-                        if (res
-                                && *res)
-                            tim_inetd_service_write_str((tim_inetd_service_t *)self, res);
-                    }
-                    else
-                    {
-                        const size_t pos = tim_tcl_error_pos(self->tcl);
-
-                        // set_color(theme().colors.at(t2::vt_color_index::Error));
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, "Error: ");
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_error_msg(self->tcl));
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, line);
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                        if (pos)
-                        {
-                            static const char hr[] = "─";
-                            for (size_t i = 0; i < pos - 1; ++i)
-                                tim_inetd_service_write((tim_inetd_service_t *)self, hr, sizeof(hr) - 1, NULL);
-                        }
-                        {
-                            static const char arrow[] = "┘";
-                            tim_inetd_service_write((tim_inetd_service_t *)self, arrow, sizeof(arrow) - 1, NULL);
-                        }
-                        // reset_colors();
-                    }
-                    free(line);
+                    if (res
+                            && *res)
+                        tim_inetd_service_write_str((tim_inetd_service_t *)self, res);
                 }
-                break;
+                else
+                {
+                    const size_t pos = tim_tcl_error_pos(self->tcl);
+
+                    // set_color(theme().colors.at(t2::vt_color_index::Error));
+                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "Error: ");
+                    tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_error_msg(self->tcl));
+                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
+                    tim_inetd_service_write_str((tim_inetd_service_t *)self, line);
+                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
+                    if (pos)
+                    {
+                        static const char hr[] = "-";
+                        for (size_t i = 0; i < pos - 1; ++i)
+                            tim_inetd_service_write((tim_inetd_service_t *)self, hr, sizeof(hr) - 1, NULL);
+                    }
+                    {
+                        static const char arrow[] = "+";
+                        tim_inetd_service_write((tim_inetd_service_t *)self, arrow, sizeof(arrow) - 1, NULL);
+                    }
+                    // reset_colors();
+                }
+                free(line);
             }
-            case TimLineEditContinue:
-                break;
-
-            case TimLineEditExit:
-                tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_shell_bye_banner());
-                return false;
-
-            case TimLineEditError:
-                self->new_line = true;
-                break;
+            break;
         }
+        case TimLineEditContinue:
+            break;
+
+        case TimLineEditExit:
+            tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_shell_bye_banner());
+            return false;
+
+        case TimLineEditError:
+            self->new_line = true;
+            break;
     }
 
     return true;

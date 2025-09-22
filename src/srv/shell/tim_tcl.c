@@ -25,7 +25,8 @@ tim_tcl_t *tim_tcl_new(tim_tcl_write_t write, tim_tcl_dispatch_t dispatch)
     assert(tcl);
 
     tcl->lil = lil_new();
-    tcl->prompt = "► ";
+    // tcl->prompt = "► ";
+    tcl->prompt = "> ";
 
     lil_callback(tcl->lil, LIL_CALLBACK_WRITE, (lil_callback_proc_t)write);
     if (dispatch)

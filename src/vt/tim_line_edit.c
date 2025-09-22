@@ -92,8 +92,6 @@ static void tim_line_edit_history_next(tim_line_edit_t *le, tim_line_edit_histor
  * \file tim_line_edit.h
  * \brief An abstract class implementing terminal text line edit.
  * Autocompleting is supported.
- *
- * \sa tim_tcl_line_edit.h
  */
 
 // Public
@@ -843,7 +841,6 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
     {
         char *s = NULL;
         const size_t l = tim_from_ws(&s, tim_wcstr(ws));
-        TIM_TRACE(Debug, "AAAAAA '%s'", s);
         if (le->write(le->user_data, s, l) < 0)
         {
             /* Can't recover from write error. */

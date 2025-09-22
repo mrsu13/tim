@@ -50,7 +50,7 @@ bool tim_inetd_service_read(tim_inetd_service_t *srv)
     assert(srv->ready_read && "ready_read is not set.");
 
     struct mg_iobuf *r = &(srv->c->recv);
-    TIM_TRACE(Debug, "%s service got data: %.*s", tim_service_name(&srv->super), (int)r->len, r->buf);
+    TIM_TRACE(Debug, "%s service got data: '%.*s'", tim_service_name(&srv->super), (int)r->len, r->buf);
     size_t read = 0;
     if (!srv->ready_read(srv, (const char *)r->buf, r->len, &read))
         return false;
