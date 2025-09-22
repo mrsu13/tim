@@ -37,6 +37,13 @@ struct mg_connection *tim_inetd_service_connection(tim_inetd_service_t *srv)
     return srv->c;
 }
 
+void tim_inetd_service_close(tim_inetd_service_t *srv)
+{
+    assert(srv);
+
+    srv->c->is_draining = 1;
+}
+
 bool tim_inetd_service_read(tim_inetd_service_t *srv)
 {
     assert(srv);

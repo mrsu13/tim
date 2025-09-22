@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stddef.h>
+
+
 typedef struct tim_telnet_service tim_telnet_service_t;
 
 struct mg_connection;

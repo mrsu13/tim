@@ -62,7 +62,8 @@ void tim_telnet_service_event_handler(struct telnet_t *telnet, union telnet_even
     {
         case TELNET_EV_DATA:
             assert(self->process_data && "process_data is not set.");
-            self->process_data(self, event->data.buffer, event->data.size);
+            if (!self->process_data(self, event->data.buffer, event->data.size))
+                tim_inetd_service_close((tim_inetd_service_t *)self);
             break;
 
         case TELNET_EV_SEND:

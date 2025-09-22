@@ -5,9 +5,9 @@
 
 #include "tim_config.h"
 #include "tim_inetd_service.h"
+#include "tim_line_edit.h"
 #include "tim_trace.h"
 
-#include "linenoise.h"
 #include "mongoose.h"
 #include "tcl.h"
 
@@ -19,15 +19,14 @@ typedef struct tim_tcl_shell
 {
     tim_telnet_service_t super;
     struct tcl tcl;
-    struct linenoiseState ls;
-    char line_buffer[TIM_LINE_SIZE];
-    bool new_line;
+    tim_line_edit_t *ledit;
 } tim_tcl_shell_t;
 
 static const char *tim_tcl_shell_welcome_banner();
 static const char *tim_tcl_shell_bye_banner();
 static const char *tim_tcl_shell_prompt(const tim_tcl_shell_t *srv);
 static bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size);
+static int tim_tcl_shell_write_data(void *srv, const char *data, size_t size);
 
 tim_tcl_shell_t *tim_tcl_shell_new(struct mg_connection *c)
 {
@@ -38,10 +37,10 @@ tim_tcl_shell_t *tim_tcl_shell_new(struct mg_connection *c)
     srv->super.process_data = &tim_tcl_shell_process_data;
     tcl_init(&srv->tcl);
 
+    srv->ledit = tim_line_edit_new(tim_tcl_shell_write_data, srv);
     tim_inetd_service_write_str((tim_inetd_service_t *)srv, tim_tcl_shell_welcome_banner());
-    tim_inetd_service_write_str((tim_inetd_service_t *)srv, tim_tcl_shell_prompt(srv));
 
-    srv->new_line = true;
+    tim_line_edit_new_line(srv->ledit, tim_tcl_shell_prompt(srv));
 
     return srv;
 }
@@ -60,12 +59,12 @@ void tim_tcl_shell_free(tim_tcl_shell_t *srv)
 
 const char *tim_tcl_shell_welcome_banner()
 {
-    return "";
+    return "Welcome to TIM!";
 }
 
 const char *tim_tcl_shell_bye_banner()
 {
-    return "";
+    return "Bye!\n";
 }
 
 const char *tim_tcl_shell_prompt(const tim_tcl_shell_t *srv)
@@ -77,26 +76,40 @@ const char *tim_tcl_shell_prompt(const tim_tcl_shell_t *srv)
 bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size)
 {
     tim_tcl_shell_t *self = (tim_tcl_shell_t *)srv;
-    assert(srv);
+    assert(self);
     assert(data);
 
-    if (self->new_line)
+    switch (tim_line_edit_get_line(self->ledit, data, size))
     {
-        int d = *(int *)tim_inetd_service_connection((tim_inetd_service_t *)srv)->fd;
-        linenoiseEditStart(&self->ls, d, d, self->line_buffer, sizeof(self->line_buffer),
-                           tim_tcl_shell_prompt(self));
+        case TimLineEditFinished:
+        {
+            char *line = tim_line_edit_line(self->ledit);
+            TIM_TRACE(Debug, "Command to process: '%s'", line);
+            free(line);
+            tim_line_edit_new_line(self->ledit, tim_tcl_shell_prompt(self));
+        }
+
+        case TimLineEditContinue:
+            break;
+
+        case TimLineEditExit:
+            tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_shell_bye_banner());
+            return false;
+
+        case TimLineEditError:
+            return false;
     }
 
-    char *line = linenoiseEditFeed(&self->ls);
-    if (line == linenoiseEditMore)
-        return true;
-    linenoiseEditStop(&self->ls);
-    if (!line) // Ctrl+D pressed.
-        exit(0);
-
-    TIM_TRACE(Debug, "Line to process: %s", line);
-
-    linenoiseFree(line);
-
     return true;
+}
+
+int tim_tcl_shell_write_data(void *srv, const char *data, size_t size)
+{
+    tim_tcl_shell_t *self = (tim_tcl_shell_t *)srv;
+    assert(self);
+    assert(data);
+
+    return tim_inetd_service_write((tim_inetd_service_t *)self, data, size, NULL)
+                ? size
+                : -1;
 }
