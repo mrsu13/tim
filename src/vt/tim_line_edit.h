@@ -26,7 +26,7 @@ typedef enum tim_line_edit_status
 tim_line_edit_status_t tim_line_edit_get_line(tim_line_edit_t *le, const char *data, size_t size);
 
 bool tim_line_edit_empty(const tim_line_edit_t *le);
-char *tim_line_edit_line(const tim_line_edit_t *le);
+const char *tim_line_edit_line(const tim_line_edit_t *le);
 
 void tim_line_edit_hide(tim_line_edit_t *le);
 void tim_line_edit_show(tim_line_edit_t *le);

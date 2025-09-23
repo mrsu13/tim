@@ -1,4 +1,11 @@
 #pragma once
 
-#define TIM_CLIENT_PORT 2323
-#define TIM_LINE_SIZE   1024
+#include <cstdint>
+
+
+namespace tim
+{
+
+static const std::uint16_t CLIENT_PORT = 2323;
+
+}

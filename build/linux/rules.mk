@@ -16,12 +16,12 @@ export INCLUDES := $(addprefix -I, $(SUBDIRS)) $(TIM_INCLUDES)
 ifdef TIM_DEBUG_MODE
 	TIM_DEFINES  := -DTIM_OS_LINUX -DTIM_DEBUG
 	TIM_CFLAGS   := -g -O0 -Wall -Werror
-	TIM_CPPFLAGS := -g -O0 -Wall -Werror
+	TIM_CPPFLAGS := -g -O0 --fno-exceptions Wall -Werror
 	TIM_STRIP    := touch
 else
 	TIM_DEFINES  := -DTIM_OS_LINUX -DNDEBUG
 	TIM_CFLAGS   := -O3 -Wall -Werror
-	TIM_CPPFLAGS := -O3 -Wall -Werror
+	TIM_CPPFLAGS := -O3 --fno-exceptions -Wall -Werror
 	TIM_STRIP    := $(STRIP)
 endif
 

@@ -1,0 +1,3 @@
+  * Source: <https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz>
+  * Version: 3.12.0
+  * License: [MIT](https://github.com/nlohmann/json#license)

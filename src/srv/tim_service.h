@@ -1,12 +1,35 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 
-typedef struct tim_service tim_service_t;
+namespace tim
+{
 
-void tim_service_init(tim_service_t *srv, const char *name);
-void tim_service_destroy(tim_service_t *srv);
+namespace p
+{
 
-uint64_t tim_service_id(const tim_service_t *srv);
-const char *tim_service_name(const tim_service_t *srv);
+struct service;
+
+}
+
+class service
+{
+
+public:
+
+    virtual ~service();
+
+    std::uint64_t id() const;
+    const std::string &name() const;
+
+protected:
+
+    explicit service(const std::string &name);
+
+private:
+
+    std::unique_ptr<tim::p::service> _d;
+};

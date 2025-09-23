@@ -2,15 +2,25 @@
 
 #include "mongoose.h"
 
-#include <stdbool.h>
+#include <memory>
 
 
-typedef struct tim_inetd tim_inetd_t;
-
-typedef struct tim_app
+namespace tim
 {
-    bool quit;
 
-    struct mg_mgr mg;
-    tim_inetd_t *tcl_shell_inetd;
-} tim_app_t;
+class inetd;
+
+namespace p
+{
+
+struct tim_app
+{
+    bool _quit = false;
+
+    struct mg_mgr _mg;
+    std::unique_ptr<tim::inetd> *tcl_shell_inetd;
+};
+
+}
+
+}

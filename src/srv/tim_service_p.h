@@ -1,10 +1,18 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
+#include <string>
 
 
-typedef struct tim_service
+namespace tim::p
 {
-    uint64_t id;
-    char *name;
-} tim_service_t;
+
+struct service
+{
+    static std::uint64_t next_id();
+
+    std::uint64_t _id = 0;
+    std::string _name;
+};
+
+}

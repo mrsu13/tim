@@ -1,10 +1,14 @@
 #pragma once
 
+namespace tim
+{
 
-static const char *const TIM_VERSION =
+static const char *const VERSION =
 #include "../VERSION"
 ;
 
-static const char *const TIM_BUILD =
+static const char *const BUILD =
 #include "../BUILD_TIME"
 ;
+
+}

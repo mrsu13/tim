@@ -1,12 +1,18 @@
 #pragma once
 
-typedef enum tim_severity
+namespace tim
 {
-    TimError,
-    TimWarning,
-    TimInfo,
-    TimDebug,
-    TimTrace
-} tim_severity_t;
 
-const char *tim_severity_title(tim_severity_t severity);
+enum class severity
+{
+    Fatal,
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace
+};
+
+const char *severity_title(tim::severity severity);
+
+}

@@ -3,8 +3,6 @@
 #include "tim_file.h"
 #include "tim_trace.h"
 #include "tim_vt.h"
-#include "tim_wstr.h"
-#include "tim_wstring.h"
 
 #include "tim_line_edit_p.h"
 
@@ -70,7 +68,7 @@ static void tim_line_edit_refresh_line_with_completion(tim_line_edit_t *le,
                                                        unsigned refresh_flags);
 static char tim_line_edit_complete_line(tim_line_edit_t *le, int key_pressed);
 
-static void tim_line_edit_refresh_show_hints(tim_line_edit_t *le, tim_wstr_t *s);
+static void tim_line_edit_refresh_show_hints(tim_line_edit_t *le, tim_str_t *s);
 static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refresh_flags);
 static void tim_line_edit_refresh_multi_line(tim_line_edit_t *le, unsigned refresh_flags);
 static void tim_line_edit_refresh_line_with_flags(tim_line_edit_t *le, unsigned refresh_flags);
@@ -85,7 +83,7 @@ static void tim_line_edit_delete(tim_line_edit_t *le);
 static void tim_line_edit_backspace(tim_line_edit_t *le);
 static void tim_line_edit_delete_prev_word(tim_line_edit_t *le);
 
-static void tim_line_edit_history_add(tim_line_edit_t *le, const wchar_t *line);
+static void tim_line_edit_history_add(tim_line_edit_t *le, const char *line);
 static void tim_line_edit_history_next(tim_line_edit_t *le, tim_line_edit_history_dir_t dir);
 
 /**
@@ -107,24 +105,20 @@ void tim_line_edit_init(tim_line_edit_t *le, tim_line_edit_write_t write, void *
     le->user_data = user_data;
 
     le->buf_size = TIM_BUFFER_SIZE;
-    le->buf = (wchar_t *)calloc(1, le->buf_size);
+    le->buf = (char *)calloc(1, le->buf_size);
     assert(le->buf && "Failed to allocate memory for line editor's buffer.");
     le->cols = 80;
-    le->history_max_size = TIM_HISTORY_SIZE;
+
+    utringbuffer_new(le->history, TIM_HISTORY_SIZE, &ut_str_icd);
 }
 
 void tim_line_edit_destroy(tim_line_edit_t *le)
 {
     assert(le);
 
-    if (le->history)
-    {
-        for (int i = 0; i < le->history_len; ++i)
-            free(le->history[i]);
-        free(le->history);
-    }
-
     free(le->prompt);
+
+    utringbuffer_free(le->history);
 
     memset(le, 0, sizeof(*le));
 }
@@ -173,9 +167,9 @@ bool tim_line_edit_new_line(tim_line_edit_t *le, const char *prompt)
     le->in_completion = false;
 
     free(le->prompt);
-    tim_to_ws(&le->prompt, prompt);
+    le->prompt = strdup(prompt);
     le->plen = tim_vt_strlen(prompt);
-    le->psize = wcslen(le->prompt);
+    le->psize = strlen(le->prompt);
 
     le->old_pos = le->pos = 0;
     le->len = 0;
@@ -189,7 +183,7 @@ bool tim_line_edit_new_line(tim_line_edit_t *le, const char *prompt)
 
     /* The latest history entry is always our current buffer, that
      * initially is just an empty string. */
-    tim_line_edit_history_add(le, L"");
+    tim_line_edit_history_add(le, "");
 
     return le->write(le->user_data, "\r\n", 2) > 0
                 && le->write(le->user_data, prompt, le->psize) > 0;
@@ -369,13 +363,13 @@ tim_line_edit_status_t tim_line_edit_get_line(tim_line_edit_t *le, const char *d
             break;
 
         case TimKeyCtrlU: /* Delete the whole line. */
-            le->buf[0] = L'\0';
+            le->buf[0] = '\0';
             le->pos = le->len = 0;
             tim_line_edit_refresh_line(le);
             break;
 
         case TimKeyCtrlK: /* Delete from current to end of line. */
-            le->buf[le->pos] = L'\0';
+            le->buf[le->pos] = '\0';
             le->len = le->pos;
             tim_line_edit_refresh_line(le);
             break;
@@ -412,13 +406,11 @@ bool tim_line_edit_empty(const tim_line_edit_t *le)
     return *le->buf;
 }
 
-char *tim_line_edit_line(const tim_line_edit_t *le)
+const char *tim_line_edit_line(const tim_line_edit_t *le)
 {
     assert(le);
 
-    char *line;
-    tim_from_ws(&line, le->buf);
-    return line;
+    return le->buf;
 }
 
 /**
@@ -515,7 +507,7 @@ void tim_line_edit_history_set_max_size(tim_line_edit_t *le, size_t size)
     {
         int to_copy = le->history_len;
 
-        wchar_t **new_history = malloc(sizeof(wchar_t *) * size);
+        char **new_history = malloc(size);
         assert(new_history && "Failed to allocate memory for History.");
 
         /* If we can't copy everything, free the elements we'll not use. */
@@ -525,8 +517,8 @@ void tim_line_edit_history_set_max_size(tim_line_edit_t *le, size_t size)
                 free(le->history[i]);
             to_copy = size;
         }
-        wmemset((wchar_t *)new_history, 0, size);
-        wmemcpy((wchar_t *)new_history, le->history[le->history_len - to_copy], to_copy);
+        wmemset(new_history, 0, size);
+        wmemcpy(new_history, le->history[le->history_len - to_copy], to_copy);
         free(le->history);
         le->history = new_history;
     }
@@ -557,12 +549,7 @@ bool tim_line_edit_history_save(tim_line_edit_t *le, const char *path)
     umask(old_umask);
     chmod(path, S_IRUSR | S_IWUSR);
     for (int i = 0; i < le->history_len; ++i)
-    {
-        char *line;
-        tim_from_ws(&line, le->history[i]);
-        fputs(line, fp);
-        free(line);
-    }
+        fputs(le->history[i], fp);
     fclose(fp);
 
     return true;
@@ -595,10 +582,7 @@ bool tim_line_edit_history_load(tim_line_edit_t *le, const char *path)
             p = strchr(buf,'\n');
         if (p)
             *p = '\0';
-        wchar_t *wbuf;
-        tim_to_ws(&wbuf, buf);
-        tim_line_edit_history_add(le, wbuf);
-        free(wbuf);
+        tim_line_edit_history_add(le, buf);
     }
     fclose(fp);
 
@@ -634,10 +618,7 @@ static void tim_line_edit_refresh_line_with_completion(tim_line_edit_t *le,
     tim_line_edit_completions_t lc = { 0, NULL };
     if (!c)
     {
-        char *buf;
-        tim_from_ws(&buf, le->buf);
-        le->complete(le, buf, &lc);
-        free(buf);
+        le->complete(le, le->buf, &lc);
         c = &lc;
     }
 
@@ -646,9 +627,9 @@ static void tim_line_edit_refresh_line_with_completion(tim_line_edit_t *le,
     {
         tim_line_edit_t saved = *le;
 
-        le->len = le->pos = tim_to_ws(&le->buf, c->completions[le->completion_idx]);
+        le->len = le->pos = utf8len(c->completions[le->completion_idx]);
+        le->buf = c->completions[le->completion_idx];
         tim_line_edit_refresh_line_with_flags(le, refresh_flags);
-        free(le->buf);
 
         le->len = saved.len;
         le->pos = saved.pos;
@@ -681,12 +662,7 @@ static char tim_line_edit_complete_line(tim_line_edit_t *le, int key_pressed)
 
     tim_line_edit_completions_t lc;
 
-    {
-        char *line = NULL;
-        tim_from_ws(&line, le->buf);
-        le->complete(le, line, &lc);
-        free(line);
-    }
+    le->complete(le, le->buf, &lc);
     if (!lc.size)
     {
         tim_line_edit_beep(le);
@@ -725,9 +701,7 @@ static char tim_line_edit_complete_line(tim_line_edit_t *le, int key_pressed)
                 if (le->completion_idx < lc.size)
                     le->len
                         = le->pos
-                        = mbstowcs(le->buf,
-                                   lc.completions[le->completion_idx],
-                                   le->buf_size - 1);
+                        = snprintf(le->buf, le->buf_size, "%s", lc.completions[le->completion_idx]);
                 le->in_completion = false;
                 break;
         }
@@ -746,7 +720,7 @@ static char tim_line_edit_complete_line(tim_line_edit_t *le, int key_pressed)
 /** Helper of refresh_single_line() and refresh_multi_line() to show hints
   * to the right of the prompt.
   */
-static void tim_line_edit_refresh_show_hints(tim_line_edit_t *le, tim_wstr_t *s)
+static void tim_line_edit_refresh_show_hints(tim_line_edit_t *le, tim_str_t *s)
 {
     assert(le);
     assert(s);
@@ -758,33 +732,22 @@ static void tim_line_edit_refresh_show_hints(tim_line_edit_t *le, tim_wstr_t *s)
     {
         int color = -1;
         bool bold = false;
-        char *hint = NULL;
-        {
-            char *line;
-            tim_from_ws(&line, le->buf);
-            hint = le->hint(le, line, &color, &bold);
-            free(line);
-        }
+        char *hint = le->hint(le, le->buf, &color, &bold);
         if (!hint
                 && *hint)
         {
-            wchar_t *whint = NULL;
-            tim_to_ws(&whint, hint);
-            free(hint);
-
             if (bold
                     && color == -1)
                 color = 37;
             if (color != -1
                     || bold)
-                tim_wcscat_swprintf(s, L"\033[%d;%d;49m", bold, color);
+                tim_sprintf(s, "\033[%d;%d;49m", bold, color);
 
-            tim_wcscat(s, whint);
-            free(whint);
+            tim_strcat(s, hint);
 
             if (color != -1
                     || bold)
-                tim_wcscat(s, L"\033[0m");
+                tim_strcat(s, "\033[0m");
         }
     }
 }
@@ -800,7 +763,7 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
 {
     assert(le);
 
-    const wchar_t *buf = le->buf;
+    const char *buf = le->buf;
     size_t len = le->len;
     size_t pos = le->pos;
 
@@ -815,39 +778,34 @@ static void tim_line_edit_refresh_single_line(tim_line_edit_t *le, unsigned refr
         --len;
 
     /* Cursor to the left edge. */
-    tim_wstr_t *ws = tim_wstr_new(L"\r");
+    tim_str_t *s = tim_str_new("\r");
 
     if ((refresh_flags & TimRefreshWrite))
     {
         /* Write the prompt and the current buffer content. */
-        tim_wcsncat(ws, le->prompt, le->psize);
+        tim_strncat(s, le->prompt, le->psize);
         if (le->mask_mode)
-            tim_wcscat_fill(ws, '*', len);
+            tim_strcat_fill(s, '*', len);
         else
-            tim_wcsncat(ws, buf, len);
+            tim_strncat(s, buf, len);
         /* Show hits if any. */
-        tim_line_edit_refresh_show_hints(le, ws);
+        tim_line_edit_refresh_show_hints(le, s);
     }
 
     /* Erase to right. */
-    tim_wcscat(ws, L"\x1b[0K");
+    tim_strcat(s, "\x1b[0K");
 
     if ((refresh_flags & TimRefreshWrite))
     {
         /* Move cursor to the original position. */
-        tim_wcscat_swprintf(ws, L"\r\x1b[%dC", (int)(pos + le->plen));
+        tim_strcat_sprintf(ws, "\r\x1b[%zuC", pos + le->plen);
     }
 
+    if (le->write(le->user_data, tim_cstr(s), tim_strlen(s)) < 0)
     {
-        char *s = NULL;
-        const size_t l = tim_from_ws(&s, tim_wcstr(ws));
-        if (le->write(le->user_data, s, l) < 0)
-        {
-            /* Can't recover from write error. */
-        }
-        free(s);
+        /* Can't recover from write error. */
     }
-    tim_wstr_free(ws);
+    tim_str_free(s);
 }
 
 /* Multi line low level line refresh.
@@ -873,35 +831,35 @@ static void tim_line_edit_refresh_multi_line(tim_line_edit_t *le, unsigned refre
     /* First step: clear all the lines used before. To do so start by
      * going to the last row. */
 
-    tim_wstr_t *ws = tim_wstr_new(NULL);
+    tim_str_t *s = tim_str_new(NULL);
 
     if ((refresh_flags & TimRefreshClean))
     {
         if (old_rows - rpos > 0)
-            tim_wcscat_swprintf(ws, L"\x1b[%dB", old_rows - rpos);
+            tim_strcat_sprintf(s, "\x1b[%dB", old_rows - rpos);
 
         /* Now for every row clear it, go up. */
         for (j = 0; j < old_rows - 1; ++j)
-            tim_wcscat(ws, L"\r\x1b[0K\x1b[1A");
+            tim_strcat(s, "\r\x1b[0K\x1b[1A");
     }
 
     if ((refresh_flags & TimRefreshAll))
     {
         /* Clean the top line. */
-        tim_wcscat(ws, L"\r\x1b[0K");
+        tim_strcat(ws, "\r\x1b[0K");
     }
 
     if ((refresh_flags & TimRefreshWrite))
     {
         /* Write the prompt and the current buffer content. */
-        tim_wcsncat(ws, le->prompt, le->psize);
+        tim_strncat(s, le->prompt, le->psize);
         if (le->mask_mode)
-            tim_wcscat_fill(ws, L'*', le->len);
+            tim_strcat_fill(ws, '*', le->len);
         else
-            tim_wcsncat(ws, le->buf, le->len);
+            tim_strncat(ws, le->buf, le->len);
 
         /* Show hits if any. */
-        tim_line_edit_refresh_show_hints(le, ws);
+        tim_line_edit_refresh_show_hints(le, s);
 
         /* If we are at the very end of the screen with our prompt, we need to
          * emit a newline and move the prompt to the first column. */
@@ -909,7 +867,7 @@ static void tim_line_edit_refresh_multi_line(tim_line_edit_t *le, unsigned refre
                 && le->pos == le->len
                 && (le->pos + le->plen) % le->cols == 0)
         {
-            tim_wcscat(ws, L"\n\r");
+            tim_strcat(s, "\n\r");
             ++rows;
             if (rows > (int)le->old_rows)
                 le->old_rows = rows;
@@ -920,29 +878,24 @@ static void tim_line_edit_refresh_multi_line(tim_line_edit_t *le, unsigned refre
 
         /* Go up till we reach the expected position. */
         if (rows - rpos2 > 0)
-            tim_wcscat_swprintf(ws, L"\x1b[%dA", rows - rpos2);
+            tim_strcat_sprintf(s, "\x1b[%dA", rows - rpos2);
 
         /* Set column. */
         col = (le->plen + (int)le->pos) % (int)le->cols;
         if (col)
-            tim_wcscat_swprintf(ws, L"\r\x1b[%dC", col);
+            tim_strcat_sprintf(s, "\r\x1b[%dC", col);
         else
-            tim_wcscat(ws, L"\r");
+            tim_strcat(s, "\r");
     }
 
     le->old_pos = le->pos;
 
+    if (le->write(le->user_data, tim_cstr(s), tim_strlen(s)) < 0)
     {
-        char *s = NULL;
-        const size_t l = tim_from_ws(&s, tim_wcstr(ws));
-        if (le->write(le->user_data, s, l) < 0)
-        {
-            /* Can't recover from write error. */
-        }
-        free(s);
+        /* Can't recover from write error. */
     }
 
-    tim_wstr_free(ws);
+    tim_str_free(s);
 }
 
 /** Calls the two low level functions refresh_single_line() or
@@ -1000,11 +953,11 @@ static bool tim_line_edit_insert(tim_line_edit_t *le, char c)
         }
         else
         {
-            wmemmove(le->buf + le->pos + 1, le->buf + le->pos, le->len - le->pos);
+            memmove(le->buf + le->pos + 1, le->buf + le->pos, le->len - le->pos);
             le->buf[le->pos] = c;
             ++(le->len);
             ++(le->pos);
-            le->buf[le->len] = L'\0';
+            le->buf[le->len] = '\0';
             tim_line_edit_refresh_line(le);
         }
 
@@ -1069,41 +1022,14 @@ static void tim_line_edit_move_end(tim_line_edit_t *le)
 /**
  * Add line to the history.
  */
-static void tim_line_edit_history_add(tim_line_edit_t *le, const wchar_t *line)
+static void tim_line_edit_history_add(tim_line_edit_t *le, const char *line)
 {
     assert(le);
     assert(line);
 
-    wchar_t *line_copy;
-
-    if (le->history_max_size == 0)
-        return;
-
-    /* Initialization on first call. */
-    if (!le->history)
-    {
-        le->history = calloc(1, sizeof(wchar_t *) * le->history_max_size);
-        assert(le->history && "Failed to allocate memory for History.");
-    }
-
-    /* Don't add duplicated lines. */
-    if (le->history_len
-            && !wcscmp(le->history[le->history_len - 1], line))
-        return;
-
-    /* Add an heap allocated copy of the line in the history.
-     * If we reached the max length, remove the older line. */
-    line_copy = wcsdup(line);
-    assert(line_copy);
-
-    if (le->history_len == le->history_max_size)
-    {
-        free(le->history[0]);
-        wmemmove(le->history[0], le->history[1], le->history_max_size - 1);
-        --(le->history_len);
-    }
-    le->history[le->history_len] = line_copy;
-    ++(le->history_len);
+    if (utringbuffer_empty(le->history)
+            || strcmp(utringbuffer_back(le->history), line))
+        utringbuffer_push_back(le->history, &line);
 }
 
 /** Substitute the currently edited line with the next or previous history
@@ -1113,12 +1039,15 @@ static void tim_line_edit_history_next(tim_line_edit_t *le, tim_line_edit_histor
 {
     assert(le);
 
+    if (utringbuffer_len(le->history) <= 1)
+        return;
+
     if (le->history_len > 1)
     {
         /* Update the current history entry before to
          * overwrite it with the next one. */
         free(le->history[le->history_len - 1 - le->history_idx]);
-        le->history[le->history_len - 1 - le->history_idx] = wcsdup(le->buf);
+        le->history[le->history_len - 1 - le->history_idx] = strdup(le->buf);
         /* Show the new entry */
         le->history_idx += (dir == TimLineEditHistoryPrev)
                                 ? 1
@@ -1135,9 +1064,9 @@ static void tim_line_edit_history_next(tim_line_edit_t *le, tim_line_edit_histor
             return;
         }
 
-        wcpncpy(le->buf, le->history[le->history_len - 1 - le->history_idx], le->buf_size);
+        strncpy(le->buf, le->history[le->history_len - 1 - le->history_idx], le->buf_size);
         le->buf[le->buf_size - 1] = '\0';
-        le->len = le->pos = wcslen(le->buf);
+        le->len = le->pos = strlen(le->buf);
         tim_line_edit_refresh_line(le);
     }
 }
@@ -1152,7 +1081,7 @@ static void tim_line_edit_delete(tim_line_edit_t *le)
     if (le->len > 0
             && le->pos < le->len)
     {
-        wmemmove(le->buf + le->pos, le->buf + le->pos + 1, le->len - le->pos - 1);
+        memmove(le->buf + le->pos, le->buf + le->pos + 1, le->len - le->pos - 1);
         --(le->len);
         le->buf[le->len] = '\0';
         tim_line_edit_refresh_line(le);
@@ -1168,7 +1097,7 @@ static void tim_line_edit_backspace(tim_line_edit_t *le)
     if (le->pos > 0
             && le->len > 0)
     {
-        wmemmove(le->buf + le->pos - 1, le->buf + le->pos, le->len - le->pos);
+        memmove(le->buf + le->pos - 1, le->buf + le->pos, le->len - le->pos);
         --(le->pos);
         --(le->len);
         le->buf[le->len] = '\0';
@@ -1193,7 +1122,7 @@ static void tim_line_edit_delete_prev_word(tim_line_edit_t *le)
                 && le->buf[le->pos - 1] != L' ')
         --(le->pos);
     diff = old_pos - le->pos;
-    wmemmove(le->buf + le->pos, le->buf + old_pos, le->len - old_pos + 1);
+    memmove(le->buf + le->pos, le->buf + old_pos, le->len - old_pos + 1);
     le->len -= diff;
     tim_line_edit_refresh_line(le);
 }
