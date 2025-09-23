@@ -1,5 +1,9 @@
 #pragma once
 
+#include <memory>
+#include <string>
+
+
 struct mg_mgr;
 
 namespace tim
@@ -20,6 +24,12 @@ public:
     app(int argc, char **argv);
     ~app();
 
+    static const std::string &name();
+    static void set_name(const std::string &name);
+
+    static const std::string &org_name();
+    static void set_org_name(const std::string &name);
+
     void exec();
     void quit();
 
@@ -29,3 +39,5 @@ private:
 
     std::unique_ptr<tim::p::app> _d;
 };
+
+}

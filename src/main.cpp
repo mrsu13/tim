@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv)
 {
-    std::unque_ptr<tim::app> app(new tim::app(argc, argv));
+    std::unique_ptr<tim::app> app(new tim::app(argc, argv));
 
     app->exec();
 

@@ -8,6 +8,7 @@
 
 #include "libtelnet.h"
 #include "mongoose.h"
+#include "utf8/utf8.h"
 
 #include <cassert>
 
@@ -62,6 +63,89 @@ int tim::a_telnet_service::printf(const char *format, ... )
 
     return n;
 }
+
+/** \param s Colorized string.
+ *  \return Number of glyphs in string \a s.
+ */
+std::size_t tim::a_telnet_service::strlen(const std::string &s)
+{
+    if (s.empty())
+        return 0;
+
+    /* ANSI color control sequences have the form:
+     * "\x1b" "[" [0-9;]+ "m"
+     * We parse them with a simple state machine.
+     */
+
+    enum class state
+    {
+        SearchEsc,
+        ExpectBracket,
+        ExpectInner,
+        ExpectTrail
+    };
+
+    state st = state::SearchEsc;
+
+    std::size_t len = 0;
+    std::size_t found = 0;
+
+    const std::size_t size = s.size();
+    for (std::size_t i = 0; i < size; ++i)
+    {
+        const char c = s[i];
+
+        switch (st)
+        {
+            case state::SearchEsc:
+                len = 0;
+                if (c == '\x1b')
+                {
+                    st = state::ExpectBracket;
+                    ++len;
+                }
+                break;
+
+            case state::ExpectBracket:
+                if (c == '[')
+                {
+                    st = state::ExpectInner;
+                    ++len;
+                }
+                else
+                    st = state::SearchEsc;
+                break;
+
+            case state::ExpectInner:
+                if (c >= '0'
+                        && c <= '9')
+                {
+                    ++len;
+                    st = state::ExpectTrail;
+                }
+                else
+                    st = state::SearchEsc;
+                break;
+
+            case state::ExpectTrail:
+                if (c == 'm')
+                {
+                    ++len;
+                    found += len;
+                    st = state::SearchEsc;
+                }
+                else if (c != ';'
+                            && ((c < '0') || (c > '9')))
+                    st = state::SearchEsc;
+                /* 0-9, or semicolon */
+                ++len;
+                break;
+        }
+    }
+
+    return utf8len((const utf8_int8_t *)s.c_str()) - found;
+}
+
 
 // Protected
 

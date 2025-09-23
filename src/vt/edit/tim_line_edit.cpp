@@ -50,7 +50,7 @@ std::string tim::line_edit::prompt() const
 void tim::line_edit::set_prompt(const std::string &prompt)
 {
     _d->_prompt = tim::to_wstring(prompt);
-    _d->_plen = tim::vt_strlen(prompt);
+    _d->_plen = tim::a_telnet_service::strlen(prompt);
 }
 
 bool tim::line_edit::empty() const
@@ -104,8 +104,8 @@ bool tim::line_edit::new_line()
 
     const std::string p = prompt();
     return (!_d->_line_count++
-                        || _d->_telnet->write("\r\n", 2) > 0)
-                    && _d->_telnet->write(p.c_str(), p.size()) > 0;
+                        || _d->_telnet->write("\r\n", 2))
+                    && _d->_telnet->write(p.c_str(), p.size());
 }
 
 /**
@@ -479,17 +479,6 @@ void tim::p::line_edit::beep()
 {
 }
 
-/** Use the ESC `[6n` escape sequence to query the horizontal cursor position
-  * and return it. On error `-1` is returned, on success the position of the
-  * cursor.
-  */
-int tim::p::line_edit::cursor_position()
-{
-    std::size_t cols, rows;
-    _telnet->get_cursor_pos(cols, rows);
-    return cols;
-}
-
 /* Called by complete_line() and show() to render the current
  * edited line with the proposed completion. If the current completion table
  * is already available, it is passed as second argument, otherwise the
@@ -674,7 +663,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     }
 
     const std::string s = tim::from_wstring(ws);
-    if (_telnet->write(s.c_str(), s.size()) < 0)
+    if (!_telnet->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -761,7 +750,10 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
     _old_pos = _pos;
 
     const std::string s = tim::from_wstring(ws);
-    if (_telnet->write(s.c_str(), s.size()) < 0) {} /* Can't recover from write error. */
+    if (!_telnet->write(s.c_str(), s.size()))
+    {
+        /* Can't recover from write error. */
+    }
 }
 
 /** Calls the two low level functions refresh_single_line() or
@@ -800,8 +792,8 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
                             ? '*'
                             : c;
         std::string s(utf8codepointsize(d), 0);
-        utf8catcodepoint((char8_t *)(&s[0]), d, s.size());
-        if (_telnet->write(s.c_str(), s.size()) < 0)
+        utf8catcodepoint((utf8_int8_t *)(&s[0]), d, s.size());
+        if (!_telnet->write(s.c_str(), s.size()))
             return false;
     }
     else

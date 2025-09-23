@@ -7,7 +7,7 @@
 #include "tim_translator.h"
 
 #include "lil.hpp"
-#include "utf8.h"
+#include "utf8/utf8.h"
 
 #include <cassert>
 

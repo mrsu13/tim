@@ -1,8 +1,6 @@
 #include "tim_file_tools.h"
 
-#include "tim_application.h"
-#include "tim_core_prefs.h"
-#include "tim_core_properties.h"
+#include "tim_app.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
@@ -19,14 +17,14 @@ std::filesystem::path tim::standard_location(tim::filesystem_location location)
         case tim::filesystem_location::AppConfig:
             return std::filesystem::path(std::getenv("HOME"))
                             / ".config"
-                            / tim::to_lower(tim::application::org_name())
-                            / tim::to_lower(tim::application::name());
+                            / tim::to_lower(tim::app::org_name())
+                            / tim::to_lower(tim::app::name());
         case tim::filesystem_location::AppData:
         case tim::filesystem_location::AppLocalData:
             return std::filesystem::path(std::getenv("HOME"))
                             / ".local/share"
-                            / tim::to_lower(tim::application::org_name())
-                            / tim::to_lower(tim::application::name());
+                            / tim::to_lower(tim::app::org_name())
+                            / tim::to_lower(tim::app::name());
         case tim::filesystem_location::Current:
             return std::filesystem::current_path();
         case tim::filesystem_location::Home:
@@ -58,12 +56,12 @@ std::filesystem::path tim::standard_location(tim::filesystem_location location)
         case tim::filesystem_location::AppConfig:
         case tim::filesystem_location::AppData:
             return std::filesystem::path(std::getenv("APPDATA"))
-                                / tim::to_lower(tim::application::org_name())
-                                / tim::to_lower(tim::application::name());
+                                / tim::to_lower(tim::app::org_name())
+                                / tim::to_lower(tim::app::name());
         case tim::filesystem_location::AppLocalData:
             return std::filesystem::path(std::getenv("LOCALAPPDATA"))
-                                / tim::to_lower(tim::application::org_name())
-                                / tim::to_lower(tim::application::name());
+                                / tim::to_lower(tim::app::org_name())
+                                / tim::to_lower(tim::app::name());
         case tim::filesystem_location::Current:
             return std::filesystem::current_path();
         case tim::filesystem_location::Home:
@@ -168,35 +166,6 @@ bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
                          TIM_TR("Empty file path."_en,
                                 "Пустой путь к файлу."_ru));
 
-    if (tim::resource::valid_path(epath))
-    {
-        const tim::resource *r = tim::resource::get(epath, false);
-        if (r)
-        {
-            j = nlohmann::json::parse((const char *)r->data(),
-                                      (const char *)r->data() + r->size(),
-                                      nullptr, // Parser call-back.
-                                      false, // Allow exceptions.
-                                      true); // Ignore comments.
-            if (j.is_discarded())
-                return TIM_TRACE(Error,
-                                TIM_TR("Failed to parse JSON file '%s' at position %s-%s."_en,
-                                      "Ошибка при разборе JSON-файла '%s' в позиции %s-%s."_ru),
-                                epath.string().c_str(),
-                                j.start_pos() == std::string::npos
-                                    ? tim::na()
-                                    : std::to_string(j.start_pos()).c_str(),
-                                j.end_pos() == std::string::npos
-                                    ? tim::na()
-                                    : std::to_string(j.end_pos()).c_str());
-            return true;
-        }
-        return TIM_TRACE(Error,
-                        TIM_TR("Resource '%s' does not exist."_en,
-                              "Ресурс '%s' не существует."_ru),
-                        epath.string().c_str());
-    }
-
     {
         std::string js;
         if (!tim::read_file(epath, js))
@@ -209,15 +178,15 @@ bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
                                   true); // Ignore comments.
         if (j.is_discarded())
             return TIM_TRACE(Error,
-                            TIM_TR("Failed to parse JSON file '%s' at position %s-%s."_en,
-                                  "Ошибка при разборе JSON-файла '%s' в позиции %s-%s."_ru),
-                            epath.string().c_str(),
-                            j.start_pos() == std::string::npos
-                                ? tim::na()
-                                : std::to_string(j.start_pos()).c_str(),
-                            j.end_pos() == std::string::npos
-                                ? tim::na()
-                                : std::to_string(j.end_pos()).c_str());
+                             TIM_TR("Failed to parse JSON file '%s' at position %s-%s."_en,
+                                    "Ошибка при разборе JSON-файла '%s' в позиции %s-%s."_ru),
+                             epath.string().c_str(),
+                             j.start_pos() == std::string::npos
+                                 ? tim::na()
+                                 : std::to_string(j.start_pos()).c_str(),
+                             j.end_pos() == std::string::npos
+                                 ? tim::na()
+                                 : std::to_string(j.end_pos()).c_str());
     }
 
     return true;

@@ -10,6 +10,11 @@
 #include <cassert>
 
 
+tim::inetd::~inetd() = default;
+
+
+// Private
+
 tim::inetd::inetd(mg_mgr *mg, std::uint16_t port, service_factory factory)
     : tim::service("inetd")
     , _d(new tim::p::inetd())
@@ -28,11 +33,6 @@ tim::inetd::inetd(mg_mgr *mg, std::uint16_t port, service_factory factory)
             TIM_TRACE(Fatal, "Failed to create inetd at port %u.", _d->_port);
     }
 }
-
-tim::inetd::~inetd() = default;
-
-
-// Private
 
 void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
 {

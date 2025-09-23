@@ -87,7 +87,6 @@ struct line_edit
     void history_add(const std::wstring &line);
 
     void beep();
-    int cursor_position();
 
     void refresh_line_with_completion(const tim::line_edit::completions *c, refresh_flags flags);
     std::int32_t complete_line(std::int32_t key_pressed);

@@ -1,5 +1,8 @@
 #include "tim_trace.h"
 
+#include <cstdio>
+#include <cstdlib>
+
 
 bool tim::vtracef(tim::severity severity,
                  const char *file_name, std::size_t line,
@@ -26,7 +29,7 @@ bool tim::vtracef(tim::severity severity,
     va_end(args_copy);
     std::fprintf(stderr, "%s", "\n");
 
-    if (severity > tim::severity::Fatal)
+    if (severity == tim::severity::Fatal)
         std::exit(EXIT_FAILURE);
 
     return severity > tim::severity::Error;

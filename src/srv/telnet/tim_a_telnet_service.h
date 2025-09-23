@@ -28,9 +28,10 @@ public:
     void clear();
 
     int vprintf(const char *format, va_list args);
-
     int printf(const char *format, ... )
                __attribute__ ((format(printf, 2, 3)));
+
+    static std::size_t strlen(const std::string &s);
 
     virtual bool process_data(const char *data, std::size_t size) = 0;
 

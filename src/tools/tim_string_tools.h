@@ -55,7 +55,6 @@ std::string simplify(const std::string &s);
 
 void wrap(std::string &s, std::size_t pos);
 std::string unwrap(const std::string &s);
-void unwrap(std::string &s);
 
 std::string strip_pem(const std::string &pem);
 

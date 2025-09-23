@@ -3,7 +3,6 @@
 #include "tim_string_vector.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
-#include "tim_xhtmlite_node_type.h"
 
 #include "nlohmann/json.hpp"
 
@@ -248,8 +247,7 @@ std::string tim::strip_pem(const std::string &pem)
     static const char *const RE_PEM_HEADER = R"(\-{5}[\w\s]+\-{5})";
 
     std::string s = tim::trim(std::regex_replace(pem, std::regex(RE_PEM_HEADER, std::regex::ECMAScript), ""));
-    tim::unwrap(s);
-    return s;
+    return tim::unwrap(s);
 }
 
 int tim::vsprintf(std::string &s, const char *format, va_list args)
