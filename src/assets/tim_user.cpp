@@ -1,69 +1,40 @@
 #include "tim_user.h"
 
-#include "tim_uuid.h"
+#include "tim_user_p.h"
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cassert>
 
 
-typedef struct tim_user
+// Public
+
+tim::user::user(const std::string &pkey)
+    : _d(new tim::p::user())
 {
-    tim_uuid_t id;
-    tim_country_t country;
-    tim_phone_t phone;
-    char *nick_name;
-    const char *icon;
-    char *motto;
-} tim_user_t;
+    _d->_pkey = pkey;
 
-tim_user_t *tim_user_new(tim_country_t country, tim_phone_t phone)
-{
-    assert(phone > 1000000000 && phone < 9999999999
-                && "Invalid phone number.");
-
-    tim_user_t *user = (tim_user_t *)calloc(1, sizeof(tim_user_t));
-    assert(user);
-    user->country = country;
-    user->phone = phone;
-    return user;
+    assert(!_d->_pkey.empty() && "User's public key must not be empty.");
 }
 
-void tim_user_free(tim_user_t *user)
+const tim::uuid &tim::user::id() const
 {
-    assert(user);
-    free(user->nick_name);
-    free(user);
+    return _d->_id;
 }
 
-const char *tim_user_id(const tim_user_t *user)
+const std::string &tim::user::pkey() const
 {
-    assert(user);
-    return user->id;
+    return _d->_pkey;
 }
 
-void tim_user_set_id(tim_user_t *user, const char *id)
+const std::string &tim::user::nick() const
 {
-    assert(user);
-    if (id)
-        memcpy(user->id, id, sizeof(user->id));
-    else
-        memset(user->id, 0, sizeof(user->id));
+    return _d->_nick;
 }
 
-const char *tim_user_nick_name(const tim_user_t *user)
+const std::string &tim::user::icon() const
 {
-    assert(user);
-    return user->nick_name;
+    return _d->_icon;
 }
-
-void tim_user_set_nick_name(tim_user_t *user, const char *nick_name)
+const std::string &tim::user::motto() const
 {
-    assert(user);
-    free(user->nick_name);
-    if (nick_name
-            && *nick_name)
-        user->nick_name = strdup(nick_name);
-    else
-        user->nick_name = NULL;
+    return _d->_motto;
 }

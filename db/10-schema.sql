@@ -26,14 +26,13 @@ CREATE TABLE user
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
 
-    country INTEGER NOT NULL DEFAULT 7,
-    phone INTEGER UNIQUE NOT NULL CHECK(phone > 1000000000 AND phone < 9999999999),
-    nick_name VARCHAR UNIQUE,
+    pkey VARCHAR UNIQUE NOT NULL, -- Public key.
+    nick VARCHAR UNIQUE,
     icon VARCHAR,
     motto VARCHAR
 );
-CREATE UNIQUE INDEX user_phone ON user(phone);
-CREATE UNIQUE INDEX user_nick_name ON user(nick_name);
+CREATE UNIQUE INDEX user_pkey ON user(pkey);
+CREATE UNIQUE INDEX user_nick ON user(nick);
 
 
 -- Подписки

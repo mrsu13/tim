@@ -8,7 +8,7 @@ BEGIN;
 -- Пользователи --
 ------------------
 
-INSERT INTO user (id, phone, nick_name)
-    VALUES ((SELECT id FROM generate_id LIMIT 1), 1111111111, '"admin"');
+INSERT INTO user (id, pkey, nick)
+    VALUES ((SELECT id FROM generate_id LIMIT 1), "1111111111", '"admin"');
 
 COMMIT;
