@@ -20,7 +20,6 @@ struct tcl_shell
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::line_edit> _ledit;
     std::filesystem::path _history_path = "/tmp/tim.txt";
-    bool _new_line = false;
 };
 
 }

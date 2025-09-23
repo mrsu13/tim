@@ -105,7 +105,7 @@ struct line_edit
     bool _mask_mode = false; /* Show "***" instead of input. For passwords. */
     bool _ml_mode = false; /* Multi line mode. Default is single line. */
 
-    std::size_t _line_count = 0; // We need this just to omit `\r\n` when we first call new_line().
+    std::size_t _line_count = 0; // We need this just to omit `\n` when we first call new_line().
 };
 
 }

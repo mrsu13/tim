@@ -104,7 +104,7 @@ bool tim::line_edit::new_line()
 
     const std::string p = prompt();
     return (!_d->_line_count++
-                        || _d->_telnet->write("\r\n", 2))
+                        || _d->_telnet->write("\n", 1))
                     && _d->_telnet->write(p.c_str(), p.size());
 }
 

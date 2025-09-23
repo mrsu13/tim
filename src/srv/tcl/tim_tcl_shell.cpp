@@ -38,20 +38,13 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
     if (_d->_tcl->evaluating())
         return true;
 
-    if (_d->_new_line)
-    {
-        _d->_new_line = false;
-        _d->_ledit->new_line();
-    }
-
     switch (_d->_ledit->get_line(data, size))
     {
         case tim::line_edit::status::Finished:
         {
-            _d->_new_line = true;
             if (!_d->_ledit->empty())
             {
-                write("\r\n", 2);
+                write("\n", 1);
                 const std::string &line = _d->_ledit->line();
                 _d->_ledit->history_save(_d->_history_path);
 
@@ -82,6 +75,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
                     }
                     //reset_colors();
                 }
+                _d->_ledit->new_line();
             }
             break;
         }
@@ -92,7 +86,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
             return false;
 
         case tim::line_edit::status::Error:
-            _d->_new_line = true;
+            _d->_ledit->new_line();
             break;
     }
 
