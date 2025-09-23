@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <codecvt>
 #include <cstdlib>
 #include <cstring>
 #include <cwctype>
@@ -17,22 +18,12 @@
 
 std::wstring tim::to_wstring(const std::string &s)
 {
-    const std::size_t len = std::mbstowcs(nullptr, s.c_str(), 0) + 1;
-    wchar_t *buffer = new wchar_t[len];
-    std::mbstowcs(buffer, s.c_str(), len);
-    std::wstring ws(buffer);
-    delete[] buffer;
-    return ws;
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().from_bytes(s);
 }
 
 std::string tim::from_wstring(const std::wstring &ws)
 {
-    const std::size_t len = std::wcstombs(nullptr, ws.c_str(), 0) + 1;
-    char *buffer = new char[len];
-    std::wcstombs(buffer, ws.c_str(), len);
-    std::string s(buffer);
-    delete[] buffer;
-    return s;
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().to_bytes(ws);
 }
 
 std::string tim::escape_quotes(const std::string &str)

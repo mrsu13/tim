@@ -44,7 +44,6 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
                 write("\n", 1);
                 const std::string &line = _d->_ledit->line();
                 _d->_ledit->history_save(_d->_history_path);
-
                 std::string res;
                 if (_d->_tcl->eval(line, &res))
                 {

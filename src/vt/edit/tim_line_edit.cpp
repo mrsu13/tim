@@ -122,8 +122,13 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
     if (!size)
         return status::Continue;
 
-    std::int32_t c = *data++;
-    --size;
+    std::int32_t c;
+    {
+        const utf8_int8_t *next = utf8codepoint((const utf8_int8_t *)data, &c);
+        const int d = next - (const utf8_int8_t *)data;
+        data += d;
+        size -= d;
+    }
 
     if ((_d->_in_completion
                 || c == (char)tim::key::Tab)
@@ -174,7 +179,8 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                 _d->edit_delete();
             else
             {
-                _d->_history.pop_back();
+                if (!_d->_history.empty())
+                    _d->_history.pop_back();
                 return status::Exit;
             }
             break;
