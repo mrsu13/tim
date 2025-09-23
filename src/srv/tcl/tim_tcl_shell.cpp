@@ -19,6 +19,7 @@ tim::tcl_shell::tcl_shell(mg_connection *c)
 {
     _d->_tcl.reset(new tim::tcl(this));
     _d->_ledit.reset(new tim::line_edit(this));
+    _d->_ledit->set_prompt(_d->_tcl->prompt());
 
     write_str(tim::p::tcl_shell::welcome_banner());
 
