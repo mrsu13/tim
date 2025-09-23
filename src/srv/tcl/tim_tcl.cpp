@@ -1,6 +1,10 @@
 #include "tim_tcl.h"
 
-#include "tim::tcl::p.h"
+#include "tim_tcl_p.h"
+
+#include "tim_a_telnet_service.h"
+#include "tim_string_tools.h"
+#include "tim_translator.h"
 
 #include "lil.hpp"
 #include "utf8.h"
@@ -10,9 +14,12 @@
 
 // Public
 
-tim::tcl::tcl()
-    : _d(new tim::p::tcl())
+tim::tcl::tcl(tim::a_telnet_service *telnet)
+    : _d(new tim::p::tcl(this))
 {
+    assert(telnet);
+
+    _d->_telnet = telnet;
     _d->_lil = lil_new();
 
     lil_callback(_d->_lil, LIL_CALLBACK_WRITE, (lil_callback_proc_t)tim::p::tcl::write);
@@ -45,12 +52,46 @@ bool tim::tcl::eval(const std::string &program, std::string *res, void *user_dat
     void *old_data = lil_get_data(_d->_lil);
     lil_set_data(_d->_lil, user_data);
 
-    _d->_error_msg = nullptr;
+    _d->_error_msg.clear();
     _d->_error_pos = 0;
 
     lil_value_t rv = lil_parse(_d->_lil, program.c_str(), program.size(), 1);
-    const bool ok = !lil_error(_d->_lil, &_d->_error_msg, &_d->_error_pos);
+    const char *err_msg = nullptr;
+    const bool ok = !lil_error(_d->_lil, &err_msg, &_d->_error_pos);
     _d->_error_pos = utf8nlen((const utf8_int8_t *)program.c_str(), _d->_error_pos);
+
+    // FIXME! Dirty hack.
+    if (err_msg
+            && *err_msg)
+    {
+        _d->_error_msg = err_msg;
+        tim::replace(_d->_error_msg,
+                     "Too many recursive calls",
+                     TIM_TR("Too many recursive calls."_en,
+                            "Слишком много рекурсивных вызовов."_ru));
+        tim::replace(_d->_error_msg,
+                     "catcher limit reached while trying to call unknown function",
+                     TIM_TR("Catcher limit reached while trying to call unknown command"_en,
+                            "Достигнут предел ловушек при попытке вызова неизвестной команды"_ru));
+        tim::replace(_d->_error_msg,
+                     "unknown function",
+                     TIM_TR("Unknown command"_en,
+                            "Неизвестная команда"_ru));
+        tim::replace(_d->_error_msg,
+                     "division by zero in expression",
+                     TIM_TR("Division by zero in expression"_en,
+                            "Деление на ноль в выражении"_ru));
+        tim::replace(_d->_error_msg,
+                     "mixing invalid types in expression",
+                     TIM_TR("Mixing invalid types in expression"_en,
+                            "Смешение недопустимых типов в выражении"_ru));
+        tim::replace(_d->_error_msg,
+                     "expression syntax error",
+                     TIM_TR("Expression syntax error"_en,
+                            "Синтаксическая ошибка в выражении"_ru));
+        _d->_error_msg += '.';
+    }
+
     if (ok
             && res)
         *res = lil_to_string(rv);
@@ -73,7 +114,7 @@ const std::string &tim::tcl::prompt() const
     return _d->_prompt;
 }
 
-const char *tim::tcl::error_msg() const
+const std::string &tim::tcl::error_msg() const
 {
     return _d->_error_msg;
 }
@@ -88,10 +129,16 @@ std::size_t tim::tcl::error_pos() const
 
 void tim::p::tcl::write(lil_t lil, const char *msg)
 {
+    assert(lil);
+    assert(msg);
 
+    tim::p::tcl *self = (tim::p::tcl *)lil_get_data(lil);
+    assert(self);
+
+    self->_telnet->write_str(msg);
 }
 
 void tim::p::tcl::dispatch(lil_t lil)
 {
-
+    (void) lil;
 }

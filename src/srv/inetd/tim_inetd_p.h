@@ -24,7 +24,7 @@ struct inetd
 
     tim::inetd::service_factory _factory;
 
-    using connection_map = std::unordered_map<mg_connection *, std::unique_ptr<tim::inetd_service>>;
+    using connection_map = std::unordered_map<mg_connection *, std::unique_ptr<tim::a_inetd_service>>;
     connection_map _connections;
 };
 

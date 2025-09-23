@@ -1,169 +1,111 @@
 #include "tim_tcl_shell.h"
 
-#include "tim_telnet_service.h"
-#include "tim_telnet_service_p.h"
+#include "tim_tcl_shell_p.h"
 
 #include "tim_config.h"
-#include "tim_inetd_service.h"
 #include "tim_line_edit.h"
 #include "tim_tcl.h"
 #include "tim_trace.h"
+#include "tim_translator.h"
 
-#include "lil.h"
-
-#include <assert.h>
-#include <stdlib.h>
+#include <cassert>
 
 
-typedef struct tim_tcl_shell
+// Public
+
+tim::tcl_shell::tcl_shell(mg_connection *c)
+    : tim::a_telnet_service("tcl_shell", c)
+    , _d(new tim::p::tcl_shell())
 {
-    tim_telnet_service_t super;
-    tim_tcl_t *tcl;
-    tim_line_edit_t *ledit;
-    bool new_line;
-} tim_tcl_shell_t;
+    _d->_tcl.reset(new tim::tcl(this));
+    _d->_ledit.reset(new tim::line_edit(this));
 
-static const char *tim_tcl_shell_welcome_banner();
-static const char *tim_tcl_shell_bye_banner();
-static bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size);
-static int tim_tcl_shell_write_data(void *srv, const char *data, size_t size);
-static void tim_tcl_shell_tcl_write(lil_t lil, const char *msg);
+    write_str(tim::p::tcl_shell::welcome_banner());
 
-tim_tcl_shell_t *tim_tcl_shell_new(struct mg_connection *c)
-{
-    tim_tcl_shell_t *srv = (tim_tcl_shell_t *)calloc(1, sizeof(tim_tcl_shell_t));
-    assert(srv);
-
-    tim_telnet_service_init(&srv->super, c);
-    srv->super.process_data = &tim_tcl_shell_process_data;
-
-    srv->tcl = tim_tcl_new(&tim_tcl_shell_tcl_write, NULL);
-    assert(srv->tcl);
-
-    srv->ledit = tim_line_edit_new(tim_tcl_shell_write_data, srv);
-    assert(srv->ledit);
-    tim_inetd_service_write_str((tim_inetd_service_t *)srv, tim_tcl_shell_welcome_banner());
-
-    tim_line_edit_new_line(srv->ledit, tim_tcl_prompt(srv->tcl));
-
-    return srv;
+    _d->_ledit->new_line();
 }
 
-void tim_tcl_shell_free(tim_tcl_shell_t *srv)
+tim::tcl_shell::~tcl_shell()
 {
-    assert(srv);
-    tim_inetd_service_write_str((tim_inetd_service_t *)srv, tim_tcl_shell_bye_banner());
-    tim_line_edit_free(srv->ledit);
-    tim_tcl_free(srv->tcl);
-    tim_telnet_service_destroy(&srv->super);
-    free(srv);
+    write_str(tim::p::tcl_shell::bye_banner());
 }
 
-
-// Static
-
-const char *tim_tcl_shell_welcome_banner()
+bool tim::tcl_shell::process_data(const char *data, std::size_t size)
 {
-    return "Welcome to TIM!";
-}
-
-const char *tim_tcl_shell_bye_banner()
-{
-    return "Bye!\n";
-}
-
-bool tim_tcl_shell_process_data(void *srv, const char *data, size_t size)
-{
-    tim_tcl_shell_t *self = (tim_tcl_shell_t *)srv;
-    assert(self);
     assert(data);
 
-    if (tim_tcl_evaluating(self->tcl))
-        return true;
-
-    if (self->new_line)
+    if (!_d->_tcl->evaluating())
     {
-        self->new_line = false;
-        tim_line_edit_new_line(self->ledit, tim_tcl_prompt(self->tcl));
-    }
-
-    switch (tim_line_edit_get_line(self->ledit, data, size))
-    {
-        case TimLineEditFinished:
+        if (_d->_new_line)
         {
-            self->new_line = true;
-            if (!tim_line_edit_empty(self->ledit))
-            {
-                tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                char *line = tim_line_edit_line(self->ledit);
-                // _d->_ledit->history_save(_d->_history_path);
-
-                const char *res;
-                if (tim_tcl_eval(self->tcl, line, &res, self))
-                {
-                    if (res
-                            && *res)
-                        tim_inetd_service_write_str((tim_inetd_service_t *)self, res);
-                }
-                else
-                {
-                    const size_t pos = tim_tcl_error_pos(self->tcl);
-
-                    // set_color(theme().colors.at(t2::vt_color_index::Error));
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "Error: ");
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_error_msg(self->tcl));
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, line);
-                    tim_inetd_service_write_str((tim_inetd_service_t *)self, "\n");
-                    if (pos)
-                    {
-                        static const char hr[] = "-";
-                        for (size_t i = 0; i < pos - 1; ++i)
-                            tim_inetd_service_write((tim_inetd_service_t *)self, hr, sizeof(hr) - 1, NULL);
-                    }
-                    {
-                        static const char arrow[] = "+";
-                        tim_inetd_service_write((tim_inetd_service_t *)self, arrow, sizeof(arrow) - 1, NULL);
-                    }
-                    // reset_colors();
-                }
-                free(line);
-            }
-            break;
+            _d->_new_line = false;
+            _d->_ledit->new_line();
         }
-        case TimLineEditContinue:
-            break;
 
-        case TimLineEditExit:
-            tim_inetd_service_write_str((tim_inetd_service_t *)self, tim_tcl_shell_bye_banner());
-            return false;
+        switch (_d->_ledit->get_line(data, size))
+        {
+            case tim::line_edit::status::Finished:
+            {
+                _d->_new_line = true;
+                if (!_d->_ledit->empty())
+                {
+                    write("\r\n", 2);
+                    const std::string &line = _d->_ledit->line();
+                    _d->_ledit->history_save(_d->_history_path);
 
-        case TimLineEditError:
-            self->new_line = true;
-            break;
+                    std::string res;
+                    if (_d->_tcl->eval(line, &res, this))
+                    {
+                        if (!res.empty())
+                            write(res.c_str(), res.size());
+                    }
+                    else
+                    {
+                        const std::size_t pos = _d->_tcl->error_pos();
+
+                        //set_color(theme().colors.at(tim::vt_color_index::Error));
+                        this->printf(TIM_TR("Error: %s\n%s\n"_en,
+                                            "Ошибка. %s\n%s\n"_ru),
+                                     _d->_tcl->error_msg().c_str(),
+                                     line.c_str());
+                        if (pos)
+                        {
+                            static const char hr[] = "─";
+                            for (std::size_t i = 0; i < pos - 1; ++i)
+                                write(hr, sizeof(hr) - 1);
+                        }
+                        {
+                            static const char arrow[] = "┘";
+                            write(arrow, sizeof(arrow) - 1);
+                        }
+                        //reset_colors();
+                    }
+                }
+                break;
+            }
+            case tim::line_edit::status::Continue:
+                break;
+
+            case tim::line_edit::status::Exit:
+                return false;
+
+            case tim::line_edit::status::Error:
+                _d->_new_line = true;
+                break;
+        }
     }
 
     return true;
 }
 
-int tim_tcl_shell_write_data(void *srv, const char *data, size_t size)
-{
-    tim_tcl_shell_t *self = (tim_tcl_shell_t *)srv;
-    assert(self);
-    assert(data);
+// Private
 
-    return tim_inetd_service_write((tim_inetd_service_t *)self, data, size, NULL)
-                ? size
-                : -1;
+const char *tim::p::tcl_shell::welcome_banner()
+{
+    return "Welcome to TIM!";
 }
 
-void tim_tcl_shell_tcl_write(lil_t lil, const char *msg)
+const char *tim::p::tcl_shell::bye_banner()
 {
-    assert(lil);
-    assert(msg);
-
-    tim_tcl_shell_t *self = (tim_tcl_shell_t *)lil_get_data(lil);
-    assert(self);
-
-    tim_inetd_service_write_str((tim_inetd_service_t *)self, msg);
+    return "Bye!\n";
 }

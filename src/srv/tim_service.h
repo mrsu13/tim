@@ -33,3 +33,5 @@ private:
 
     std::unique_ptr<tim::p::service> _d;
 };
+
+}

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
+#include <string>
 
 
 namespace tim
@@ -13,12 +15,14 @@ struct tcl;
 
 }
 
+class a_telnet_service;
+
 class tcl
 {
 
 public:
 
-    tcl();
+    explicit tcl(tim::a_telnet_service *telnet);
     virtual ~tcl();
 
     bool evaluating() const;
@@ -26,13 +30,8 @@ public:
     void break_eval();
 
     const std::string &prompt() const;
-    const char *error_msg() const;
+    const std::string &error_msg() const;
     std::size_t error_pos() const;
-
-protected:
-
-    virtual void write(const char *msg);
-    virtual void dispatch();
 
 private:
 

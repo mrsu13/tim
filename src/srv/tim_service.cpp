@@ -1,18 +1,11 @@
 #include "tim_service.h"
 
-#include "tim::service::p.h"
+#include "tim_service_p.h"
 
 #include <cassert>
 
 
-tim::service::service(const std::string &name)
-    : _d(new tim::p::service())
-{
-    assert(!nam.empty() && "Service name must not be empty.");
-
-    _d->_id = tim::p::service::next_id();
-    _d->_name = name;
-}
+// Public
 
 tim::service::~service() = default;
 
@@ -24,6 +17,18 @@ std::uint64_t tim::service::id() const
 const std::string &tim::service::name() const
 {
     return _d->_name;
+}
+
+
+// Protected
+
+tim::service::service(const std::string &name)
+    : _d(new tim::p::service())
+{
+    assert(!name.empty() && "Service name must not be empty.");
+
+    _d->_id = tim::p::service::next_id();
+    _d->_name = name;
 }
 
 

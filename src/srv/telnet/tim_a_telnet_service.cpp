@@ -2,7 +2,8 @@
 
 #include "tim_a_telnet_service_p.h"
 
-#include "tim_inetd_service.h"
+#include "tim_a_inetd_service.h"
+#include "tim_string_tools.h"
 #include "tim_trace.h"
 
 #include "libtelnet.h"
@@ -18,12 +19,55 @@ tim::a_telnet_service::~a_telnet_service()
     telnet_free(_d->_telnet);
 }
 
+/**
+ * \bug
+ */
+std::size_t tim::a_telnet_service::cols() const
+{
+    return 80;
+}
+
+/**
+ * \bug
+ */
+void tim::a_telnet_service::clear()
+{
+}
+
+int tim::a_telnet_service::vprintf(const char *format, va_list args)
+{
+    assert(format && *format);
+
+    std::string s;
+
+    va_list args_copy;
+    va_copy(args_copy, args);
+    const int n = tim::vsprintf(s, format, args);
+    va_end(args_copy);
+
+    if (n > 0)
+        write(s.c_str(), n);
+
+    return n;
+}
+
+int tim::a_telnet_service::printf(const char *format, ... )
+{
+    assert(format && *format);
+
+    va_list args;
+    va_start(args, format);
+    const int n = tim::a_telnet_service::vprintf(format, args);
+    va_end(args);
+
+    return n;
+}
 
 // Protected
 
-tim::a_telnet_service::a_telnet_service(mg_connection *c)
-    : tim::inetd_service("telnet", c)
-    , _d(new tim::p::a_telnet_service())
+tim::a_telnet_service::a_telnet_service(const std::string &name, mg_connection *c)
+    : tim::a_inetd_service(name, c)
+    , _d(new tim::p::a_telnet_service(this))
 {
     _d->_telnet = telnet_init(nullptr,
                               &tim::p::a_telnet_service::event_handler,
@@ -65,7 +109,7 @@ void tim::p::a_telnet_service::event_handler(telnet_t *telnet, telnet_event_t *e
 {
     (void) telnet;
 
-    tim::p::a_telnet_service *self = (tim::a_telnet_service::t *)data;
+    tim::p::a_telnet_service *self = (tim::p::a_telnet_service *)data;
     assert(self);
 
     switch (event->type)

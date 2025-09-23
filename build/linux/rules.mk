@@ -16,24 +16,24 @@ export INCLUDES := $(addprefix -I, $(SUBDIRS)) $(TIM_INCLUDES)
 ifdef TIM_DEBUG_MODE
 	TIM_DEFINES  := -DTIM_OS_LINUX -DTIM_DEBUG
 	TIM_CFLAGS   := -g -O0 -Wall -Werror
-	TIM_CPPFLAGS := -g -O0 --fno-exceptions Wall -Werror
+	TIM_CPPFLAGS := -g -O0 -fno-exceptions -Wall -Werror
 	TIM_STRIP    := touch
 else
 	TIM_DEFINES  := -DTIM_OS_LINUX -DNDEBUG
 	TIM_CFLAGS   := -O3 -Wall -Werror
-	TIM_CPPFLAGS := -O3 --fno-exceptions -Wall -Werror
+	TIM_CPPFLAGS := -O3 -fno-exceptions -Wall -Werror
 	TIM_STRIP    := $(STRIP)
 endif
 
 TIM_LIBS := -lm
 
-PARTCL_DEFINES := -DTCL_DISABLE_PUTS
+LIL_DEFINES := -DLIL_ENABLE_POOLS -DLIL_ENABLE_RECLIMIT=1024
 
-DEFINES := $(TIM_DEFINES) $(PARTCL_DEFINES)
+DEFINES := $(TIM_DEFINES) $(LIL_DEFINES)
 CFLAGS   := $(TIM_CFLAGS)
 CPPFLAGS := $(TIM_CPPFLAGS)
 
-export LIBS := -Xlinker --start-group $(TIM_LIBS) $(SDL_LIBS) -Xlinker --end-group
+export LIBS := -Xlinker --start-group $(TIM_LIBS) -Xlinker --end-group
 
 C_SRCS := $(shell find $(SRC_PATH) -type f -name *.c -execdir test ! -f IGNORE ';' -print)
 CPP_SRCS := $(shell find $(SRC_PATH) -type f -name *.cpp -execdir test ! -f IGNORE ';' -print)

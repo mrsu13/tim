@@ -14,7 +14,7 @@
 tim::a_inetd_service::~a_inetd_service()
 {
     if (_d->_c)
-        _d->_d->is_draining = 1;
+        _d->_c->is_draining = 1;
 }
 
 mg_connection *tim::a_inetd_service::connection() const
@@ -32,7 +32,7 @@ bool tim::a_inetd_service::read()
     struct mg_iobuf *r = &(_d->_c->recv);
     TIM_TRACE(Debug, "%s service got data: '%.*s'", name().c_str(), (int)r->len, r->buf);
     std::size_t bytes_read = 0;
-    if (!ready_read(srv, (const char *)r->buf, r->len, &bytes_read))
+    if (!ready_read((const char *)r->buf, r->len, &bytes_read))
         return false;
 
     r->len -= bytes_read; // Tell Mongoose we've consumed data.
@@ -43,7 +43,7 @@ bool tim::a_inetd_service::write(const char *data, std::size_t size, std::size_t
 {
     assert(data);
 
-    return ready_write(srv, data, size, bytes_written);
+    return ready_write(data, size, bytes_written);
 }
 
 bool tim::a_inetd_service::write_str(const std::string &s)

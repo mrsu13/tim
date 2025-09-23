@@ -43,11 +43,12 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
     {
         case MG_EV_OPEN:
             if (c->is_listening == 1)
-                TIM_TRACE(Info, "inetd is listening at port %u.", self->_port);
+                TIM_TRACE(Debug, "inetd is listening at port %u.", self->_port);
             break;
 
         case MG_EV_ACCEPT:
-            TIM_TRACE(Info, "inetd accepted a connection at port %u.", self->_port);
+        {
+            TIM_TRACE(Debug, "inetd accepted a connection at port %u.", self->_port);
             /* For the future support of TLS.
             if (mg_url_is_ssl(s_lsn))
             {
@@ -64,7 +65,7 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
 //            c->is_hexdumping = 1;
 #endif
 
-            std::unique_ptr<tim::a_inetd_service_t> srv = self->_factory(c);
+            std::unique_ptr<tim::a_inetd_service> srv = self->_factory(c);
             if (srv)
                 self->_connections.emplace(c, std::move(srv));
             else
@@ -73,11 +74,12 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
                 c->is_draining = 1;
             }
             break;
+        }
 
         case MG_EV_READ:
             if (!c->is_draining)
             {
-                connection_map::const_iterator::f = self->_connections.find(c);
+                connection_map::const_iterator f = self->_connections.find(c);
                 assert(f != self->_connections.cend());
                 if (!f->second->read())
                     f->second->close();
@@ -86,8 +88,8 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
 
         case MG_EV_CLOSE:
         {
-            TIM_TRACE(Debug, "inetd connection at port %u disconnected.", self->port);
-            connection_map::iterator::f = self->_connections.find(c);
+            TIM_TRACE(Debug, "inetd connection at port %u disconnected.", self->_port);
+            connection_map::iterator f = self->_connections.find(c);
             assert(f != self->_connections.end());
             self->_connections.erase(f);
             break;
@@ -97,7 +99,7 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
             if (!c->is_draining)
             {
                 TIM_TRACE(Error, "Error: %s", (char *)ev_data);
-                connection_map::iterator::f = self->_connections.find(c);
+                connection_map::iterator f = self->_connections.find(c);
                 assert(f != self->_connections.end());
                 self->_connections.erase(f);
             }

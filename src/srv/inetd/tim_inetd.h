@@ -3,6 +3,7 @@
 #include "tim_service.h"
 
 #include <cstdint>
+#include <functional>
 
 
 struct mg_connection;

@@ -4,9 +4,12 @@
 #include <string>
 
 
+typedef struct _lil_t *lil_t;
+
 namespace tim
 {
 
+class a_telnet_service;
 class tcl;
 
 namespace p
@@ -24,11 +27,13 @@ struct tcl
     static void dispatch(lil_t lil);
 
     tim::tcl *const _q;
+
+    tim::a_telnet_service *_telnet = nullptr;
     lil_t _lil = nullptr;
     bool _evaluating = false;
     std::string _prompt = "► ";
-    const char *error_msg = nullptr;
-    std::size_t error_pos = 0;
+    std::string _error_msg;
+    std::size_t _error_pos = 0;
 };
 
 }

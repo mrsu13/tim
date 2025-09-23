@@ -6,8 +6,8 @@
 #include <cstddef>
 
 
-#define TIM_TRACE(severity, ...) \
-    tim_tracef(Tim##severity, __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define TIM_TRACE(svrt, ...) \
+    tim::tracef(tim::severity::svrt, __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 
 
 namespace tim

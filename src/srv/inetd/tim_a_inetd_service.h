@@ -35,8 +35,8 @@ protected:
 
     a_inetd_service(const std::string &name, mg_connection *c);
 
-    bool ready_read(const char *data, std::size_t size, std::size_t *bytes_read = nullptr) = 0;
-    bool ready_write(const char *data, std::size_t size, std::size_t *bytes_written = nullptr) = 0;
+    virtual bool ready_read(const char *data, std::size_t size, std::size_t *bytes_read = nullptr) = 0;
+    virtual bool ready_write(const char *data, std::size_t size, std::size_t *bytes_written = nullptr) = 0;
 
 private:
 
