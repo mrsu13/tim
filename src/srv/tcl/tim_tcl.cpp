@@ -50,7 +50,7 @@ bool tim::tcl::eval(const std::string &program, std::string *res)
     _d->_evaluating = true;
 
     void *old_data = lil_get_data(_d->_lil);
-    lil_set_data(_d->_lil, this);
+    lil_set_data(_d->_lil, _d.get());
 
     _d->_error_msg.clear();
     _d->_error_pos = 0;
@@ -130,7 +130,10 @@ std::size_t tim::tcl::error_pos() const
 void tim::p::tcl::write(lil_t lil, const char *msg)
 {
     assert(lil);
-    assert(msg);
+
+    if (!msg
+            || !*msg)
+        return;
 
     tim::p::tcl *self = (tim::p::tcl *)lil_get_data(lil);
     assert(self);

@@ -26,10 +26,7 @@ tim::tcl_shell::tcl_shell(mg_connection *c)
     _d->_ledit->new_line();
 }
 
-tim::tcl_shell::~tcl_shell()
-{
-    write_str(tim::p::tcl_shell::bye_banner());
-}
+tim::tcl_shell::~tcl_shell() = default;
 
 bool tim::tcl_shell::process_data(const char *data, std::size_t size)
 {
@@ -83,6 +80,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
             break;
 
         case tim::line_edit::status::Exit:
+            write_str(tim::p::tcl_shell::bye_banner());
             return false;
 
         case tim::line_edit::status::Error:
@@ -92,6 +90,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
 
     return true;
 }
+
 
 // Private
 

@@ -27,7 +27,7 @@ public:
     mg_connection *connection() const;
     void close();
 
-    bool read();
+    bool read_from_connection();
     bool write(const char *data, std::size_t size, std::size_t *bytes_written = nullptr);
     bool write_str(const std::string &s);
 

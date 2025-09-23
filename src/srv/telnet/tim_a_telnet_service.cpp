@@ -5,6 +5,7 @@
 #include "tim_a_inetd_service.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
+#include "tim_translator.h"
 
 #include "libtelnet.h"
 #include "mongoose.h"
@@ -208,7 +209,10 @@ void tim::p::a_telnet_service::event_handler(telnet_t *telnet, telnet_event_t *e
             break;
 
         case TELNET_EV_ERROR:
-            TIM_TRACE(Error, "Telnet error: %s", event->error.msg);
+            TIM_TRACE(Error,
+                      TIM_TR("TELNET error: %s"_en,
+                             "Ошибка TELNET: %s"_ru),
+                      event->error.msg);
             break;
 
         default:
