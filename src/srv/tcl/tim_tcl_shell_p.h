@@ -14,8 +14,8 @@ namespace p
 
 struct tcl_shell
 {
-    static const char *welcome_banner();
-    static const char *bye_banner();
+    static const std::string &welcome_banner();
+    static const std::string &bye_banner();
 
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::line_edit> _ledit;

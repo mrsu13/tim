@@ -8,6 +8,8 @@
 #include "tim_trace.h"
 #include "tim_translator.h"
 
+#include "fort.h"
+
 #include <cassert>
 
 
@@ -19,7 +21,7 @@ tim::tcl_shell::tcl_shell(mg_connection *c)
 {
     _d->_tcl.reset(new tim::tcl(this));
     _d->_ledit.reset(new tim::line_edit(this));
-    _d->_ledit->set_prompt(_d->_tcl->prompt());
+    _d->_ledit->set_prompt(colorized(_d->_tcl->prompt(), theme().colors.at(tim::vt_color_index::Prompt)));
 
     write_str(tim::p::tcl_shell::welcome_banner());
 
@@ -54,7 +56,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
                 {
                     const std::size_t pos = _d->_tcl->error_pos();
 
-                    //set_color(theme().colors.at(tim::vt_color_index::Error));
+                    set_color(theme().colors.at(tim::vt_color_index::Error));
                     this->printf(TIM_TR("Error: %s\n%s\n"_en,
                                         "Ошибка. %s\n%s\n"_ru),
                                  _d->_tcl->error_msg().c_str(),
@@ -69,7 +71,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
                         static const char arrow[] = "┘";
                         write(arrow, sizeof(arrow) - 1);
                     }
-                    //reset_colors();
+                    reset_colors();
                 }
                 _d->_ledit->new_line();
             }
@@ -93,12 +95,23 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
 
 // Private
 
-const char *tim::p::tcl_shell::welcome_banner()
+const std::string &tim::p::tcl_shell::welcome_banner()
 {
-    return "Welcome to TIM!\n";
+    static std::string banner;
+    if (banner.empty())
+    {
+        ft_table_t *table = ft_create_table();
+        ft_set_cell_prop(table, FT_ANY_ROW, FT_ANY_COLUMN, FT_CPROP_ROW_TYPE, FT_ROW_HEADER);
+        ft_write_ln(table, "Welcome to TIM!");
+
+        banner = ft_to_string(table);
+        ft_destroy_table(table);
+    }
+    return banner;
 }
 
-const char *tim::p::tcl_shell::bye_banner()
+const std::string &tim::p::tcl_shell::bye_banner()
 {
-    return "Bye!\n";
+    static const std::string banner = "Bye!\n";
+    return banner;
 }

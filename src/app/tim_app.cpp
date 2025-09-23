@@ -8,7 +8,10 @@
 #include "tim_trace.h"
 #include "tim_version.h"
 
+#include "fort.h"
+
 #include <cassert>
+#include <locale>
 
 
 // Public
@@ -18,6 +21,15 @@ tim::app::app(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
+
+    std::setbuf(stdout, nullptr);
+    std::setbuf(stderr, nullptr);
+
+#ifdef TIM_OS_LINUX
+    std::locale::global(std::locale("en_US.utf8"));
+#endif
+
+    ft_set_default_border_style(FT_SOLID_ROUND_STYLE);
 
     // mg_log_set(MG_LL_VERBOSE);
     mg_mgr_init(&_d->_mg);

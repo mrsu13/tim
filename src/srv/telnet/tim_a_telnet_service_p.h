@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tim_vt_theme.h"
+
 #include <cassert>
 
 
@@ -26,6 +28,7 @@ struct a_telnet_service
 
     tim::a_telnet_service *const _q;
     telnet_t *_telnet = nullptr;
+    tim::vt_theme _theme = tim::VT_THEME_DARK;
 };
 
 }
