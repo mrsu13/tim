@@ -58,6 +58,29 @@ struct line_edit
         Next
     };
 
+    void history_add(const std::wstring &line);
+
+    void beep();
+
+    void refresh_line_with_completion(const tim::line_edit::completions *c, refresh_flags flags);
+    std::int32_t complete_line(std::int32_t key_pressed);
+
+    void refresh_show_hints(std::wstring &s);
+    void refresh_single_line(refresh_flags flags);
+    void refresh_multi_line(refresh_flags flags);
+    void refresh_line_with_flags(refresh_flags flags);
+    void refresh_line();
+
+    bool edit_insert(std::int32_t c);
+    void edit_move_left();
+    void edit_move_right();
+    void edit_move_home();
+    void edit_move_end();
+    void edit_delete();
+    void edit_backspace();
+    void edit_delete_prev_word();
+    void edit_history_next(history_dir dir);
+
     tim::a_telnet_service *_telnet = nullptr;
 
     tim::line_edit::completer_fn _completer;
@@ -83,29 +106,6 @@ struct line_edit
     bool _ml_mode = false; /* Multi line mode. Default is single line. */
 
     std::size_t _line_count = 0; // We need this just to omit `\r\n` when we first call new_line().
-
-    void history_add(const std::wstring &line);
-
-    void beep();
-
-    void refresh_line_with_completion(const tim::line_edit::completions *c, refresh_flags flags);
-    std::int32_t complete_line(std::int32_t key_pressed);
-
-    void refresh_show_hints(std::wstring &s);
-    void refresh_single_line(refresh_flags flags);
-    void refresh_multi_line(refresh_flags flags);
-    void refresh_line_with_flags(refresh_flags flags);
-    void refresh_line();
-
-    bool edit_insert(std::int32_t c);
-    void edit_move_left();
-    void edit_move_right();
-    void edit_move_home();
-    void edit_move_end();
-    void edit_delete();
-    void edit_backspace();
-    void edit_delete_prev_word();
-    void edit_history_next(history_dir dir);
 };
 
 }

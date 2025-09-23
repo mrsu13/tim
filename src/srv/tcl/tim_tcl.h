@@ -26,7 +26,7 @@ public:
     virtual ~tcl();
 
     bool evaluating() const;
-    bool eval(const std::string &program, std::string *res = nullptr, void *user_data = nullptr);
+    bool eval(const std::string &program, std::string *res = nullptr);
     void break_eval();
 
     const std::string &prompt() const;

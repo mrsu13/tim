@@ -36,7 +36,7 @@ bool tim::tcl::evaluating() const
     return _d->_evaluating;
 }
 
-bool tim::tcl::eval(const std::string &program, std::string *res, void *user_data)
+bool tim::tcl::eval(const std::string &program, std::string *res)
 {
     assert(!_d->_evaluating && "Recursive evaluating is not allowed.");
 
@@ -50,7 +50,7 @@ bool tim::tcl::eval(const std::string &program, std::string *res, void *user_dat
     _d->_evaluating = true;
 
     void *old_data = lil_get_data(_d->_lil);
-    lil_set_data(_d->_lil, user_data);
+    lil_set_data(_d->_lil, this);
 
     _d->_error_msg.clear();
     _d->_error_pos = 0;

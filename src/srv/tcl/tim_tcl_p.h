@@ -31,7 +31,7 @@ struct tcl
     tim::a_telnet_service *_telnet = nullptr;
     lil_t _lil = nullptr;
     bool _evaluating = false;
-    std::string _prompt = "► ";
+    std::string _prompt = "> ";
     std::string _error_msg;
     std::size_t _error_pos = 0;
 };
