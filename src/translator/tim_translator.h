@@ -36,5 +36,4 @@ private:
 
 }
 
-#define TIM_TR(...) \
-           tim::translator::translate({ __VA_ARGS__ }, __FILE__, __LINE__)
+#define TIM_TR(...) tim::translator::translate({ __VA_ARGS__ }, __FILE__, __LINE__)

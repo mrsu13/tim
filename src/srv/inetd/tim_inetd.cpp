@@ -4,6 +4,7 @@
 
 #include "tim_a_inetd_service.h"
 #include "tim_trace.h"
+#include "tim_translator.h"
 
 #include "mongoose.h"
 
@@ -32,7 +33,10 @@ tim::inetd::inetd(mg_mgr *mg, std::uint16_t port, service_factory factory)
         char url[128];
         std::snprintf(url, sizeof(url), "tcp://0.0.0.0:%u", _d->_port);
         if (!(_d->_server = mg_listen(mg, url, tim::p::inetd::handle_events, _d.get())))
-            TIM_TRACE(Fatal, "Failed to create inetd at port %u.", _d->_port);
+            TIM_TRACE(Fatal,
+                      TIM_TR("Failed to instantiate inetd at port %u."_en,
+                             "Ошибка при попытке создать экземпляр inetd на порту %u."_ru),
+                      _d->_port);
     }
 }
 
@@ -72,7 +76,10 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
                 self->_connections.emplace(c, std::move(srv));
             else
             {
-                TIM_TRACE(Error, "Failed to create inetd service at port %u.", self->_port);
+                TIM_TRACE(Error,
+                          TIM_TR("Failed to instantiate inetd service at port %u."_en,
+                                 "Ошибка при попытке запустить сервис inetd на порту %u."_ru),
+                          self->_port);
                 c->is_draining = 1;
             }
             break;
@@ -105,7 +112,10 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
         case MG_EV_ERROR:
             if (!c->is_draining)
             {
-                TIM_TRACE(Error, "Error: %s", (char *)ev_data);
+                TIM_TRACE(Error,
+                          TIM_TR("Network error: %s"_en,
+                                 "Сетевая ошибка: %s"_ru),
+                          (char *)ev_data);
                 connection_map::iterator f = self->_connections.find(c);
                 assert(f != self->_connections.end());
                 self->_connections.erase(f);

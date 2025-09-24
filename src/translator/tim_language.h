@@ -6,7 +6,7 @@ namespace tim
 /**
  * Languages supported by tim::tr.
  *
- * \sa tim::tr TIM_TR()
+ * \see tim::tr TIM_TR()
  */
 enum class language
 {

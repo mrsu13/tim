@@ -7,8 +7,6 @@
 #include <cstdarg>
 
 
-struct mg_connection;
-
 namespace tim
 {
 

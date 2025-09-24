@@ -193,8 +193,8 @@ bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
 }
 
 bool tim::write_to_file(const std::filesystem::path &path,
-                       const std::string &text,
-                       tim::file_write_mode mode)
+                        const std::string &text,
+                        tim::file_write_mode mode)
 {
     const std::filesystem::path epath = tim::complete_path(path, tim::create_path::Base);
 
@@ -202,8 +202,8 @@ bool tim::write_to_file(const std::filesystem::path &path,
 
     if (epath.empty())
         return TIM_TRACE(Error, "%s",
-                        TIM_TR("Empty file path."_en,
-                              "Пустой путь к файлу."_ru));
+                         TIM_TR("Empty file path."_en,
+                                "Пустой путь к файлу."_ru));
 
     std::ofstream os;
     os.open(epath, mode == tim::file_write_mode::Append
@@ -295,25 +295,7 @@ std::size_t tim::process_file(const std::filesystem::path &path,
 
     return bytes_processed;
 }
-/*
-void tim::add_recent_file(const std::filesystem::path &path)
-{
-    if (path.empty())
-        return;
 
-    std::list<std::filesystem::path> files = tim::p::recent_files().value();
-    for (std::list<std::filesystem::path>::iterator i = files.begin(); i != files.end();)
-        if (*i == path)
-            i = files.erase(i);
-        else
-            ++i;
-    files.emplace_front(path);
-    if (files.size() > tim::RECENT_FILES_MAX)
-        files.resize(tim::RECENT_FILES_MAX);
-
-    tim::p::recent_files().set_value(files);
-}
-*/
 bool tim::path_exists(const std::filesystem::path &path)
 {
     std::error_code ec;

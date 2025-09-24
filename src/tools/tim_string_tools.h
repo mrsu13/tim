@@ -210,8 +210,8 @@ std::string tim::to_hex(Unsigned value)
 
 template<class Collection>
 Collection tim::split(const typename Collection::value_type &s,
-                     const typename Collection::value_type::value_type *delimiters,
-                     tim::split_mode behavior)
+                      const typename Collection::value_type::value_type *delimiters,
+                      tim::split_mode behavior)
 {
     Collection collection;
 

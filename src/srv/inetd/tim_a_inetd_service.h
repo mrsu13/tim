@@ -4,8 +4,8 @@
 
 #include <cstddef>
 
-struct mg_connection;
 
+struct mg_connection;
 
 namespace tim
 {

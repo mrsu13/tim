@@ -118,7 +118,7 @@ constexpr tim::flags<Enum>::operator value_type() const
 }
 
 /**
- * Приведение значения флагов к булевскому типу для проверку на ненулёвость.
+ * Приведение значения флагов к булеву типу для проверку на неравенство нулю.
  */
 template<typename Enum>
 constexpr tim::flags<Enum>::operator bool() const
@@ -127,7 +127,7 @@ constexpr tim::flags<Enum>::operator bool() const
 }
 
 /**
- * \return \c true, если флаг \arg f установлен и \c false --- в противном случае.
+ * \return \c true, если флаг \a f установлен и \c false --- в противном случае.
  */
 template<typename Enum>
 constexpr bool tim::flags<Enum>::test(Enum f) const
@@ -142,7 +142,7 @@ void tim::flags<Enum>::set(value_type mask)
 }
 
 /**
- * Установить флаг \arg f в значение \arg on.
+ * Установить флаг \a f в значение \a on.
  */
 template<typename Enum>
 void tim::flags<Enum>::set(Enum f, bool on)
@@ -154,7 +154,7 @@ void tim::flags<Enum>::set(Enum f, bool on)
 }
 
 /**
- * Сбросить флаг \arg f.
+ * Сбросить флаг \a f.
  */
 template<typename Enum>
 void tim::flags<Enum>::clear(Enum f)
@@ -173,7 +173,7 @@ void tim::flags<Enum>::reset()
 
 /**
  * \return Объект с копией флагов из этого объекта, в этой копии также будет
- * установлен флаг \arg f.
+ * установлен флаг \a f.
  */
 template<typename Enum>
 constexpr tim::flags<Enum> tim::flags<Enum>::operator|(Enum f) const
@@ -182,9 +182,9 @@ constexpr tim::flags<Enum> tim::flags<Enum>::operator|(Enum f) const
 }
 
 /**
- * Set flags defined by mask \arg mask.
+ * Set flags defined by mask \a mask.
  *
- * \sa set()
+ * \see set()
  */
 template<typename Enum>
 tim::flags<Enum> &tim::flags<Enum>::operator=(value_type mask)
@@ -194,9 +194,9 @@ tim::flags<Enum> &tim::flags<Enum>::operator=(value_type mask)
 }
 
 /**
- * Set flag \arg f.
+ * Set flag \a f.
  *
- * \sa set()
+ * \see set()
  */
 template<typename Enum>
 tim::flags<Enum> &tim::flags<Enum>::operator|=(Enum f)
@@ -206,7 +206,7 @@ tim::flags<Enum> &tim::flags<Enum>::operator|=(Enum f)
 }
 
 /**
- * Установить флаги, установленные в \arg f.
+ * Установить флаги, установленные в \a f.
  */
 template<typename Enum>
 tim::flags<Enum> &tim::flags<Enum>::operator|=(const tim::flags<Enum> &f)

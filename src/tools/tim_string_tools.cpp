@@ -403,12 +403,12 @@ bool tim::from_string(const std::string &json, nlohmann::json &j)
 
     if (j.is_discarded())
         return TIM_TRACE(Error,
-                        TIM_TR("Failed to parse JSON at position %s-%s."_en,
-                              "Ошибка при разборе JSON в позиции %s-%s."_ru),
-                        j.start_pos() == std::string::npos
+                         TIM_TR("Failed to parse JSON at position %s-%s."_en,
+                                "Ошибка при разборе JSON в позиции %s-%s."_ru),
+                         j.start_pos() == std::string::npos
                             ? tim::na()
                             : std::to_string(j.start_pos()).c_str(),
-                        j.end_pos() == std::string::npos
+                         j.end_pos() == std::string::npos
                             ? tim::na()
                             : std::to_string(j.end_pos()).c_str());
 
