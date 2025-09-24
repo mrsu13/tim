@@ -1,0 +1,26 @@
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{indentfirst}
+
+\pagestyle{empty}
+
+% Pages may be different in height.
+\raggedbottom
+
+%\setlength{\parindent}{0mm}
+
+\sloppy
+
+% Two letters may be put to the next line during hyphenation.
+\righthyphenmin=2
+
+% Spacing between items for enumerate and itemize.
+\let\tmpenumerate\enumerate
+\let\tmpendenumerate\endenumerate
+\renewenvironment{enumerate}{\tmpenumerate\setlength\itemsep{0em}}{\tmpendenumerate}
+
+\let\tmpitemize\itemize
+\let\tmpenditemize\enditemize
+\renewenvironment{itemize}{\tmpitemize\setlength\itemsep{0em}}{\tmpenditemize}
+
+\makeatletter
