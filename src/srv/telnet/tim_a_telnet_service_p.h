@@ -27,8 +27,11 @@ struct a_telnet_service
     static void event_handler(telnet_t *telnet, telnet_event_t *event, void *data);
 
     tim::a_telnet_service *const _q;
-    telnet_t *_telnet = nullptr;
     tim::vt_theme _theme = tim::VT_THEME_DARK;
+    telnet_t *_telnet = nullptr;
+    std::string _term_name;
+    unsigned _cols = 0;
+    unsigned _rows = 0;
 };
 
 }

@@ -6,17 +6,17 @@ const char *tim::severity_title(tim::severity severity)
     switch (severity)
     {
         case tim::severity::Fatal:
-            return "Fatal";
+            return "[F]";
         case tim::severity::Error:
-            return "Error";
+            return "[E]";
         case tim::severity::Warning:
-            return "Warning";
+            return "[W]";
         case tim::severity::Info:
-            return "Info";
+            return "[I]";
         case tim::severity::Debug:
-            return "Debug";
+            return "[D]";
         case tim::severity::Trace:
-            return "Trace";
+            return "[T]";
     }
 
     return nullptr;

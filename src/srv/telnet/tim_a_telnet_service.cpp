@@ -21,12 +21,14 @@ tim::a_telnet_service::~a_telnet_service()
     telnet_free(_d->_telnet);
 }
 
-/**
- * \bug
- */
+std::size_t tim::a_telnet_service::rows() const
+{
+    return std::max(10U, _d->_rows);
+}
+
 std::size_t tim::a_telnet_service::cols() const
 {
-    return 80;
+    return std::max(20U, _d->_cols);
 }
 
 /**
@@ -556,6 +558,30 @@ void tim::p::a_telnet_service::event_handler(telnet_t *telnet, telnet_event_t *e
         case TELNET_EV_SEND:
             mg_send(self->_q->connection(), event->data.buffer, event->data.size);
             break;
+
+        case TELNET_EV_SUBNEGOTIATION:
+        {
+            switch (event->sub.telopt)
+            {
+                case TELNET_TELOPT_NAWS:
+                    if (event->sub.size >= 4)
+                    {
+                        self->_cols = ((std::uint8_t)event->sub.buffer[0] << 8) | (std::uint8_t)event->sub.buffer[1];
+                        self->_rows = ((std::uint8_t)event->sub.buffer[2] << 8) | (std::uint8_t)event->sub.buffer[3];
+                        TIM_TRACE(Debug, "Terminal size: %ux%u.", self->_cols, self->_rows);
+                    }
+                    break;
+
+                case TELNET_TELOPT_TTYPE:
+                    self->_term_name = std::string(event->sub.buffer, event->sub.size);
+                    TIM_TRACE(Debug, "Terminal name: '%s'.", self->_term_name.c_str());
+                    break;
+
+                default:
+                    break;
+            }
+            break;
+        }
 
         case TELNET_EV_ERROR:
             TIM_TRACE(Error,

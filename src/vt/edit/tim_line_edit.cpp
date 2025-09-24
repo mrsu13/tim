@@ -601,6 +601,8 @@ void tim::p::line_edit::refresh_show_hints(std::wstring &s)
     if (!_hinter)
         return;
 
+    _cols = _telnet->cols();
+
     if (_plen + _line.size() < _cols)
     {
         int color = -1, bold = 0;
@@ -630,6 +632,8 @@ void tim::p::line_edit::refresh_show_hints(std::wstring &s)
   */
 void tim::p::line_edit::refresh_single_line(refresh_flags flags)
 {
+    _cols = _telnet->cols();
+
     const wchar_t *buf = _line.c_str();
     std::size_t len = _line.size();
     std::size_t pos = _pos;
@@ -684,6 +688,8 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
  */
 void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
 {
+    _cols = _telnet->cols();
+
     int rows = static_cast<int>((_plen + _line.size() + _cols - 1) / _cols); /* Rows used by current buf. */
     int rpos = static_cast<int>((_plen + _old_pos + _cols) / _cols); /* Cursor relative row. */
     int rpos2; /* rpos after refresh. */
@@ -786,6 +792,8 @@ void tim::p::line_edit::refresh_line()
  */
 bool tim::p::line_edit::edit_insert(std::int32_t c)
 {
+    _cols = _telnet->cols();
+
     _line.insert(_pos, 1, c);
     ++_pos;
     if (_pos == _line.size()

@@ -30,7 +30,7 @@ void tim::a_inetd_service::close()
 bool tim::a_inetd_service::read_from_connection()
 {
     struct mg_iobuf *r = &(_d->_c->recv);
-    TIM_TRACE(Debug, "'%s' service got data: '%.*s'", name().c_str(), (int)r->len, r->buf);
+    // TIM_TRACE(Debug, "'%s' service got data: '%.*s'", name().c_str(), (int)r->len, r->buf);
     std::size_t bytes_read = 0;
     if (!ready_read((const char *)r->buf, r->len, &bytes_read))
         return false;

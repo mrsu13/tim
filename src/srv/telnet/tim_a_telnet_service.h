@@ -24,6 +24,7 @@ public:
 
     ~a_telnet_service();
 
+    std::size_t rows() const;
     std::size_t cols() const;
     void clear();
 
