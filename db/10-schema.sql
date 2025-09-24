@@ -26,12 +26,12 @@ CREATE TABLE user
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
 
-    pkey VARCHAR UNIQUE NOT NULL, -- Public key.
+    pub_key VARCHAR UNIQUE NOT NULL, -- Public key.
     nick VARCHAR UNIQUE,
     icon VARCHAR,
     motto VARCHAR
 );
-CREATE UNIQUE INDEX user_pkey ON user(pkey);
+CREATE UNIQUE INDEX user_pub_key ON user(pub_key);
 CREATE UNIQUE INDEX user_nick ON user(nick);
 
 

@@ -68,7 +68,7 @@ bool tim::tcl_shell::process_data(const char *data, std::size_t size)
                             write(hr, sizeof(hr) - 1);
                     }
                     {
-                        static const char arrow[] = "┘";
+                        static const char arrow[] = "^";
                         write(arrow, sizeof(arrow) - 1);
                     }
                     reset_colors();
