@@ -1,6 +1,6 @@
 #include "tim_file_tools.h"
 
-#include "tim_app.h"
+#include "tim_application.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
@@ -17,14 +17,14 @@ std::filesystem::path tim::standard_location(tim::filesystem_location location)
         case tim::filesystem_location::AppConfig:
             return std::filesystem::path(std::getenv("HOME"))
                             / ".config"
-                            / tim::to_lower(tim::app::org_name())
-                            / tim::to_lower(tim::app::name());
+                            / tim::to_lower(tim::application::org_name())
+                            / tim::to_lower(tim::application::name());
         case tim::filesystem_location::AppData:
         case tim::filesystem_location::AppLocalData:
             return std::filesystem::path(std::getenv("HOME"))
                             / ".local/share"
-                            / tim::to_lower(tim::app::org_name())
-                            / tim::to_lower(tim::app::name());
+                            / tim::to_lower(tim::application::org_name())
+                            / tim::to_lower(tim::application::name());
         case tim::filesystem_location::Current:
             return std::filesystem::current_path();
         case tim::filesystem_location::Home:
@@ -56,12 +56,12 @@ std::filesystem::path tim::standard_location(tim::filesystem_location location)
         case tim::filesystem_location::AppConfig:
         case tim::filesystem_location::AppData:
             return std::filesystem::path(std::getenv("APPDATA"))
-                                / tim::to_lower(tim::app::org_name())
-                                / tim::to_lower(tim::app::name());
+                                / tim::to_lower(tim::application::org_name())
+                                / tim::to_lower(tim::application::name());
         case tim::filesystem_location::AppLocalData:
             return std::filesystem::path(std::getenv("LOCALAPPDATA"))
-                                / tim::to_lower(tim::app::org_name())
-                                / tim::to_lower(tim::app::name());
+                                / tim::to_lower(tim::application::org_name())
+                                / tim::to_lower(tim::application::name());
         case tim::filesystem_location::Current:
             return std::filesystem::current_path();
         case tim::filesystem_location::Home:

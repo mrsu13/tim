@@ -10,6 +10,8 @@
 #include <cassert>
 
 
+// Public
+
 tim::inetd::~inetd() = default;
 
 
@@ -88,10 +90,15 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
 
         case MG_EV_CLOSE:
         {
-            TIM_TRACE(Debug, "inetd connection at port %u disconnected.", self->_port);
-            connection_map::iterator f = self->_connections.find(c);
-            assert(f != self->_connections.end());
-            self->_connections.erase(f);
+            if (c != self->_server)
+            {
+                TIM_TRACE(Debug, "inetd connection at port %u closed.", self->_port);
+                connection_map::iterator f = self->_connections.find(c);
+                assert(f != self->_connections.end());
+                self->_connections.erase(f);
+            }
+            else
+                TIM_TRACE(Debug, "inetd server at port %u closed.", self->_port);
             break;
         }
 

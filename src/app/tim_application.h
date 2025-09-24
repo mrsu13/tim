@@ -12,17 +12,17 @@ namespace tim
 namespace p
 {
 
-struct app;
+struct application;
 
 }
 
-class app
+class application
 {
 
 public:
 
-    app(int argc, char **argv);
-    ~app();
+    application(int argc, char **argv);
+    ~application();
 
     static const std::string &name();
     static void set_name(const std::string &name);
@@ -37,7 +37,9 @@ public:
 
 private:
 
-    std::unique_ptr<tim::p::app> _d;
+    std::unique_ptr<tim::p::application> _d;
 };
+
+tim::application *app();
 
 }
