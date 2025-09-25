@@ -4,6 +4,7 @@
 #include "tim_translator.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 
 
@@ -68,6 +69,21 @@ tim::color::color(const char *html_color)
               html_color);
 }
 
+tim::color tim::color::black()
+{
+    return tim::color{ 0, 0, 0, 0xFF };
+}
+
+tim::color tim::color::white()
+{
+    return tim::color{ 0xFF, 0xFF, 0xFF, 0xFF };
+}
+
+tim::color tim::color::transparent()
+{
+    return tim::color{};
+}
+
 bool tim::color::empty() const
 {
     return (!r && !g && !b) || a == 0;
@@ -79,6 +95,18 @@ void tim::color::clear()
     g = 0;
     b = 0;
     a = 0;
+}
+
+tim::color tim::color::text_color() const
+{
+    const float luminosity = std::sqrt(
+        r * r * 0.299f // Red
+            + g * g * 0.587f // Green
+            + b * b * 0.114f); // Blue
+
+    return luminosity > (186.0f / 255.0f)
+                ? tim::color::black()
+                : tim::color::white();
 }
 
 bool operator==(const tim::color &a, const tim::color &b)

@@ -48,6 +48,11 @@ public:
     int printf(const char *format, ... )
                __attribute__ ((format(printf, 2, 3)));
 
+    int cprintf(const tim::color &text_color,
+                const tim::color &bg_color,
+                const char *format, ... )
+                __attribute__ ((format(printf, 4, 5)));
+
     virtual bool process_data(const char *data, std::size_t size) = 0;
 
 protected:

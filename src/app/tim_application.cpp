@@ -4,7 +4,7 @@
 
 #include "tim_config.h"
 #include "tim_inetd.h"
-#include "tim_tcl_shell.h"
+#include "tim_prompt_service.h"
 #include "tim_trace.h"
 #include "tim_version.h"
 
@@ -56,7 +56,7 @@ tim::application::application(int argc, char **argv)
     // mg_log_set(MG_LL_VERBOSE);
     mg_mgr_init(&_d->_mg);
 
-    _d->_tcl_shell_inetd = tim::inetd::start<tim::tcl_shell>(&_d->_mg, tim::CLIENT_PORT);
+    _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::CLIENT_PORT);
 }
 
 tim::application::~application()

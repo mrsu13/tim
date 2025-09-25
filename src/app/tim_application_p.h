@@ -46,7 +46,7 @@ struct application
     bool _quit = false;
 
     struct mg_mgr _mg;
-    std::unique_ptr<tim::inetd> _tcl_shell_inetd;
+    std::unique_ptr<tim::inetd> _prompt_inetd;
 };
 
 }

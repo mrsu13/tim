@@ -25,6 +25,8 @@ public:
     explicit tcl(tim::a_telnet_service *telnet);
     virtual ~tcl();
 
+    tim::a_telnet_service *telnet() const;
+
     bool evaluating() const;
     bool eval(const std::string &program, std::string *res = nullptr);
     void break_eval();

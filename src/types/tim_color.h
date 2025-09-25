@@ -17,8 +17,14 @@ struct color
     color(std::uint8_t _r, std::uint8_t _g, std::uint8_t _b, std::uint8_t _a = 0xFF);
     color(const char *html_color);
 
+    static tim::color black();
+    static tim::color white();
+    static tim::color transparent();
+
     bool empty() const;
     void clear();
+
+    tim::color text_color() const;
 };
 
 }

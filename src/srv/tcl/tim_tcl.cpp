@@ -6,6 +6,10 @@
 #include "tim_string_tools.h"
 #include "tim_translator.h"
 
+// Commands
+#include "tim_tcl_cmd_general.h"
+#include "tim_tcl_cmd_term.h"
+
 #include "lil.hpp"
 #include "utf8/utf8.h"
 
@@ -24,11 +28,19 @@ tim::tcl::tcl(tim::a_telnet_service *telnet)
 
     lil_callback(_d->_lil, LIL_CALLBACK_WRITE, (lil_callback_proc_t)tim::p::tcl::write);
     lil_callback(_d->_lil, LIL_CALLBACK_DISPATCH, (lil_callback_proc_t)tim::p::tcl::dispatch);
+
+    tim::tcl_add_general(_d->_lil);
+    tim::tcl_add_term(_d->_lil);
 }
 
 tim::tcl::~tcl()
 {
     lil_free(_d->_lil);
+}
+
+tim::a_telnet_service *tim::tcl::telnet() const
+{
+    return _d->_telnet;
 }
 
 bool tim::tcl::evaluating() const
@@ -50,7 +62,7 @@ bool tim::tcl::eval(const std::string &program, std::string *res)
     _d->_evaluating = true;
 
     void *old_data = lil_get_data(_d->_lil);
-    lil_set_data(_d->_lil, _d.get());
+    lil_set_data(_d->_lil, this);
 
     _d->_error_msg.clear();
     _d->_error_pos = 0;
@@ -135,10 +147,10 @@ void tim::p::tcl::write(lil_t lil, const char *msg)
             || !*msg)
         return;
 
-    tim::p::tcl *self = (tim::p::tcl *)lil_get_data(lil);
+    tim::tcl *self = (tim::tcl *)lil_get_data(lil);
     assert(self);
 
-    self->_telnet->write_str(msg);
+    self->telnet()->write_str(msg);
 }
 
 void tim::p::tcl::dispatch(lil_t lil)

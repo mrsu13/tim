@@ -23,6 +23,10 @@ public:
 
     bool process_data(const char *data, std::size_t size) override;
 
+protected:
+
+    virtual bool get_command(const std::string &line, std::string &command);
+
 private:
 
     std::unique_ptr<tim::p::tcl_shell> _d;

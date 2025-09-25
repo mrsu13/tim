@@ -498,6 +498,27 @@ int tim::a_telnet_service::printf(const char *format, ... )
     return n;
 }
 
+int tim::a_telnet_service::cprintf(const tim::color &text_color,
+                                   const tim::color &bg_color,
+                                   const char *format, ... )
+{
+    assert(format && *format);
+
+    set_color(text_color);
+    set_bg_color(bg_color);
+
+    va_list args;
+    va_start(args, format);
+    const int n = tim::a_telnet_service::vprintf(format, args);
+    va_end(args);
+
+    if (!text_color.empty()
+            || !bg_color.empty())
+        reset_colors();
+
+    return n;
+}
+
 
 // Protected
 
