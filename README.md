@@ -1,1 +1,1 @@
-# tim, TELNET Instant Messenger
+# tim, the Terminal Instant Messenger

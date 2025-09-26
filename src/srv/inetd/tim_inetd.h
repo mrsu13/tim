@@ -53,9 +53,10 @@ std::unique_ptr<tim::inetd> tim::inetd::start(mg_mgr *mg, std::uint16_t port)
     static_assert(std::is_base_of_v<tim::a_inetd_service, S>,
                   "S must be a descendant of tim::a_inetd_service class.");
 
-    return std::unique_ptr<tim::inetd>(new tim::inetd(mg, port,
-                                                      [](mg_connection *c)
-                                                      {
-                                                            return std::make_unique<S>(c);
-                                                      }));
+    return std::unique_ptr<tim::inetd>(
+                new tim::inetd(mg, port,
+                               [](mg_connection *c)
+                               {
+                                    return std::make_unique<S>(c);
+                               }));
 }
