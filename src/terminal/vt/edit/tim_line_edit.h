@@ -10,7 +10,7 @@
 namespace tim
 {
 
-class a_terminal;
+class vt;
 
 namespace p
 {
@@ -24,8 +24,10 @@ class line_edit
 
 public:
 
-    explicit line_edit(tim::a_terminal *term);
+    explicit line_edit(tim::vt *term);
     virtual ~line_edit();
+
+    tim::vt *terminal() const;
 
     std::string prompt() const;
     void set_prompt(const std::string &prompt);

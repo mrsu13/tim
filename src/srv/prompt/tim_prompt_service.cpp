@@ -38,7 +38,7 @@ bool tim::prompt_service::get_command(const std::string &line, std::string &comm
     if (line.size() < 2
             || line[0] != tim::COMMAND_PREFIX)
     {
-        _d->cloud(line == "lorem ipsum"
+        _d->cloud(line == "lorem"
                     ? LOREM_IPSUM
                     : line);
         return false;

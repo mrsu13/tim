@@ -81,7 +81,7 @@ struct line_edit
     void edit_delete_prev_word();
     void edit_history_next(history_dir dir);
 
-    tim::a_terminal *_terminal = nullptr;
+    tim::vt *_terminal = nullptr;
 
     tim::line_edit::completer_fn _completer;
     tim::line_edit::hinter_fn _hinter;

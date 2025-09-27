@@ -6,18 +6,18 @@
 namespace tim
 {
 
-class tcl;
+class a_script_engine;
 class line_edit;
 
 namespace p
 {
 
-struct tcl_shell
+struct vt_shell
 {
     static const std::string &welcome_banner();
     static const std::string &bye_banner();
 
-    std::unique_ptr<tim::tcl> _tcl;
+    tim::a_script_engine *_engine = nullptr;
     std::unique_ptr<tim::line_edit> _ledit;
     std::filesystem::path _history_path;
 };

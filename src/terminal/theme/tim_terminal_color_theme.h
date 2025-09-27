@@ -8,7 +8,7 @@
 namespace tim
 {
     
-enum class vt_color_index
+enum class terminal_color_index
 {
     Text, ///< Regular text.
     EmText, ///< Emphasized text.
@@ -23,6 +23,6 @@ enum class vt_color_index
     Count ///< Number of colors.
 };
 
-using vt_color_theme = std::unordered_map<tim::vt_color_index, tim::color>;
+using terminal_color_theme = std::unordered_map<tim::terminal_color_index, tim::color>;
 
 }

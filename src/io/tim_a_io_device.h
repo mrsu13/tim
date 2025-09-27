@@ -22,21 +22,20 @@ class a_io_device
 
 public:
 
+    using data_handler = std::function<std::size_t (const char *data, std::size_t size)>;
+
     virtual ~a_io_device();
 
     mg_connection *connection() const;
     void close();
 
-    bool read_from_connection();
-    bool write(const char *data, std::size_t size, std::size_t *bytes_written = nullptr);
+    void read();
+    bool write(const char *data, std::size_t size);
     bool write_str(const std::string &s);
 
 protected:
 
-    a_io_device(mg_connection *c);
-
-    virtual bool ready_read(const char *data, std::size_t size, std::size_t *bytes_read = nullptr) = 0;
-    virtual bool ready_write(const char *data, std::size_t size, std::size_t *bytes_written = nullptr) = 0;
+    a_io_device(mg_connection *c, data_handler dh);
 
 private:
 

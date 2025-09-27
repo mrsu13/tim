@@ -2,9 +2,10 @@
 
 #include "tim_line_edit_p.h"
 
-#include "tim_a_terminal.h"
+#include "tim_a_io_device.h"
 #include "tim_file_tools.h"
 #include "tim_string_tools.h"
+#include "tim_vt.h"
 
 #include "utf8/utf8.h"
 
@@ -28,7 +29,7 @@
 /**
  * Constructor.
  */
-tim::line_edit::line_edit(tim::a_terminal *term)
+tim::line_edit::line_edit(tim::vt *term)
     : _d(new tim::p::line_edit())
 {
     assert(term);
@@ -38,6 +39,11 @@ tim::line_edit::line_edit(tim::a_terminal *term)
 }
 
 tim::line_edit::~line_edit() = default;
+
+tim::vt *tim::line_edit::terminal() const
+{
+    return _d->_terminal;
+}
 
 std::string tim::line_edit::prompt() const
 {
@@ -50,7 +56,7 @@ std::string tim::line_edit::prompt() const
 void tim::line_edit::set_prompt(const std::string &prompt)
 {
     _d->_prompt = tim::to_wstring(prompt);
-    _d->_plen = tim::a_terminal::strlen(prompt);
+    _d->_plen = tim::vt::strlen(prompt);
 }
 
 bool tim::line_edit::empty() const
@@ -104,8 +110,8 @@ bool tim::line_edit::new_line()
 
     const std::string p = prompt();
     return (!_d->_line_count++
-                        || _d->_terminal->write("\n", 1))
-                    && _d->_terminal->write(p.c_str(), p.size());
+                        || _d->_terminal->io()->write("\n", 1))
+                    && _d->_terminal->io()->write(p.c_str(), p.size());
 }
 
 /**
@@ -164,7 +170,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             return status::Finished;
 
         case (char)tim::key::Ctrl_C:
-            _d->_terminal->write_str("^C");
+            _d->_terminal->io()->write_str("^C");
             clear();
             return status::Finished;
 
@@ -673,7 +679,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     }
 
     const std::string s = tim::from_wstring(ws);
-    if (!_terminal->write(s.c_str(), s.size()))
+    if (!_terminal->io()->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -762,7 +768,7 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
     _old_pos = _pos;
 
     const std::string s = tim::from_wstring(ws);
-    if (!_terminal->write(s.c_str(), s.size()))
+    if (!_terminal->io()->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -807,7 +813,7 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
                             : c;
         std::string s(utf8codepointsize(d), 0);
         utf8catcodepoint((utf8_int8_t *)(&s[0]), d, s.size());
-        if (!_terminal->write(s.c_str(), s.size()))
+        if (!_terminal->io()->write(s.c_str(), s.size()))
             return false;
     }
     else
