@@ -3,6 +3,7 @@
 #include "tim_tcl_shell_p.h"
 
 #include "tim_config.h"
+#include "tim_file_tools.h"
 #include "tim_line_edit.h"
 #include "tim_tcl.h"
 #include "tim_trace.h"
@@ -19,9 +20,15 @@ tim::tcl_shell::tcl_shell(mg_connection *c)
     : tim::a_telnet_service("tcl_shell", c)
     , _d(new tim::p::tcl_shell())
 {
+    _d->_history_path
+        = tim::complete_path(tim::standard_location(tim::filesystem_location::AppData)
+                                / tim::HISTORY_FNAME,
+                             tim::create_path::Base);
+
     _d->_tcl.reset(new tim::tcl(this));
     _d->_ledit.reset(new tim::line_edit(this));
     _d->_ledit->set_prompt(colorized(_d->_tcl->prompt(), theme().colors.at(tim::vt_color_index::Prompt)));
+    _d->_ledit->history_load(_d->_history_path);
 
     write_str(tim::p::tcl_shell::welcome_banner());
 
