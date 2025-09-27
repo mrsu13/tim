@@ -24,6 +24,8 @@ public:
     vt_shell(tim::vt *term, tim::a_script_engine *engine);
     ~vt_shell();
 
+    tim::vt *terminal() const;
+
     bool eval(const char *data, std::size_t size);
 
 private:

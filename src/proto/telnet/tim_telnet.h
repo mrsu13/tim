@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tim_signal.h"
+
 #include <memory>
 
 
@@ -20,20 +22,16 @@ class telnet
 
 public:
 
-    using input_handler = std::function<bool (const char *data, std::size_t size)>;
+    tim::signal<const char * /* data */, std::size_t /* size */> ready_read;
 
-    telnet(tim::a_io_device *io, input_handler ih);
+    telnet(tim::a_io_device *io);
     ~telnet();
 
     const std::string &terminal_name() const;
     std::size_t rows() const;
     std::size_t cols() const;
 
-    bool write(const char *data, std::size_t size) override;
-
-protected:
-
-    std::size_t ready_read(const char *data, std::size_t size) override;
+    bool write(const char *data, std::size_t size);
 
 private:
 

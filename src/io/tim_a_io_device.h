@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tim_signal.h"
+
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -22,20 +24,20 @@ class a_io_device
 
 public:
 
-    using data_handler = std::function<std::size_t (const char *data, std::size_t size)>;
+    tim::signal<> ready_read;
 
     virtual ~a_io_device();
 
     mg_connection *connection() const;
     void close();
 
-    void read();
+    std::size_t read(const char **data);
     bool write(const char *data, std::size_t size);
     bool write_str(const std::string &s);
 
 protected:
 
-    a_io_device(mg_connection *c, data_handler dh);
+    a_io_device(mg_connection *c);
 
 private:
 

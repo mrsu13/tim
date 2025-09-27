@@ -42,6 +42,11 @@ tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
 
 tim::vt_shell::~vt_shell() = default;
 
+tim::vt *tim::vt_shell::terminal() const
+{
+    return _d->_ledit->terminal();
+}
+
 bool tim::vt_shell::eval(const char *data, std::size_t size)
 {
     assert(data);

@@ -27,12 +27,15 @@ void tim::a_io_device::close()
     _d->_c->is_draining = 1;
 }
 
-void tim::a_io_device::read()
+std::size_t tim::a_io_device::read(const char **data)
 {
-    struct mg_iobuf *r = &(_d->_c->recv);
-    // TIM_TRACE(Debug, "'%s' service got data: '%.*s'", name().c_str(), (int)r->len, r->buf);
+    assert(data);
 
-    r->len -= _d->_data_handler((const char *)r->buf, r->len); // Tell Mongoose we've consumed data.
+    struct mg_iobuf *r = &(_d->_c->recv);
+    *data = (const char *)r->buf;
+    const std::size_t size = r->len;
+    r->len = 0; // Tell Mongoose we've consumed data.
+    return size;
 }
 
 bool tim::a_io_device::write(const char *data, std::size_t size)
@@ -54,12 +57,11 @@ bool tim::a_io_device::write_str(const std::string &s)
 
 // Protected
 
-tim::a_io_device::a_io_device(mg_connection *c, data_handler dh)
-    : _d(new tim::p::a_io_device())
+tim::a_io_device::a_io_device(mg_connection *c)
+    : ready_read()
+    , _d(new tim::p::a_io_device())
 {
     assert(c);
-    assert(dh);
 
     _d->_c = c;
-    _d->_data_handler = dh;
 }

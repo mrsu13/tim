@@ -2,6 +2,7 @@
 
 #include "tim_telnet_p.h"
 
+#include "tim_a_io_device.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
@@ -12,13 +13,13 @@
 
 // Public
 
-tim::telnet::telnet(mg_connection *c, input_handler ih)
-    : tim::a_io_device(c)
+tim::telnet::telnet(tim::a_io_device *io)
+    : ready_read()
     , _d(new tim::p::telnet(this))
 {
-    assert(ih);
+    assert(io);
 
-    _d->_input_handler = ih;
+    _d->_io = io;
     _d->_telnet = telnet_init(nullptr,
                               &tim::p::telnet::event_handler,
                               TELNET_FLAG_NVT_EOL, // Receive data with translation of the TELNET NVT CR NUL
@@ -26,6 +27,8 @@ tim::telnet::telnet(mg_connection *c, input_handler ih)
                                                    // return (\r) and C newline (\n), respectively.
                               _d.get());
     assert(_d->_telnet);
+
+    _d->_io->ready_read.connect(std::bind(&tim::p::telnet::on_ready_read, _d.get()));
 
     telnet_negotiate(_d->_telnet, TELNET_DO, TELNET_TELOPT_NAWS);
     telnet_negotiate(_d->_telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
@@ -62,16 +65,14 @@ bool tim::telnet::write(const char *data, std::size_t size)
 }
 
 
-// Protected
-
-std::size_t tim::telnet::ready_read(const char *data, std::size_t size)
-{
-    telnet_recv(_d->_telnet, data, size);
-    return size;
-}
-
-
 // Private
+
+void tim::p::telnet::on_ready_read()
+{
+    const char *data;
+    const std::size_t size = _io->read(&data);
+    telnet_recv(_telnet, data, size);
+}
 
 void tim::p::telnet::event_handler(telnet_t *telnet, telnet_event_t *event, void *data)
 {
@@ -83,12 +84,11 @@ void tim::p::telnet::event_handler(telnet_t *telnet, telnet_event_t *event, void
     switch (event->type)
     {
         case TELNET_EV_DATA:
-            if (!self->_input_handler(event->data.buffer, event->data.size))
-                self->_q->close();
+            self->_q->ready_read(event->data.buffer, event->data.size);
             break;
 
         case TELNET_EV_SEND:
-            self->_q->tim::a_io_device::write(event->data.buffer, event->data.size);
+            self->_io->write(event->data.buffer, event->data.size);
             break;
 
         case TELNET_EV_SUBNEGOTIATION:
