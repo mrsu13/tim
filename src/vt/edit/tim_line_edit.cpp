@@ -2,7 +2,7 @@
 
 #include "tim_line_edit_p.h"
 
-#include "tim_a_telnet_service.h"
+#include "tim_a_terminal.h"
 #include "tim_file_tools.h"
 #include "tim_string_tools.h"
 
@@ -28,13 +28,13 @@
 /**
  * Constructor.
  */
-tim::line_edit::line_edit(tim::a_telnet_service *telnet)
+tim::line_edit::line_edit(tim::a_terminal *term)
     : _d(new tim::p::line_edit())
 {
-    assert(telnet);
+    assert(term);
 
-    _d->_telnet = telnet;
-    _d->_cols = _d->_telnet->cols();
+    _d->_terminal = term;
+    _d->_cols = _d->_terminal->cols();
 }
 
 tim::line_edit::~line_edit() = default;
@@ -50,7 +50,7 @@ std::string tim::line_edit::prompt() const
 void tim::line_edit::set_prompt(const std::string &prompt)
 {
     _d->_prompt = tim::to_wstring(prompt);
-    _d->_plen = tim::a_telnet_service::strlen(prompt);
+    _d->_plen = tim::a_terminal::strlen(prompt);
 }
 
 bool tim::line_edit::empty() const
@@ -92,7 +92,7 @@ bool tim::line_edit::new_line()
 {
     _d->_in_completion = false;
     _d->_old_pos = _d->_pos = 0;
-    _d->_cols = _d->_telnet->cols();
+    _d->_cols = _d->_terminal->cols();
     _d->_old_rows = 0;
     _d->_history_idx = 0;
 
@@ -104,8 +104,8 @@ bool tim::line_edit::new_line()
 
     const std::string p = prompt();
     return (!_d->_line_count++
-                        || _d->_telnet->write("\n", 1))
-                    && _d->_telnet->write(p.c_str(), p.size());
+                        || _d->_terminal->write("\n", 1))
+                    && _d->_terminal->write(p.c_str(), p.size());
 }
 
 /**
@@ -164,7 +164,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             return status::Finished;
 
         case (char)tim::key::Ctrl_C:
-            _d->_telnet->write_str("^C");
+            _d->_terminal->write_str("^C");
             clear();
             return status::Finished;
 
@@ -306,7 +306,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             break;
 
         case (char)tim::key::Ctrl_L: /* Clear screen. */
-            _d->_telnet->clear();
+            _d->_terminal->clear();
             _d->refresh_line();
             break;
 
@@ -601,7 +601,7 @@ void tim::p::line_edit::refresh_show_hints(std::wstring &s)
     if (!_hinter)
         return;
 
-    _cols = _telnet->cols();
+    _cols = _terminal->cols();
 
     if (_plen + _line.size() < _cols)
     {
@@ -632,7 +632,7 @@ void tim::p::line_edit::refresh_show_hints(std::wstring &s)
   */
 void tim::p::line_edit::refresh_single_line(refresh_flags flags)
 {
-    _cols = _telnet->cols();
+    _cols = _terminal->cols();
 
     const wchar_t *buf = _line.c_str();
     std::size_t len = _line.size();
@@ -673,7 +673,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     }
 
     const std::string s = tim::from_wstring(ws);
-    if (!_telnet->write(s.c_str(), s.size()))
+    if (!_terminal->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -688,7 +688,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
  */
 void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
 {
-    _cols = _telnet->cols();
+    _cols = _terminal->cols();
 
     int rows = static_cast<int>((_plen + _line.size() + _cols - 1) / _cols); /* Rows used by current buf. */
     int rpos = static_cast<int>((_plen + _old_pos + _cols) / _cols); /* Cursor relative row. */
@@ -762,7 +762,7 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
     _old_pos = _pos;
 
     const std::string s = tim::from_wstring(ws);
-    if (!_telnet->write(s.c_str(), s.size()))
+    if (!_terminal->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -792,7 +792,7 @@ void tim::p::line_edit::refresh_line()
  */
 bool tim::p::line_edit::edit_insert(std::int32_t c)
 {
-    _cols = _telnet->cols();
+    _cols = _terminal->cols();
 
     _line.insert(_pos, 1, c);
     ++_pos;
@@ -807,7 +807,7 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
                             : c;
         std::string s(utf8codepointsize(d), 0);
         utf8catcodepoint((utf8_int8_t *)(&s[0]), d, s.size());
-        if (!_telnet->write(s.c_str(), s.size()))
+        if (!_terminal->write(s.c_str(), s.size()))
             return false;
     }
     else

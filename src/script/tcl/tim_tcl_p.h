@@ -9,7 +9,6 @@ typedef struct _lil_t *lil_t;
 namespace tim
 {
 
-class a_telnet_service;
 class tcl;
 
 namespace p
@@ -28,7 +27,6 @@ struct tcl
 
     tim::tcl *const _q;
 
-    tim::a_telnet_service *_telnet = nullptr;
     lil_t _lil = nullptr;
     bool _evaluating = false;
     std::string _prompt = "► ";

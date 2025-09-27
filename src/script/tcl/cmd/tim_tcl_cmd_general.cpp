@@ -11,6 +11,8 @@
 
 // Static
 
+#ifdef TIM_DEBUG
+
 static lil_value_t tim_tcl_cmd_quit(lil_t lil, size_t argc, lil_value_t *argv)
 {
     (void) argv;
@@ -28,6 +30,8 @@ static lil_value_t tim_tcl_cmd_quit(lil_t lil, size_t argc, lil_value_t *argv)
     return nullptr;
 }
 
+#endif
+
 
 // Public
 
@@ -35,5 +39,7 @@ void tim::tcl_add_general(lil_t lil)
 {
     assert(lil);
 
+#ifdef TIM_DEBUG
     TIM_TCL_REGISTER(lil, quit);
+#endif
 }

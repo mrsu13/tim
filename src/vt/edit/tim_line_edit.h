@@ -10,7 +10,7 @@
 namespace tim
 {
 
-class a_telnet_service;
+class a_terminal;
 
 namespace p
 {
@@ -24,7 +24,7 @@ class line_edit
 
 public:
 
-    explicit line_edit(tim::a_telnet_service *telnet);
+    explicit line_edit(tim::a_terminal *term);
     virtual ~line_edit();
 
     std::string prompt() const;

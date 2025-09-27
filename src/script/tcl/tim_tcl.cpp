@@ -2,7 +2,7 @@
 
 #include "tim_tcl_p.h"
 
-#include "tim_a_telnet_service.h"
+#include "tim_a_terminal.h"
 #include "tim_string_tools.h"
 #include "tim_translator.h"
 
@@ -18,12 +18,10 @@
 
 // Public
 
-tim::tcl::tcl(tim::a_telnet_service *telnet)
-    : _d(new tim::p::tcl(this))
+tim::tcl::tcl(tim::a_terminal *term)
+    : tim::a_script_engine("Tcl", term)
+    , _d(new tim::p::tcl(this))
 {
-    assert(telnet);
-
-    _d->_telnet = telnet;
     _d->_lil = lil_new();
 
     lil_callback(_d->_lil, LIL_CALLBACK_WRITE, (lil_callback_proc_t)tim::p::tcl::write);
@@ -36,11 +34,6 @@ tim::tcl::tcl(tim::a_telnet_service *telnet)
 tim::tcl::~tcl()
 {
     lil_free(_d->_lil);
-}
-
-tim::a_telnet_service *tim::tcl::telnet() const
-{
-    return _d->_telnet;
 }
 
 bool tim::tcl::evaluating() const
@@ -150,7 +143,7 @@ void tim::p::tcl::write(lil_t lil, const char *msg)
     tim::tcl *self = (tim::tcl *)lil_get_data(lil);
     assert(self);
 
-    self->telnet()->write_str(msg);
+    self->terminal()->write_str(msg);
 }
 
 void tim::p::tcl::dispatch(lil_t lil)
