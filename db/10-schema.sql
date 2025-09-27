@@ -40,7 +40,8 @@ DROP TABLE IF EXISTS subscription;
 CREATE TABLE subscription
 (
     publisher_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
-    subscriber_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE CHECK(subscriber_id != publisher_id)
+    subscriber_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE CHECK(subscriber_id != publisher_id),
+    UNIQUE(publisher_id, subscriber_id)
 );
 CREATE INDEX subscription_publisher_id ON subscription(publisher_id);
 CREATE INDEX subscription_subscriber_id ON subscription(subscriber_id);
@@ -51,29 +52,15 @@ DROP TABLE IF EXISTS post;
 CREATE TABLE post
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
-    user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    user_id VARCHAR REFERENCES user(id) ON DELETE CASCADE,
+    post_id VARCHAR REFERENCES post(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
 
-    text VARCHAR
+    text VARCHAR NOT NULL
 );
 CREATE INDEX post_user_id ON post(user_id);
 CREATE INDEX post_timestamp ON post(timestamp);
-
-
--- Комментарии к сообщению
-DROP TABLE IF EXISTS comment;
-CREATE TABLE comment
-(
-    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
-    post_id VARCHAR NOT NULL REFERENCES post(id) ON DELETE CASCADE,
-
-    timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
-
-    text VARCHAR
-);
-CREATE INDEX comment_post_id ON comment(post_id);
-CREATE INDEX comment_timestamp ON comment(timestamp);
 
 
 -- Реакция на сообщение

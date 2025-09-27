@@ -12,10 +12,4 @@ CREATE VIEW generate_id AS
         FROM
             (SELECT lower(hex(randomblob(16))) AS u, substr('89ab', abs(random()) % 4 + 1, 1) AS v);
 
-
--- Генератор случайных паролей длиной в 16 символов.
-DROP VIEW IF EXISTS generate_password;
-CREATE VIEW generate_password AS
-    SELECT '"' || upper(char(abs(random()) % 25 + 65)) || lower(hex(randomblob(4))) || abs(random() % 10) || '"' AS password;
-
 COMMIT;

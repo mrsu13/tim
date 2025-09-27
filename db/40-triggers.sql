@@ -88,14 +88,6 @@ BEGIN
     SELECT RAISE(ROLLBACK, 'Post ID may not be changed.');
 END;
 
--- Комментарий
-DROP TRIGGER IF EXISTS comment_update_id;
-CREATE TRIGGER comment_update_id BEFORE UPDATE ON comment
-    WHEN NEW.id IS NOT NULL AND NEW.id != OLD.id
-BEGIN
-    SELECT RAISE(ROLLBACK, 'Comment ID may not be changed.');
-END;
-
 -- Реакция
 DROP TRIGGER IF EXISTS reaction_update_id;
 CREATE TRIGGER reaction_update_id BEFORE UPDATE ON reaction

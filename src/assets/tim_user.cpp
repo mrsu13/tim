@@ -15,6 +15,8 @@ tim::user::user(const std::string &pkey)
     assert(!_d->_pkey.empty() && "User's public key must not be empty.");
 }
 
+tim::user::~user() = default;
+
 const tim::uuid &tim::user::id() const
 {
     return _d->_id;
