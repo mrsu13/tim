@@ -6,14 +6,14 @@
 namespace tim
 {
 
-class a_io_device;
+class a_protocol;
 
 namespace p
 {
 
 struct a_terminal
 {
-    tim::a_io_device *_io = nullptr;
+    tim::a_protocol *_proto = nullptr;
     tim::terminal_theme _theme = tim::TERMINAL_THEME_DARK;
 };
 

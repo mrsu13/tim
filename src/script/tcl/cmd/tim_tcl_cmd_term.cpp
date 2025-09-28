@@ -1,6 +1,6 @@
 #include "tim_tcl_cmd_term.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_a_terminal.h"
 #include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
@@ -54,11 +54,11 @@ static lil_value_t tim_tcl_cmd_palette256(lil_t lil, size_t argc, lil_value_t *a
     {
         if (c > 0
                 && c % ITEMS_PER_LINE == 0)
-            tcl->terminal()->io()->write("\n", 1);
+            tcl->terminal()->protocol()->write("\n", 1);
 
         tcl->terminal()->printf("%3zu", c);
         tcl->terminal()->cprintf(tim::color{}, tcl->terminal()->color(c), "%s", "  ");
-        tcl->terminal()->io()->write(" ", 1);
+        tcl->terminal()->protocol()->write(" ", 1);
     }
 
     return nullptr;

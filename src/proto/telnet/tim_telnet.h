@@ -1,14 +1,12 @@
 #pragma once
 
-#include "tim_signal.h"
+#include "tim_a_protocol.h"
 
 #include <memory>
 
 
 namespace tim
 {
-
-class a_io_device;
 
 namespace p
 {
@@ -17,12 +15,10 @@ struct telnet;
 
 }
 
-class telnet
+class telnet : public tim::a_protocol
 {
 
 public:
-
-    tim::signal<const char * /* data */, std::size_t /* size */> ready_read;
 
     telnet(tim::a_io_device *io);
     ~telnet();
@@ -31,7 +27,8 @@ public:
     std::size_t rows() const;
     std::size_t cols() const;
 
-    bool write(const char *data, std::size_t size);
+    bool write(const char *data, std::size_t size) override;
+    void process_raw_data(const char *data, std::size_t size) override;
 
 private:
 

@@ -2,7 +2,7 @@
 
 #include "tim_a_terminal_p.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 
@@ -13,9 +13,9 @@
 
 tim::a_terminal::~a_terminal() = default;
 
-tim::a_io_device *tim::a_terminal::io() const
+tim::a_protocol *tim::a_terminal::protocol() const
 {
-    return _d->_io;
+    return _d->_proto;
 }
 
 const tim::terminal_theme &tim::a_terminal::theme() const
@@ -40,7 +40,7 @@ int tim::a_terminal::vprintf(const char *format, va_list args)
     va_end(args_copy);
 
     if (n > 0)
-        io()->write(s.c_str(), n);
+        _d->_proto->write(s.c_str(), n);
 
     return n;
 }
@@ -81,10 +81,10 @@ int tim::a_terminal::cprintf(const tim::color &text_color,
 
 // Protected
 
-tim::a_terminal::a_terminal(tim::a_io_device *io)
+tim::a_terminal::a_terminal(tim::a_protocol *proto)
     : _d(new tim::p::a_terminal())
 {
-    assert(io);
+    assert(proto);
 
-    _d->_io = io;
+    _d->_proto = proto;
 }

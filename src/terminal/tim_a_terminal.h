@@ -9,7 +9,7 @@
 namespace tim
 {
 
-class a_io_device;
+class a_protocol;
 
 namespace p
 {
@@ -25,7 +25,7 @@ public:
 
     virtual ~a_terminal();
 
-    tim::a_io_device *io() const;
+    tim::a_protocol *protocol() const;
 
     const tim::terminal_theme &theme() const;
     void set_theme(const tim::terminal_theme &theme);
@@ -56,7 +56,7 @@ public:
 
 protected:
 
-    explicit a_terminal(tim::a_io_device *io);
+    explicit a_terminal(tim::a_protocol *proto);
 
 private:
 

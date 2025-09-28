@@ -2,7 +2,7 @@
 
 #include "tim_tcl_p.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_a_terminal.h"
 #include "tim_string_tools.h"
 #include "tim_translator.h"
@@ -180,7 +180,7 @@ void tim::p::tcl::write(lil_t lil, const char *msg)
     tim::tcl *self = (tim::tcl *)lil_get_data(lil);
     assert(self);
 
-    self->terminal()->io()->write_str(msg);
+    self->terminal()->protocol()->write_str(msg);
 }
 
 void tim::p::tcl::dispatch(lil_t lil)

@@ -14,12 +14,9 @@
 // Public
 
 tim::telnet::telnet(tim::a_io_device *io)
-    : ready_read()
+    : tim::a_protocol(io)
     , _d(new tim::p::telnet(this))
 {
-    assert(io);
-
-    _d->_io = io;
     _d->_telnet = telnet_init(nullptr,
                               &tim::p::telnet::event_handler,
                               TELNET_FLAG_NVT_EOL, // Receive data with translation of the TELNET NVT CR NUL
@@ -27,8 +24,6 @@ tim::telnet::telnet(tim::a_io_device *io)
                                                    // return (\r) and C newline (\n), respectively.
                               _d.get());
     assert(_d->_telnet);
-
-    _d->_io->ready_read.connect(std::bind(&tim::p::telnet::on_ready_read, _d.get()));
 
     telnet_negotiate(_d->_telnet, TELNET_DO, TELNET_TELOPT_NAWS);
     telnet_negotiate(_d->_telnet, TELNET_DO, TELNET_TELOPT_TTYPE);
@@ -64,15 +59,13 @@ bool tim::telnet::write(const char *data, std::size_t size)
     return true;
 }
 
+void tim::telnet::process_raw_data(const char *data, std::size_t size)
+{
+    telnet_recv(_d->_telnet, data, size);
+}
+
 
 // Private
-
-void tim::p::telnet::on_ready_read()
-{
-    const char *data;
-    const std::size_t size = _io->read(&data);
-    telnet_recv(_telnet, data, size);
-}
 
 void tim::p::telnet::event_handler(telnet_t *telnet, telnet_event_t *event, void *data)
 {
@@ -84,11 +77,11 @@ void tim::p::telnet::event_handler(telnet_t *telnet, telnet_event_t *event, void
     switch (event->type)
     {
         case TELNET_EV_DATA:
-            self->_q->ready_read(event->data.buffer, event->data.size);
+            self->_q->data_ready(event->data.buffer, event->data.size);
             break;
 
         case TELNET_EV_SEND:
-            self->_io->write(event->data.buffer, event->data.size);
+            self->_q->io()->write(event->data.buffer, event->data.size);
             break;
 
         case TELNET_EV_SUBNEGOTIATION:

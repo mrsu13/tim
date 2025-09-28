@@ -2,7 +2,7 @@
 
 #include "tim_vt_p.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 
@@ -286,8 +286,8 @@ static const tim::color VT_PALETTE256[] =
 
 // Public
 
-tim::vt::vt(tim::a_io_device *io)
-    : tim::a_terminal(io)
+tim::vt::vt(tim::a_protocol *proto)
+    : tim::a_terminal(proto)
     , _d(new tim::p::vt(this))
 {
 }
@@ -307,7 +307,7 @@ std::size_t tim::vt::cols() const
 void tim::vt::clear()
 {
     static const char cmd[] = "\x1b[H\x1b[2J";
-    io()->write(cmd, sizeof(cmd) - 1);
+    protocol()->write(cmd, sizeof(cmd) - 1);
 }
 
 std::size_t tim::vt::color_count() const
@@ -336,7 +336,7 @@ void tim::vt::set_color(std::size_t index)
 
 void tim::vt::set_default_color()
 {
-    io()->write("\x1b[39m", 5);
+    protocol()->write("\x1b[39m", 5);
 }
 
 void tim::vt::set_bg_color(const tim::color &c)
@@ -352,7 +352,7 @@ void tim::vt::set_bg_color(std::size_t index)
 
 void tim::vt::reverse_colors()
 {
-    io()->write("\x1b[7m", 4);
+    protocol()->write("\x1b[7m", 4);
 }
 
 /**
@@ -361,7 +361,7 @@ void tim::vt::reverse_colors()
 void tim::vt::reset_colors()
 {
     static const char cmd[] = "\x1b[0m";
-    io()->write(cmd, sizeof(cmd) - 1);
+    protocol()->write(cmd, sizeof(cmd) - 1);
 }
 
 std::string tim::vt::colorized(const std::string &s,

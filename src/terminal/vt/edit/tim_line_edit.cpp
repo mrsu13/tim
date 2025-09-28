@@ -2,7 +2,7 @@
 
 #include "tim_line_edit_p.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_file_tools.h"
 #include "tim_string_tools.h"
 #include "tim_vt.h"
@@ -110,8 +110,8 @@ bool tim::line_edit::new_line()
 
     const std::string p = prompt();
     return (!_d->_line_count++
-                        || _d->_terminal->io()->write("\n", 1))
-                    && _d->_terminal->io()->write(p.c_str(), p.size());
+                        || _d->_terminal->protocol()->write("\n", 1))
+                    && _d->_terminal->protocol()->write(p.c_str(), p.size());
 }
 
 /**
@@ -170,7 +170,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             return status::Finished;
 
         case (char)tim::key::Ctrl_C:
-            _d->_terminal->io()->write_str("^C");
+            _d->_terminal->protocol()->write_str("^C");
             clear();
             return status::Finished;
 
@@ -679,7 +679,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     }
 
     const std::string s = tim::from_wstring(ws);
-    if (!_terminal->io()->write(s.c_str(), s.size()))
+    if (!_terminal->protocol()->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -768,7 +768,7 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
     _old_pos = _pos;
 
     const std::string s = tim::from_wstring(ws);
-    if (!_terminal->io()->write(s.c_str(), s.size()))
+    if (!_terminal->protocol()->write(s.c_str(), s.size()))
     {
         /* Can't recover from write error. */
     }
@@ -813,7 +813,7 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
                             : c;
         std::string s(utf8codepointsize(d), 0);
         utf8catcodepoint((utf8_int8_t *)(&s[0]), d, s.size());
-        if (!_terminal->io()->write(s.c_str(), s.size()))
+        if (!_terminal->protocol()->write(s.c_str(), s.size()))
             return false;
     }
     else

@@ -2,7 +2,7 @@
 
 #include "tim_vt_shell_p.h"
 
-#include "tim_a_io_device.h"
+#include "tim_a_protocol.h"
 #include "tim_a_script_engine.h"
 #include "tim_config.h"
 #include "tim_file_tools.h"
@@ -35,7 +35,7 @@ tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
                                               term->theme().colors.at(tim::terminal_color_index::Prompt)));
     _d->_ledit->history_load(_d->_history_path);
 
-    term->io()->write_str(tim::p::vt_shell::welcome_banner());
+    term->protocol()->write_str(tim::p::vt_shell::welcome_banner());
 
     _d->_ledit->new_line();
 }
@@ -61,14 +61,14 @@ bool tim::vt_shell::eval(const char *data, std::size_t size)
         {
             if (!_d->_ledit->empty())
             {
-                _d->_ledit->terminal()->io()->write("\n", 1);
+                _d->_ledit->terminal()->protocol()->write("\n", 1);
                 const std::string &line = _d->_ledit->line();
                 _d->_ledit->history_save(_d->_history_path);
                 std::string res;
                 if (_d->_engine->eval(line, &res))
                 {
                     if (!res.empty())
-                        _d->_ledit->terminal()->io()->write(res.c_str(), res.size());
+                        _d->_ledit->terminal()->protocol()->write(res.c_str(), res.size());
                 }
                 else
                 {
@@ -85,11 +85,11 @@ bool tim::vt_shell::eval(const char *data, std::size_t size)
                     {
                         static const char hr[] = "─";
                         for (std::size_t i = 0; i < pos - 1; ++i)
-                            _d->_ledit->terminal()->io()->write(hr, sizeof(hr) - 1);
+                            _d->_ledit->terminal()->protocol()->write(hr, sizeof(hr) - 1);
                     }
                     {
                         static const char arrow[] = "^";
-                        _d->_ledit->terminal()->io()->write(arrow, sizeof(arrow) - 1);
+                        _d->_ledit->terminal()->protocol()->write(arrow, sizeof(arrow) - 1);
                     }
                     _d->_ledit->terminal()->reset_colors();
                 }
@@ -101,7 +101,7 @@ bool tim::vt_shell::eval(const char *data, std::size_t size)
             break;
 
         case tim::line_edit::status::Exit:
-            _d->_ledit->terminal()->io()->write_str(tim::p::vt_shell::bye_banner());
+            _d->_ledit->terminal()->protocol()->write_str(tim::p::vt_shell::bye_banner());
             return false;
 
         case tim::line_edit::status::Error:

@@ -20,7 +20,7 @@ class vt : public tim::a_terminal
 
 public:
 
-    explicit vt(tim::a_io_device *io);
+    explicit vt(tim::a_protocol *proto);
     ~vt();
 
     std::size_t rows() const override;

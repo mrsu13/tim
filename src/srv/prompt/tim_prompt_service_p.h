@@ -32,8 +32,8 @@ struct prompt_service
 
     tim::prompt_service *const _q;
 
-    std::unique_ptr<tim::vt> _terminal;
     std::unique_ptr<tim::telnet> _telnet;
+    std::unique_ptr<tim::vt> _terminal;
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::vt_shell> _shell;
 };

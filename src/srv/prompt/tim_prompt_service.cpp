@@ -27,12 +27,12 @@ tim::prompt_service::prompt_service(mg_connection *c)
     : tim::a_inetd_service("prompt", c)
     , _d(new tim::p::prompt_service(this))
 {
-    _d->_terminal.reset(new tim::vt(this));
     _d->_telnet.reset(new tim::telnet(this));
+    _d->_terminal.reset(new tim::vt(_d->_telnet.get()));
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get()));
     _d->_shell.reset(new tim::vt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
-    _d->_telnet->ready_read.connect(
+    _d->_telnet->data_ready.connect(
         std::bind(&tim::p::prompt_service::on_ready_read, _d.get(),
                   std::placeholders::_1, std::placeholders::_2));
 }
