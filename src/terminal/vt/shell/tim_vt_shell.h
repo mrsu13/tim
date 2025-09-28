@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 
 namespace tim
@@ -22,11 +23,15 @@ class vt_shell
 public:
 
     vt_shell(tim::vt *term, tim::a_script_engine *engine);
-    ~vt_shell();
+    virtual ~vt_shell();
 
     tim::vt *terminal() const;
 
-    bool eval(const char *data, std::size_t size);
+    bool write(const char *data, std::size_t size);
+
+protected:
+
+    virtual bool accept_command(const std::string &line, std::string &command) const;
 
 private:
 

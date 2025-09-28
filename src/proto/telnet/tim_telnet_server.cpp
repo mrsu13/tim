@@ -1,6 +1,6 @@
-#include "tim_telnet.h"
+#include "tim_telnet_server.h"
 
-#include "tim_telnet_p.h"
+#include "tim_telnet_server_p.h"
 
 #include "tim_a_io_device.h"
 #include "tim_trace.h"
@@ -13,12 +13,12 @@
 
 // Public
 
-tim::telnet::telnet(tim::a_io_device *io)
-    : tim::a_protocol(io)
-    , _d(new tim::p::telnet(this))
+tim::telnet_server::telnet_server(tim::a_io_device *io)
+    : tim::a_terminal_protocol(io)
+    , _d(new tim::p::telnet_server(this))
 {
     _d->_telnet = telnet_init(nullptr,
-                              &tim::p::telnet::event_handler,
+                              &tim::p::telnet_server::event_handler,
                               TELNET_FLAG_NVT_EOL, // Receive data with translation of the TELNET NVT CR NUL
                                                    // and CR LF sequences specified in RFC854 to C carriage
                                                    // return (\r) and C newline (\n), respectively.
@@ -31,27 +31,27 @@ tim::telnet::telnet(tim::a_io_device *io)
     telnet_negotiate(_d->_telnet, TELNET_WILL, TELNET_TELOPT_SGA);
 }
 
-tim::telnet::~telnet()
+tim::telnet_server::~telnet_server()
 {
     telnet_free(_d->_telnet);
 }
 
-const std::string &tim::telnet::terminal_name() const
+const std::string &tim::telnet_server::terminal_name() const
 {
     return _d->_term_name;
 }
 
-std::size_t tim::telnet::rows() const
-{
-    return _d->_cols;
-}
-
-std::size_t tim::telnet::cols() const
+std::size_t tim::telnet_server::rows() const
 {
     return _d->_rows;
 }
 
-bool tim::telnet::write(const char *data, std::size_t size)
+std::size_t tim::telnet_server::cols() const
+{
+    return _d->_cols;
+}
+
+bool tim::telnet_server::write(const char *data, std::size_t size)
 {
     assert(data);
 
@@ -59,7 +59,7 @@ bool tim::telnet::write(const char *data, std::size_t size)
     return true;
 }
 
-void tim::telnet::process_raw_data(const char *data, std::size_t size)
+void tim::telnet_server::process_raw_data(const char *data, std::size_t size)
 {
     telnet_recv(_d->_telnet, data, size);
 }
@@ -67,11 +67,11 @@ void tim::telnet::process_raw_data(const char *data, std::size_t size)
 
 // Private
 
-void tim::p::telnet::event_handler(telnet_t *telnet, telnet_event_t *event, void *data)
+void tim::p::telnet_server::event_handler(telnet_t *telnet, telnet_event_t *event, void *data)
 {
     (void) telnet;
 
-    tim::p::telnet *self = (tim::p::telnet *)data;
+    tim::p::telnet_server *self = (tim::p::telnet_server *)data;
     assert(self);
 
     switch (event->type)

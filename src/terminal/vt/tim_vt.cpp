@@ -2,7 +2,7 @@
 
 #include "tim_vt_p.h"
 
-#include "tim_a_protocol.h"
+#include "tim_a_terminal_protocol.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 
@@ -286,22 +286,23 @@ static const tim::color VT_PALETTE256[] =
 
 // Public
 
-tim::vt::vt(tim::a_protocol *proto)
+tim::vt::vt(tim::a_terminal_protocol *proto)
     : tim::a_terminal(proto)
     , _d(new tim::p::vt(this))
 {
+    _d->_term_proto = proto;
 }
 
 tim::vt::~vt() = default;
 
 std::size_t tim::vt::rows() const
 {
-    return std::max(10U, _d->_rows);
+    return std::max(10UL, _d->_term_proto->rows());
 }
 
 std::size_t tim::vt::cols() const
 {
-    return std::max(20U, _d->_cols);
+    return std::max(20UL, _d->_term_proto->cols());
 }
 
 void tim::vt::clear()

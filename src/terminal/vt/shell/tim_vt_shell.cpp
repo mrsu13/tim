@@ -47,7 +47,7 @@ tim::vt *tim::vt_shell::terminal() const
     return _d->_ledit->terminal();
 }
 
-bool tim::vt_shell::eval(const char *data, std::size_t size)
+bool tim::vt_shell::write(const char *data, std::size_t size)
 {
     assert(data);
 
@@ -64,34 +64,39 @@ bool tim::vt_shell::eval(const char *data, std::size_t size)
                 _d->_ledit->terminal()->protocol()->write("\n", 1);
                 const std::string &line = _d->_ledit->line();
                 _d->_ledit->history_save(_d->_history_path);
-                std::string res;
-                if (_d->_engine->eval(line, &res))
+                std::string command;
+                if (accept_command(line, command)
+                        && !command.empty())
                 {
-                    if (!res.empty())
-                        _d->_ledit->terminal()->protocol()->write(res.c_str(), res.size());
-                }
-                else
-                {
-                    const std::size_t pos = _d->_engine->error_pos();
+                    std::string res;
+                    if (_d->_engine->eval(command, &res))
+                    {
+                        if (!res.empty())
+                            _d->_ledit->terminal()->protocol()->write(res.c_str(), res.size());
+                    }
+                    else
+                    {
+                        const std::size_t pos = _d->_engine->error_pos();
 
-                    _d->_ledit->terminal()->set_color(
-                        _d->_ledit->terminal()->theme().colors.at(tim::terminal_color_index::Error));
-                    _d->_ledit->terminal()
-                        ->printf(TIM_TR("Error: %s\n%s\n"_en,
-                                        "Ошибка. %s\n%s\n"_ru),
-                                 _d->_engine->error_msg().c_str(),
-                                 line.c_str());
-                    if (pos)
-                    {
-                        static const char hr[] = "─";
-                        for (std::size_t i = 0; i < pos - 1; ++i)
-                            _d->_ledit->terminal()->protocol()->write(hr, sizeof(hr) - 1);
+                        _d->_ledit->terminal()->set_color(
+                            _d->_ledit->terminal()->theme().colors.at(tim::terminal_color_index::Error));
+                        _d->_ledit->terminal()
+                            ->printf(TIM_TR("Error: %s\n%s\n"_en,
+                                            "Ошибка. %s\n%s\n"_ru),
+                                     _d->_engine->error_msg().c_str(),
+                                     command.c_str());
+                        if (pos)
+                        {
+                            static const char hr[] = "─";
+                            for (std::size_t i = 0; i < pos - 1; ++i)
+                                _d->_ledit->terminal()->protocol()->write(hr, sizeof(hr) - 1);
+                        }
+                        {
+                            static const char arrow[] = "^";
+                            _d->_ledit->terminal()->protocol()->write(arrow, sizeof(arrow) - 1);
+                        }
+                        _d->_ledit->terminal()->reset_colors();
                     }
-                    {
-                        static const char arrow[] = "^";
-                        _d->_ledit->terminal()->protocol()->write(arrow, sizeof(arrow) - 1);
-                    }
-                    _d->_ledit->terminal()->reset_colors();
                 }
                 _d->_ledit->new_line();
             }
@@ -111,6 +116,16 @@ bool tim::vt_shell::eval(const char *data, std::size_t size)
 
     return true;
 }
+
+
+// Protected
+
+bool tim::vt_shell::accept_command(const std::string &line, std::string &command) const
+{
+    command = line;
+    return true;
+}
+
 
 // Private
 

@@ -8,6 +8,8 @@
 namespace tim
 {
 
+class a_terminal_protocol;
+
 namespace p
 {
 
@@ -20,7 +22,7 @@ class vt : public tim::a_terminal
 
 public:
 
-    explicit vt(tim::a_protocol *proto);
+    explicit vt(tim::a_terminal_protocol *proto);
     ~vt();
 
     std::size_t rows() const override;

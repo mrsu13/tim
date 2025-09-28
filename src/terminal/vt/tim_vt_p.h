@@ -6,6 +6,7 @@
 namespace tim
 {
 
+class a_terminal_protocol;
 class vt;
 
 namespace p
@@ -20,8 +21,8 @@ struct vt
     }
 
     tim::vt *const _q;
-    unsigned _cols = 0;
-    unsigned _rows = 0;
+
+    tim::a_terminal_protocol *_term_proto = nullptr;
 };
 
 }

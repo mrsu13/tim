@@ -9,10 +9,10 @@ namespace tim
 {
 
 class prompt_service;
+class prompt_shell;
 class tcl;
-class telnet;
+class telnet_server;
 class vt;
-class vt_shell;
 
 namespace p
 {
@@ -25,17 +25,14 @@ struct prompt_service
         assert(_q);
     }
 
-    void on_ready_read(const char *data, std::size_t size);
-
-    void cloud(const std::string &text,
-               const tim::color &bg_color = tim::color::transparent());
+    void on_data_ready(const char *data, std::size_t size);
 
     tim::prompt_service *const _q;
 
-    std::unique_ptr<tim::telnet> _telnet;
+    std::unique_ptr<tim::telnet_server> _telnet;
     std::unique_ptr<tim::vt> _terminal;
     std::unique_ptr<tim::tcl> _tcl;
-    std::unique_ptr<tim::vt_shell> _shell;
+    std::unique_ptr<tim::prompt_shell> _shell;
 };
 
 }
