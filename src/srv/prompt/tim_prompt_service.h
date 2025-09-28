@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tim_tcl_shell.h"
+#include "tim_a_inetd_service.h"
 
 
 namespace tim
@@ -13,17 +13,13 @@ struct prompt_service;
 
 }
 
-class prompt_service : public tim::tcl_shell
+class prompt_service : public tim::a_inetd_service
 {
 
 public:
 
     explicit prompt_service(mg_connection *c);
     ~prompt_service();
-
-protected:
-
-    bool get_command(const std::string &line, std::string &command) override;
 
 private:
 

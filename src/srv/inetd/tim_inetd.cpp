@@ -90,8 +90,7 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
             {
                 connection_map::const_iterator f = self->_connections.find(c);
                 assert(f != self->_connections.cend());
-                if (!f->second->read_from_connection())
-                    f->second->close();
+                f->second->ready_read();
             }
             break;
 
