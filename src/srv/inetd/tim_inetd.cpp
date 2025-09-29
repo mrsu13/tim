@@ -67,7 +67,7 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
                 mg_tls_init(c, &opts);
             } */
 
-#ifndef NDEBUG
+#ifndef TIM_DEBUG
 //            c->is_hexdumping = 1;
 #endif
 

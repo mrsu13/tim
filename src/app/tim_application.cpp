@@ -4,6 +4,7 @@
 
 #include "tim_config.h"
 #include "tim_inetd.h"
+#include "tim_mqtt_client.h"
 #include "tim_prompt_service.h"
 #include "tim_trace.h"
 #include "tim_version.h"
@@ -53,8 +54,12 @@ tim::application::application(int argc, char **argv)
 
     ft_set_default_border_style(FT_SOLID_ROUND_STYLE);
 
-    // mg_log_set(MG_LL_VERBOSE);
+#ifdef TIM_DEBUG
+    mg_log_set(MG_LL_VERBOSE);
+#endif
     mg_mgr_init(&_d->_mg);
+
+    _d->_mqtt.reset(new mqtt_client(&_d->_mg));
 
     _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::CLIENT_PORT);
 }

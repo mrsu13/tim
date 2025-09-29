@@ -12,6 +12,7 @@ namespace tim
 {
 
 class inetd;
+class mqtt_client;
 
 namespace p
 {
@@ -46,6 +47,7 @@ struct application
     bool _quit = false;
 
     struct mg_mgr _mg;
+    std::unique_ptr<tim::mqtt_client> _mqtt;
     std::unique_ptr<tim::inetd> _prompt_inetd;
 };
 
