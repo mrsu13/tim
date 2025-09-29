@@ -110,5 +110,5 @@ $(OBJ_DIR):
 clean:
 		@echo $(TEXT_FG_LIGHT_GREEN)"> Cleaning ... "$(TEXT_NORM)
 		$(AT)rm -rf $(OBJ_DIR)
-		$(AT)rm -f *~ *.d *.gdb core* *.so *.a BUILD_TIME .DS_Store tim
+		$(AT)rm -f *~ *.d *.gdb core* *.so *.a *.log BUILD_TIME .DS_Store tim
 		@echo $(TEXT_FG_LIGHT_GREEN)"> Done :) "$(TEXT_NORM)
