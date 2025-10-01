@@ -25,6 +25,12 @@ std::filesystem::path tim::standard_location(tim::filesystem_location location)
                             / ".local/share"
                             / tim::to_lower(tim::application::org_name())
                             / tim::to_lower(tim::application::name());
+        case tim::filesystem_location::AppTlsData:
+            return std::filesystem::path(std::getenv("HOME"))
+                            / ".config"
+                            / tim::to_lower(tim::application::org_name())
+                            / tim::to_lower(tim::application::name())
+                            / "tls";
         case tim::filesystem_location::Current:
             return std::filesystem::current_path();
         case tim::filesystem_location::Home:

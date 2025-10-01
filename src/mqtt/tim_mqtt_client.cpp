@@ -3,6 +3,7 @@
 #include "tim_mqtt_client_p.h"
 
 #include "tim_application.h"
+#include "tim_file_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
@@ -15,7 +16,8 @@ static const int TIM_MQTT_QOS = 1;
 
 // Public
 
-tim::mqtt_client::mqtt_client(mg_mgr *mg, std::uint16_t port, const std::string &host)
+tim::mqtt_client::mqtt_client(mg_mgr *mg, std::uint16_t port,
+                              bool tls_enabled, const std::string &host)
     : _d(new tim::p::mqtt_client(this))
 {
     assert(mg);
@@ -24,6 +26,7 @@ tim::mqtt_client::mqtt_client(mg_mgr *mg, std::uint16_t port, const std::string 
 
     _d->_host = host;
     _d->_port = port;
+    _d->_tls_enabled = tls_enabled;
 
     {
         const mg_mqtt_opts opts =
@@ -99,17 +102,17 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
             TIM_TRACE(Debug,
                       "TCP connection to MQTT broker '%s:%u' established.",
                       self->_host.c_str(), self->_port);
-            /* For the future support of TLS.
-            if (mg_url_is_ssl(s_lsn))
+            if (self->_tls_enabled)
             {
-                struct mg_tls_opts opts =
+                const std::filesystem::path base_path = tim::standard_location(tim::filesystem_location::AppTlsData);
+                mg_tls_opts opts =
                 {
-                    .ca = mg_unpacked("/certs/ss_ca.pem"),
-                    .cert = mg_unpacked("/certs/ss_server.pem"),
-                    .key = mg_unpacked("/certs/ss_server.pem")
+                    .ca = mg_unpacked((base_path / "ca.crt").string().c_str()),
+                    .cert = mg_unpacked((base_path / "client.crt").string().c_str()),
+                    .key = mg_unpacked((base_path / "client.key").string().c_str())
                 };
                 mg_tls_init(c, &opts);
-            } */
+            }
 
 #ifdef TIM_DEBUG
             c->is_hexdumping = 1;

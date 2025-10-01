@@ -17,6 +17,7 @@ enum class filesystem_location
     AppConfig,
     AppData,
     AppLocalData,
+    AppTlsData,
     Current,
     Home,
     Desktop,

@@ -55,7 +55,7 @@ tim::application::application(int argc, char **argv)
     ft_set_default_border_style(FT_SOLID_ROUND_STYLE);
 
 #ifdef TIM_DEBUG
-    mg_log_set(MG_LL_VERBOSE);
+    // mg_log_set(MG_LL_VERBOSE);
 #endif
     mg_mgr_init(&_d->_mg);
 

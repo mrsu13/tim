@@ -25,7 +25,8 @@ class mqtt_client
 public:
 
     mqtt_client(mg_mgr *mg,
-                std::uint16_t port = 1883,
+                std::uint16_t port = 8883,
+                bool tls_enabled = true,
                 const std::string &host = "localhost");
     ~mqtt_client();
 

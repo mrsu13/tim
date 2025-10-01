@@ -24,6 +24,7 @@ struct mqtt_client
 
     std::string _host;
     std::uint16_t _port = 0;
+    bool _tls_enabled = true;
     mg_connection *_client = nullptr;
 
     using subscribers = std::unordered_multimap<std::string, tim::mqtt_client::message_handler>;
