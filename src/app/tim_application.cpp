@@ -110,6 +110,11 @@ mg_mgr *tim::application::mongoose() const
     return &_d->_mg;
 }
 
+tim::mqtt_client *tim::application::mqtt() const
+{
+    return _d->_mqtt.get();
+}
+
 
 // Private
 

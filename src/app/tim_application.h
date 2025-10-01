@@ -9,6 +9,8 @@ struct mg_mgr;
 namespace tim
 {
 
+class mqtt_client;
+
 namespace p
 {
 
@@ -34,6 +36,7 @@ public:
     void quit();
 
     mg_mgr *mongoose() const;
+    tim::mqtt_client *mqtt() const;
 
 private:
 

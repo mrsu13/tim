@@ -6,6 +6,7 @@
 
 
 struct mg_connection;
+struct mg_timer;
 
 namespace tim::p
 {
@@ -19,13 +20,14 @@ struct mqtt_client
     }
 
     static void handle_events(mg_connection *c, int ev, void *ev_data);
+    static void ping(void *data);
 
     tim::mqtt_client *const _q;
 
-    std::string _host;
-    std::uint16_t _port = 0;
-    bool _tls_enabled = true;
+    mg_mgr *_mg = nullptr;
+    std::string _url;
     mg_connection *_client = nullptr;
+    mg_timer *_timer = nullptr;
 
     using subscribers = std::unordered_multimap<std::string, tim::mqtt_client::message_handler>;
     subscribers _subscribers;

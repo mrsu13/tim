@@ -16,36 +16,19 @@ static const int TIM_MQTT_QOS = 1;
 
 // Public
 
-tim::mqtt_client::mqtt_client(mg_mgr *mg, std::uint16_t port,
-                              bool tls_enabled, const std::string &host)
+tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::string &url,
+                              const std::chrono::seconds ping_interval)
     : _d(new tim::p::mqtt_client(this))
 {
     assert(mg);
-    assert(port > 1024 && "Port number must be greater than 1024.");
-    assert(!host.empty() && "MQTT broker host address must not be empty.");
+    assert(!url.empty() && "MQTT broker URL must not be empty.");
+    assert(ping_interval.count() && "ping_interval must not be zero.");
 
-    _d->_host = host;
-    _d->_port = port;
-    _d->_tls_enabled = tls_enabled;
-
-    {
-        const mg_mqtt_opts opts =
-        {
-            .client_id = mg_str(tim::application::name().c_str()),
-            .qos = TIM_MQTT_QOS,
-            .version = 5,
-            .keepalive = 5,
-            .clean = true
-        };
-
-        char url[512];
-        std::snprintf(url, sizeof(url), "mqtt://%s:%u", _d->_host.c_str(), _d->_port);
-        if (!(_d->_client = mg_mqtt_connect(mg, url, &opts, tim::p::mqtt_client::handle_events, _d.get())))
-            TIM_TRACE(Fatal,
-                      TIM_TR("Failed to connect to MQTT broker at '%s'."_en,
-                             "Ошибка при подключении к брокеру MQTT '%s'."_ru),
-                      url);
-    }
+    _d->_mg = mg;
+    _d->_url = url;
+    _d->_timer = mg_timer_add(mg, ping_interval.count() * 1000,
+                              MG_TIMER_REPEAT | MG_TIMER_RUN_NOW,
+                              &tim::p::mqtt_client::ping, _d.get());
 }
 
 tim::mqtt_client::~mqtt_client() = default;
@@ -100,9 +83,9 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         case MG_EV_CONNECT:
         {
             TIM_TRACE(Debug,
-                      "TCP connection to MQTT broker '%s:%u' established.",
-                      self->_host.c_str(), self->_port);
-            if (self->_tls_enabled)
+                      "TCP connection to MQTT broker '%s' established.",
+                      self->_url.c_str());
+            if (c->is_tls)
             {
                 const std::filesystem::path base_path = tim::standard_location(tim::filesystem_location::AppTlsData);
                 mg_tls_opts opts =
@@ -123,8 +106,8 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 
         case MG_EV_MQTT_OPEN:
             TIM_TRACE(Debug,
-                      "MQTT handshake with broker '%s:%u' succeeded.",
-                      self->_host.c_str(), self->_port);
+                      "MQTT handshake with broker '%s' succeeded.",
+                      self->_url.c_str());
             break;
 
         case MG_EV_MQTT_CMD:
@@ -161,8 +144,9 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         case MG_EV_CLOSE:
         {
             TIM_TRACE(Debug,
-                      "MQTT connection to broker '%s:%u' closed.",
-                      self->_host.c_str(), self->_port);
+                      "MQTT connection to broker '%s' closed.",
+                      self->_url.c_str());
+            self->_client = nullptr;
             break;
         }
 
@@ -177,4 +161,34 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
             }
             break;
     }
+}
+
+void tim::p::mqtt_client::ping(void *data)
+{
+    tim::p::mqtt_client *self = (tim::p::mqtt_client *)data;
+    assert(self);
+
+    if (self->_client)
+    {
+        mg_mqtt_ping(self->_client);
+        return;
+    }
+
+    const mg_mqtt_opts opts =
+    {
+        .client_id = mg_str(tim::application::name().c_str()),
+        .topic = mg_str("client/status"),
+        .message = mg_str("disconnected"),
+        .qos = TIM_MQTT_QOS,
+        .version = 5,
+        .keepalive = 0, // Do not disconnect.
+        .clean = true
+    };
+
+    if (!(self->_client = mg_mqtt_connect(self->_mg, self->_url.c_str(), &opts,
+                                          &tim::p::mqtt_client::handle_events, self)))
+        TIM_TRACE(Fatal,
+                  TIM_TR("Failed to connect to MQTT broker at '%s'."_en,
+                         "Ошибка при подключении к брокеру MQTT '%s'."_ru),
+                  self->_url.c_str());
 }
