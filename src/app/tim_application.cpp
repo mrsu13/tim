@@ -61,7 +61,7 @@ tim::application::application(int argc, char **argv)
 
     _d->_mqtt.reset(new mqtt_client(&_d->_mg));
 
-    _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::CLIENT_PORT);
+    _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::TELNET_PORT, false);
 }
 
 tim::application::~application()

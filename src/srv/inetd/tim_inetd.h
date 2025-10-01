@@ -31,11 +31,18 @@ public:
     ~inetd();
 
     template<class S>
-    inline static std::unique_ptr<tim::inetd> start(mg_mgr *mg, std::uint16_t port);
+    inline static std::unique_ptr<tim::inetd> start(mg_mgr *mg,
+                                                    std::uint16_t port,
+                                                    bool tls_enabled = true,
+                                                    const std::string &if_addr = "");
 
 private:
 
-    inetd(mg_mgr *mg, std::uint16_t port, service_factory factory);
+    inetd(mg_mgr *mg,
+          std::uint16_t port,
+          bool tls_enabled,
+          const std::string &if_addr,
+          service_factory factory);
 
     std::unique_ptr<tim::p::inetd> _d;
 };
@@ -48,13 +55,16 @@ private:
 // Public
 
 template<class S>
-std::unique_ptr<tim::inetd> tim::inetd::start(mg_mgr *mg, std::uint16_t port)
+std::unique_ptr<tim::inetd> tim::inetd::start(mg_mgr *mg,
+                                              std::uint16_t port,
+                                              bool tls_enabled,
+                                              const std::string &if_addr)
 {
     static_assert(std::is_base_of_v<tim::a_inetd_service, S>,
                   "S must be a descendant of tim::a_inetd_service class.");
 
     return std::unique_ptr<tim::inetd>(
-                new tim::inetd(mg, port,
+                new tim::inetd(mg, port, tls_enabled, if_addr,
                                [](mg_connection *c)
                                {
                                     return std::make_unique<S>(c);

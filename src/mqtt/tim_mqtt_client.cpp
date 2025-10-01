@@ -16,7 +16,7 @@ static const int TIM_MQTT_QOS = 1;
 
 // Public
 
-tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::string &url,
+tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::filesystem::path &url,
                               const std::chrono::seconds ping_interval)
     : _d(new tim::p::mqtt_client(this))
 {
@@ -107,7 +107,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         case MG_EV_MQTT_OPEN:
             TIM_TRACE(Debug,
                       "MQTT handshake with broker '%s' succeeded.",
-                      self->_url.c_str());
+                      self->_url.string().c_str());
             break;
 
         case MG_EV_MQTT_CMD:
@@ -145,7 +145,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         {
             TIM_TRACE(Debug,
                       "MQTT connection to broker '%s' closed.",
-                      self->_url.c_str());
+                      self->_url.string().c_str());
             self->_client = nullptr;
             break;
         }
@@ -185,10 +185,10 @@ void tim::p::mqtt_client::ping(void *data)
         .clean = true
     };
 
-    if (!(self->_client = mg_mqtt_connect(self->_mg, self->_url.c_str(), &opts,
+    if (!(self->_client = mg_mqtt_connect(self->_mg, self->_url.string().c_str(), &opts,
                                           &tim::p::mqtt_client::handle_events, self)))
         TIM_TRACE(Fatal,
                   TIM_TR("Failed to connect to MQTT broker at '%s'."_en,
                          "Ошибка при подключении к брокеру MQTT '%s'."_ru),
-                  self->_url.c_str());
+                  self->_url.string().c_str());
 }

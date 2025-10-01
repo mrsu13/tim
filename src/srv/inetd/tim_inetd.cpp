@@ -3,6 +3,7 @@
 #include "tim_inetd_p.h"
 
 #include "tim_a_inetd_service.h"
+#include "tim_file_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
@@ -18,25 +19,33 @@ tim::inetd::~inetd() = default;
 
 // Private
 
-tim::inetd::inetd(mg_mgr *mg, std::uint16_t port, service_factory factory)
+tim::inetd::inetd(mg_mgr *mg,
+                  std::uint16_t port,
+                  bool tls_enabled,
+                  const std::string &if_addr,
+                  service_factory factory)
     : tim::service("inetd")
     , _d(new tim::p::inetd())
 {
     assert(mg);
-    assert(port > 1024 && "Port number must be greater than 1024.");
+    assert(port && "port must not be positive.");
     assert(factory);
 
+    _d->_if_addr = if_addr.empty()
+                        ? "0.0.0.0"
+                        : if_addr;
     _d->_port = port;
+    _d->_tls_enabled = tls_enabled;
     _d->_factory = factory;
 
     {
         char url[128];
-        std::snprintf(url, sizeof(url), "tcp://0.0.0.0:%u", _d->_port);
+        std::snprintf(url, sizeof(url), "tcp://%s:%u", _d->_if_addr.c_str(), _d->_port);
         if (!(_d->_server = mg_listen(mg, url, tim::p::inetd::handle_events, _d.get())))
             TIM_TRACE(Fatal,
-                      TIM_TR("Failed to instantiate inetd at port %u."_en,
-                             "Ошибка при попытке создать экземпляр inetd на порту %u."_ru),
-                      _d->_port);
+                      TIM_TR("Failed to instantiate inetd at '%s:%u'."_en,
+                             "Ошибка при попытке создать экземпляр inetd на '%s:%u'."_ru),
+                      _d->_if_addr.c_str(), _d->_port);
     }
 }
 
@@ -49,23 +58,25 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
     {
         case MG_EV_OPEN:
             if (c->is_listening == 1)
-                TIM_TRACE(Debug, "inetd is listening at port %u.", self->_port);
+                TIM_TRACE(Debug, "inetd is listening at '%s:%u'.",
+                          self->_if_addr.c_str(), self->_port);
             break;
 
         case MG_EV_ACCEPT:
         {
-            TIM_TRACE(Debug, "inetd accepted a connection at port %u.", self->_port);
-            /* For the future support of TLS.
-            if (mg_url_is_ssl(s_lsn))
+            TIM_TRACE(Debug, "inetd accepted a connection at '%s:%u'.",
+                      self->_if_addr.c_str(), self->_port);
+            if (self->_tls_enabled)
             {
-                struct mg_tls_opts opts =
+                const std::filesystem::path base_path = tim::standard_location(tim::filesystem_location::AppTlsData);
+                mg_tls_opts opts =
                 {
-                    .ca = mg_unpacked("/certs/ss_ca.pem"),
-                    .cert = mg_unpacked("/certs/ss_server.pem"),
-                    .key = mg_unpacked("/certs/ss_server.pem")
+                    .ca = mg_unpacked((base_path / "ca.crt").string().c_str()),
+                    .cert = mg_unpacked((base_path / "client.crt").string().c_str()),
+                    .key = mg_unpacked((base_path / "client.key").string().c_str())
                 };
                 mg_tls_init(c, &opts);
-            } */
+            }
 
 #ifndef TIM_DEBUG
 //            c->is_hexdumping = 1;
@@ -77,9 +88,9 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
             else
             {
                 TIM_TRACE(Error,
-                          TIM_TR("Failed to instantiate inetd service at port %u."_en,
-                                 "Ошибка при попытке запустить сервис inetd на порту %u."_ru),
-                          self->_port);
+                          TIM_TR("Failed to instantiate inetd service at '%s:%u'."_en,
+                                 "Ошибка при попытке запустить сервис inetd на '%s:%u'."_ru),
+                          self->_if_addr.c_str(), self->_port);
                 c->is_draining = 1;
             }
             break;
@@ -98,13 +109,18 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
         {
             if (c != self->_server)
             {
-                TIM_TRACE(Debug, "inetd connection at port %u closed.", self->_port);
+                TIM_TRACE(Debug, "inetd connection at '%s:%u' closed.",
+                          self->_if_addr.c_str(), self->_port);
                 connection_map::iterator f = self->_connections.find(c);
-                assert(f != self->_connections.end());
-                self->_connections.erase(f);
+                if (f != self->_connections.end())
+                    self->_connections.erase(f);
             }
             else
-                TIM_TRACE(Debug, "inetd server at port %u closed.", self->_port);
+            {
+                TIM_TRACE(Debug, "inetd server at '%s:%u' closed.",
+                          self->_if_addr.c_str(), self->_port);
+                self->_server = nullptr;
+            }
             break;
         }
 

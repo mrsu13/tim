@@ -2,6 +2,7 @@
 
 #include "tim_mqtt_client.h"
 
+#include <filesystem>
 #include <unordered_map>
 
 
@@ -25,7 +26,7 @@ struct mqtt_client
     tim::mqtt_client *const _q;
 
     mg_mgr *_mg = nullptr;
-    std::string _url;
+    std::filesystem::path _url;
     mg_connection *_client = nullptr;
     mg_timer *_timer = nullptr;
 
