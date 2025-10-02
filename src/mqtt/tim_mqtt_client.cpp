@@ -59,7 +59,12 @@ void tim::mqtt_client::subscribe(const std::filesystem::path &topic, message_han
     assert(!topic.empty() && "Topic must not be empty.");
     assert(mh);
 
-    _d->_subscribers.emplace(topic, mh);
+    std::string s_topic = topic.string();
+    for (char &c: s_topic)
+        if (c == '+')
+            c = '*';
+
+    _d->_subscribers.emplace_back(tim::p::mqtt_client::subscribers::value_type{ s_topic, mh });
 
     const mg_mqtt_opts pub_opts =
     {
@@ -141,8 +146,9 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                           topic.c_str(),
                           (int)msg->data.len, msg->data.buf);
 
-                for (auto[i, e] = self->_subscribers.equal_range(topic); i != e; ++i)
-                    i->second(topic, msg->data.buf, msg->data.len);
+                for (const subscribers::value_type &pair: self->_subscribers)
+                    if (mg_match(mg_str(topic.c_str()), mg_str(pair.first.string().c_str()), nullptr))
+                        pair.second(topic, msg->data.buf, msg->data.len);
             }
             break;
 

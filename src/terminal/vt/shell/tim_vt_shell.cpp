@@ -47,6 +47,11 @@ tim::vt *tim::vt_shell::terminal() const
     return _d->_ledit->terminal();
 }
 
+void tim::vt_shell::new_line()
+{
+    _d->_ledit->new_line();
+}
+
 bool tim::vt_shell::write(const char *data, std::size_t size)
 {
     assert(data);

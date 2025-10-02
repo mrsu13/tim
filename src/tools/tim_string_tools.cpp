@@ -628,7 +628,9 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
             || width == 0)
         return str;
 
-    std::wstring text = tim::to_wstring(str);
+    const std::wstring text = tim::to_wstring(str);
+    if (text.size() <= width)
+        return str;
 
     tim::wstring_vector pars;
     tim::wstring_vector words;

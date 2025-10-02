@@ -3,7 +3,8 @@
 #include "tim_mqtt_client.h"
 
 #include <filesystem>
-#include <unordered_map>
+#include <utility>
+#include <vector>
 
 
 struct mg_connection;
@@ -30,7 +31,7 @@ struct mqtt_client
     mg_connection *_client = nullptr;
     mg_timer *_timer = nullptr;
 
-    using subscribers = std::unordered_multimap<std::filesystem::path, tim::mqtt_client::message_handler>;
+    using subscribers = std::vector<std::pair<std::filesystem::path, tim::mqtt_client::message_handler>>;
     subscribers _subscribers;
 };
 

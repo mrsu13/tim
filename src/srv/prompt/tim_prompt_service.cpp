@@ -55,7 +55,9 @@ void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
 
 void tim::p::prompt_service::on_post(const std::filesystem::path &topic, const char *data, std::size_t size)
 {
-    TIM_TRACE(Debug, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA '%s'", topic.string().c_str());
     if (topic != _topic)
-        _shell->cloud(std::string(data, size));
+    {
+        _shell->cloud('\n' + std::string(data, size));
+        _shell->new_line();
+    }
 }

@@ -27,6 +27,7 @@ public:
 
     tim::vt *terminal() const;
 
+    void new_line();
     bool write(const char *data, std::size_t size);
 
 protected:
