@@ -30,7 +30,7 @@ struct mqtt_client
     mg_connection *_client = nullptr;
     mg_timer *_timer = nullptr;
 
-    using subscribers = std::unordered_multimap<std::string, tim::mqtt_client::message_handler>;
+    using subscribers = std::unordered_multimap<std::filesystem::path, tim::mqtt_client::message_handler>;
     subscribers _subscribers;
 };
 

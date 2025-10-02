@@ -21,9 +21,6 @@ struct prompt_shell
         assert(_q);
     }
 
-    void cloud(const std::string &text,
-               const tim::color &bg_color = tim::color::transparent());
-
     tim::prompt_shell *const _q;
 };
 

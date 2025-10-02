@@ -31,7 +31,7 @@ public:
 
 protected:
 
-    virtual bool accept_command(const std::string &line, std::string &command) const;
+    virtual bool accept_command(const std::string &line, std::string &command);
 
 private:
 

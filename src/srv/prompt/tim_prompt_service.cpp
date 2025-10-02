@@ -2,9 +2,12 @@
 
 #include "tim_prompt_service_p.h"
 
+#include "tim_application.h"
+#include "tim_mqtt_client.h"
 #include "tim_prompt_shell.h"
 #include "tim_tcl.h"
 #include "tim_telnet_server.h"
+#include "tim_trace.h"
 #include "tim_vt.h"
 
 
@@ -19,9 +22,21 @@ tim::prompt_service::prompt_service(mg_connection *c)
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get()));
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
+    _d->_topic = std::filesystem::path("post") / std::to_string(id());
+
     _d->_telnet->data_ready.connect(
         std::bind(&tim::p::prompt_service::on_data_ready, _d.get(),
                   std::placeholders::_1, std::placeholders::_2));
+
+    tim::app()->mqtt()->subscribe(_d->_topic.parent_path() / "+",
+                                  std::bind(&tim::p::prompt_service::on_post, _d.get(),
+                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+
+    _d->_shell->posted.connect(
+        [&](const std::string &text)
+        {
+            tim::app()->mqtt()->publish(_d->_topic, text.c_str(), text.size());
+        });
 }
 
 tim::prompt_service::~prompt_service() = default;
@@ -36,4 +51,11 @@ void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
     if (size
             && !_shell->write(data, size))
         _q->close();
+}
+
+void tim::p::prompt_service::on_post(const std::filesystem::path &topic, const char *data, std::size_t size)
+{
+    TIM_TRACE(Debug, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA '%s'", topic.string().c_str());
+    if (topic != _topic)
+        _shell->cloud(std::string(data, size));
 }

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "tim_color.h"
-
 #include <cassert>
+#include <filesystem>
 
 
 namespace tim
@@ -26,6 +25,7 @@ struct prompt_service
     }
 
     void on_data_ready(const char *data, std::size_t size);
+    void on_post(const std::filesystem::path &topic, const char *data, std::size_t size);
 
     tim::prompt_service *const _q;
 
@@ -33,6 +33,7 @@ struct prompt_service
     std::unique_ptr<tim::vt> _terminal;
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::prompt_shell> _shell;
+    std::filesystem::path _topic;
 };
 
 }

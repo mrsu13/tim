@@ -120,7 +120,7 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
 
 // Protected
 
-bool tim::vt_shell::accept_command(const std::string &line, std::string &command) const
+bool tim::vt_shell::accept_command(const std::string &line, std::string &command)
 {
     command = line;
     return true;

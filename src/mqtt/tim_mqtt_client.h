@@ -29,14 +29,14 @@ public:
                 const std::chrono::seconds ping_interval = std::chrono::seconds{5});
     ~mqtt_client();
 
-    void publish(const std::string &topic,
+    void publish(const std::filesystem::path &topic,
                  const char *data, std::size_t size,
                  std::uint8_t qos = 1,
                  bool retain = false);
 
-    using message_handler = std::function<void (const std::string &topic, const char *data, std::size_t size)>;
+    using message_handler = std::function<void (const std::filesystem::path &topic, const char *data, std::size_t size)>;
 
-    void subscribe(const std::string &topic, message_handler mh, std::uint8_t qos = 1);
+    void subscribe(const std::filesystem::path &topic, message_handler mh, std::uint8_t qos = 1);
 
 private:
 

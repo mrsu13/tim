@@ -33,7 +33,7 @@ tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::filesystem::path &url,
 
 tim::mqtt_client::~mqtt_client() = default;
 
-void tim::mqtt_client::publish(const std::string &topic,
+void tim::mqtt_client::publish(const std::filesystem::path &topic,
                                const char *data, std::size_t size,
                                std::uint8_t qos,
                                bool retain)
@@ -42,16 +42,19 @@ void tim::mqtt_client::publish(const std::string &topic,
 
     const mg_mqtt_opts pub_opts =
     {
-        .topic = mg_str(topic.c_str()),
+        .topic = mg_str(topic.string().c_str()),
         .message = mg_str_n(data, size),
         .qos = qos,
         .retain = retain
     };
 
     mg_mqtt_pub(_d->_client, &pub_opts);
+
+    TIM_TRACE(Debug, "Published to '%s': '%s'.",
+              topic.string().c_str(), std::string(data, size).c_str());
 }
 
-void tim::mqtt_client::subscribe(const std::string &topic, message_handler mh, std::uint8_t qos)
+void tim::mqtt_client::subscribe(const std::filesystem::path &topic, message_handler mh, std::uint8_t qos)
 {
     assert(!topic.empty() && "Topic must not be empty.");
     assert(mh);
@@ -60,11 +63,13 @@ void tim::mqtt_client::subscribe(const std::string &topic, message_handler mh, s
 
     const mg_mqtt_opts pub_opts =
     {
-        .topic = mg_str(topic.c_str()),
+        .topic = mg_str(topic.string().c_str()),
         .qos = qos
     };
 
     mg_mqtt_sub(_d->_client, &pub_opts);
+
+    TIM_TRACE(Debug, "Subscribed to '%s'.", topic.string().c_str());
 }
 
 
@@ -98,7 +103,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
             }
 
 #ifdef TIM_DEBUG
-            c->is_hexdumping = 1;
+//            c->is_hexdumping = 1;
 #endif
 
             break;
