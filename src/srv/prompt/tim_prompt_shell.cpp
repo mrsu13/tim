@@ -39,20 +39,29 @@ void tim::prompt_shell::cloud(const std::string &text, const tim::color &bg_colo
     if (text.at(0) == '\n')
         terminal()->protocol()->write("\n", 1);
 
-    terminal()->set_bg_color(bg_color);
-    terminal()->set_color(bg_color.text_color());
-
     ft_table_t *table = ft_create_table();
     ft_u8write_ln(table,
                   tim::aligned(t, tim::text_align::Justify,
                                t.size() > terminal()->cols() * 2
                                    ? terminal()->cols() / 2
                                    : terminal()->cols() / 3).c_str());
-    const std::string_view table_text((const char *)ft_to_u8string(table));
-    terminal()->protocol()->write(table_text.data(), table_text.size() - 1); // No \n at the end.
+    const std::vector<std::string> lines = tim::split_v(std::string((const char *)ft_to_u8string(table)), "\n");
     ft_destroy_table(table);
 
-    terminal()->reset_colors();
+    std::size_t i = 0;
+    for (const std::string &line: lines)
+    {
+        terminal()->set_bg_color(bg_color);
+        terminal()->set_color(bg_color.text_color());
+        terminal()->protocol()->write(line.data(), line.size());
+        terminal()->reset_colors();
+        if (++i < lines.size())
+            terminal()->protocol()->write("\n", 1);
+    }
+
+    if (text.size() > 1
+            && text.at(text.size() - 1) == '\n')
+        terminal()->protocol()->write("\n", 1);
 }
 
 
