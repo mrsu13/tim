@@ -71,9 +71,9 @@ void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)
                 const std::filesystem::path base_path = tim::standard_location(tim::filesystem_location::AppTlsData);
                 mg_tls_opts opts =
                 {
-                    .ca = mg_unpacked((base_path / "ca.crt").string().c_str()),
-                    .cert = mg_unpacked((base_path / "client.crt").string().c_str()),
-                    .key = mg_unpacked((base_path / "client.key").string().c_str())
+                    .ca = mg_unpacked((base_path / "ca-cert.pem").string().c_str()),
+                    .cert = mg_unpacked((base_path / "cert.pem").string().c_str()),
+                    .key = mg_unpacked((base_path / "key.pem").string().c_str())
                 };
                 mg_tls_init(c, &opts);
             }

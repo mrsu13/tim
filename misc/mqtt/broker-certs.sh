@@ -12,25 +12,23 @@ TIM_TLS_DIR=~/.config/mrsu13/tim/tls
 MOSQUITTO_USER=mosquitto
 
 # CA
-openssl req -new -x509 -days 365 -extensions v3_ca -keyout ca.key -out ca.crt -subj "$CA_SUBJ"
+openssl req -new -x509 -days 3650 -extensions v3_ca -keyout ca-key.pem -out ca-cert.pem -subj "$CA_SUBJ"
+
+new_cert()
+{
+    openssl genrsa -out key.pem 2048
+    openssl req -new -out tmp.csr -key key.pem -subj $@
+    openssl x509 -req -in tmp.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out cert.pem -days 3650
+    openssl rsa -in key.pem -out key.pem
+}
+
+clear_cert()
+{
+    rm -f cert.pem key.pem tmp.csr
+}
 
 # Mosquitto
-openssl genrsa -out server.key 2048
-openssl req -new -out server.csr -key server.key -subj "$SERVER_SUBJ"
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 3650
-openssl rsa -in server.key -out server.key
-
-# TIM Server
-openssl genrsa -out client.key 2048
-openssl req -new -out client.csr -key client.key -subj "$CLIENT_SUBJ"
-openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 3650
-openssl rsa -in client.key -out client.key
-
-# TIM Server
-rm -rf "$TIM_TLS_DIR"
-mkdir -p "$TIM_TLS_DIR"
-cp ca.crt "$TIM_TLS_DIR/"
-mv client.* "$TIM_TLS_DIR/"
+new_cert "$SERVER_SUBJ"
 
 if [ -d "$MOSQUITTO_TLS_DIR" ]; then
     sudo rm -rf "$MOSQUITTO_TLS_DIR"
@@ -41,11 +39,24 @@ if [ ! -d "$MOSQUITTO_TLS_DIR" ]; then
 fi
 
 sudo rm -f "$MOSQUITTO_TLS_DIR/*"
-sudo mv ca.* server.* "$MOSQUITTO_TLS_DIR/"
+sudo cp *.pem "$MOSQUITTO_TLS_DIR/"
 sudo openssl rehash "$MOSQUITTO_TLS_DIR"
 sudo chown -R $MOSQUITTO_USER:$MOSQUITTO_USER "$MOSQUITTO_TLS_DIR"
+
+clear_cert
 
 sudo cp tim.conf /etc/mosquitto/conf.d/
 
 sudo systemctl restart mosquitto
 systemctl status mosquitto
+
+# TIM
+new_cert "$CLIENT_SUBJ"
+
+rm -rf "$TIM_TLS_DIR"
+mkdir -p "$TIM_TLS_DIR"
+cp *.pem "$TIM_TLS_DIR/"
+
+clear_cert
+
+rm -f ca-*
