@@ -58,7 +58,8 @@ void tim::p::prompt_service::on_post(const std::filesystem::path &topic, const c
 {
     if (topic != _topic)
     {
-        _shell->cloud('\n' + std::string(data, size),
+        _shell->cloud(_user,
+                      '\n' + std::string(data, size),
                       _shell->terminal()->color(
                         tim::to_int(topic.filename()) % (_shell->terminal()->color_count() - 1) + 1));
         _shell->new_line();

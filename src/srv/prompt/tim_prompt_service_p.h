@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tim_user.h"
+
 #include <cassert>
 #include <filesystem>
 
@@ -34,6 +36,8 @@ struct prompt_service
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::prompt_shell> _shell;
     std::filesystem::path _topic;
+
+    const tim::user _user{ .nick = "Чёрный Джо", .icon = "🤖" };
 };
 
 }

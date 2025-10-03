@@ -8,7 +8,9 @@
 namespace tim
 {
 
-    namespace p
+struct user;
+
+namespace p
 {
 
 struct prompt_shell;
@@ -25,7 +27,8 @@ public:
     prompt_shell(tim::vt *term, tim::a_script_engine *engine);
     ~prompt_shell();
 
-    void cloud(const std::string &text,
+    void cloud(const tim::user &user,
+               const std::string &text,
                const tim::color &bg_color = tim::color::transparent());
 
 protected:
