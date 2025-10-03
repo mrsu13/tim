@@ -8,6 +8,8 @@ namespace tim
 
 struct user
 {
+    std::string title() const;
+
     tim::uuid id;
     std::string pub_key;
     std::string nick;

@@ -469,7 +469,7 @@ size_t utf8_width(const void *beg, const void *end)
 
     memcpy(tmp, beg, sz);
     tmp[sz] = '\0';
-    size_t result = utf8width(tmp);
+    size_t result = utf8len(tmp); // <-TIM
     F_FREE(tmp);
     return result;
 }

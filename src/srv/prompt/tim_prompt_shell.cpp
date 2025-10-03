@@ -6,10 +6,10 @@
 #include "tim_config.h"
 #include "tim_math_tools.h"
 #include "tim_string_tools.h"
-#include "tim_user.h"
 #include "tim_vt.h"
 
 #include "fort.h"
+#include "utf8/utf8.h"
 
 
 static const std::string LOREM_IPSUM =
@@ -32,7 +32,7 @@ tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
 
 tim::prompt_shell::~prompt_shell() = default;
 
-void tim::prompt_shell::cloud(const tim::user &user,
+void tim::prompt_shell::cloud(const std::string &title,
                               const std::string &text,
                               const tim::color &bg_color)
 {
@@ -43,33 +43,30 @@ void tim::prompt_shell::cloud(const tim::user &user,
     if (text.at(0) == '\n')
         terminal()->protocol()->write("\n", 1);
 
-    const std::string title = "  "
-                                + (user.icon.empty()
-                                    ? std::string{}
-                                    : user.icon)
-                                + (user.nick.empty()
-                                    ? std::string{}
-                                    : ' ' + user.nick)
-                                + "  ";
-
+    const std::size_t t_len = utf8len(t.c_str());
+    const std::string ttl = ' '
+                                + tim::elided(tim::trim(title), 16)
+                                + ' ';
+    const std::size_t ttl_len = utf8len(ttl.c_str());
+    const std::size_t text_width = tim::bound(ttl_len,
+                                              t_len > terminal()->cols() * 2
+                                                  ? terminal()->cols() / 2
+                                                  : terminal()->cols() / 3,
+                                              terminal()->cols() - 6);
     ft_table_t *table = ft_create_table();
-    ft_u8write_ln(table,
-                  tim::aligned(t, tim::text_align::Justify,
-                               tim::bound(title.size(),
-                                          t.size() > terminal()->cols() * 2
-                                               ? terminal()->cols() / 2
-                                               : terminal()->cols() / 3,
-                                          terminal()->cols() - 6)).c_str());
+
+    ft_u8write_ln(table, tim::aligned(t, tim::text_align::Justify, text_width).c_str());
+
     const std::vector<std::string> lines = tim::split_v(std::string((const char *)ft_to_u8string(table)), "\n");
     ft_destroy_table(table);
 
     const tim::color text_color = bg_color.text_color();
 
-    if (title.size() > 4) // Not only padding spaces.
+    if (ttl_len > 2) // Not only padding spaces.
     {
         terminal()->set_bg_color(bg_color);
         terminal()->set_color(text_color);
-        terminal()->protocol()->write_str(title);
+        terminal()->protocol()->write_str(ttl);
         terminal()->reset_colors();
         terminal()->protocol()->write("\n", 1);
     }
@@ -104,7 +101,7 @@ bool tim::prompt_shell::accept_command(const std::string &line, std::string &com
         const std::string &l = line == "lorem"
                                     ? LOREM_IPSUM
                                     : line;
-        cloud(tim::user{}, l);
+        cloud(TIM_TR("You"_en, "Вы"_ru), l);
         posted(l);
         return false;
     }
