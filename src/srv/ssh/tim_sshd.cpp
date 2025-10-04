@@ -1,18 +1,11 @@
-#include "tim_ssh_server.h"
+#include "tim_sshd.h"
 
-#include "tim_application.h"
-#include "tim_prefs.h"
-#include "tim_tools.h"
-
-#include <co_areactor.h>
-#include <co_at_scope_exit.h>
-#include <co_file.h>
-#include <co_security_tools.h>
+#include "tim_sshd_p.h"
 
 
-// Public Methods
+// Public
 
-tim::ssh_server::ssh_server(std::uint16_t port, co::object *parent)
+tim::sshd::sshd(std::uint16_t port, co::object *parent)
     : co::io_server(parent)
 
     // Signal
@@ -25,13 +18,13 @@ tim::ssh_server::ssh_server(std::uint16_t port, co::object *parent)
     CO_TRY_IN_CTOR(init());
 }
 
-tim::ssh_server::~ssh_server()
+tim::sshd::~sshd()
 {
     ssh_bind_free(_bind);
     ssh_finalize();
 }
 
-bool tim::ssh_server::has_session(const std::string &imei) const
+bool tim::sshd::has_session(const std::string &imei) const
 {
     CO_ASSERT(!imei.empty());
 
@@ -41,7 +34,7 @@ bool tim::ssh_server::has_session(const std::string &imei) const
     return false;
 }
 
-co::rc tim::ssh_server::dispatch()
+co::rc tim::sshd::dispatch()
 {
     session_list::iterator i = _sessions.begin();
     while (i != _sessions.end())
@@ -56,7 +49,7 @@ co::rc tim::ssh_server::dispatch()
 
 // Private Methods
 
-co::rc tim::ssh_server::init()
+co::rc tim::sshd::init()
 {
     assert(_port && "port must be positive.");
 
@@ -103,7 +96,7 @@ co::rc tim::ssh_server::init()
 
     set_descriptor(ssh_bind_get_fd(_bind));
 
-    CO_CONNECT(this, new_connection, this, tim::ssh_server::on_new_session);
+    CO_CONNECT(this, new_connection, this, tim::sshd::on_new_session);
 
     tim::app()->reactor()->add(this);
 
@@ -112,7 +105,7 @@ co::rc tim::ssh_server::init()
     return co::Ok;
 }
 
-co::rc tim::ssh_server::on_new_session()
+co::rc tim::sshd::on_new_session()
 {
     CO_DEBUG("New SSH session at port %u.", _port);
 
@@ -135,7 +128,7 @@ co::rc tim::ssh_server::on_new_session()
     CO_TRY(tim::app()->reactor()->add(session.get()));
 
     CO_CONNECT(session.get(), authenticated,
-               this, tim::ssh_server::on_session_authenticated);
+               this, tim::sshd::on_session_authenticated);
 
     _sessions.emplace_back(std::move(session));
 
@@ -144,7 +137,7 @@ co::rc tim::ssh_server::on_new_session()
     return co::Ok;
 }
 
-void tim::ssh_server::on_session_authenticated()
+void tim::sshd::on_session_authenticated()
 {
     new_session.fire(static_cast<tim::ssh_session *>(emitter()));
 }

@@ -2,45 +2,43 @@
 
 #include "tim_ssh_session.h"
 
-#include <co_io_server.h>
-
 #include <libssh/server.h>
-
-#include <list>
 
 
 namespace tim
 {
-    
-class ssh_session;
 
-class ssh_server : public co::io_server
+namespace p
+{
+
+struct sshd;
+
+}
+
+class sshd : public tim::service
 {
 
 public:
 
-    CO_SIGNAL(new_session, tim::ssh_session *);
+    using service_factory = std::function<std::unique_ptr<tim::a_ssh_service>(ssh_session session)>;
 
-    ssh_server(std::uint16_t port, co::object *parent = nullptr);
-    virtual ~ssh_server();
+    virtual ~sshd();
 
-    inline std::uint16_t port() const;
+    template<class S>
+    inline static std::unique_ptr<tim::sshd> start(mg_mgr *mg,
+                                                   std::uint16_t port,
+                                                   const std::string &if_addr = "");
 
-    bool has_session(const std::string &imei) const;
-
-    co::rc dispatch();
+    bool dispatch();
 
 private:
 
-    co::rc init();
-    co::rc on_new_session();
-    void on_session_authenticated();
+    sshd(mg_mgr *mg,
+         std::uint16_t port,
+         const std::string &if_addr,
+         service_factory factory);
 
-    std::uint16_t _port;
-    ssh_bind _bind;
-
-    using session_list = std::list<std::unique_ptr<tim::ssh_session>>;
-    session_list _sessions;
+    std::unique_ptr<tim::p::sshd> _d;
 };
 
 }
@@ -48,9 +46,20 @@ private:
 
 // Implementation
 
-// Public Methods
+// Public
 
-inline std::uint16_t tim::ssh_server::port() const
+template<class S>
+std::unique_ptr<tim::sshd> tim::sshd::start(mg_mgr *mg,
+                                            std::uint16_t port,
+                                            const std::string &if_addr)
 {
-    return _port;
+    static_assert(std::is_base_of_v<tim::a_ssh_service, S>,
+                  "S must be a descendant of tim::a_ssh_service class.");
+
+    return std::unique_ptr<tim::sshd>(
+                new tim::sshd(mg, port, if_addr,
+                              [](ssh_session session)
+                              {
+                                  return std::make_unique<S>(session);
+                              }));
 }

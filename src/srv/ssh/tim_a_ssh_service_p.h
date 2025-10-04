@@ -5,12 +5,25 @@
 
 #include <pty.h>
 
+#include <cassert>
 
-namespace tim::p
+
+namespace tim
+{
+
+class a_ssh_service;
+
+namespace p
 {
 
 struct a_ssh_service
 {
+    explicit a_ssh_service(tim::a_ssh_service *q)
+        : _q(q)
+    {
+        assert(_q);
+    }
+
     static int data_function(ssh_session session, ssh_channel channel, void *data,
                              std::uint32_t len, int is_stderr, void *user_data);
     static int pty_request(ssh_session session, ssh_channel channel,
@@ -26,9 +39,9 @@ struct a_ssh_service
                               struct ssh_key_struct *pub_key,
                               char signature_state,
                               void *user_data);
-    static ::ssh_channel channel_open(ssh_session session, void *user_data);
+    static ssh_channel channel_open(ssh_session session, void *user_data);
 
-    tim::ssh_server *_server;
+    tim::a_ssh_service *const _q;
 
     ssh_session _session;
     ssh_channel _channel;
@@ -47,7 +60,9 @@ struct a_ssh_service
     tim::byte_vector _incoming_data;
     tim::byte_vector _outgoing_data;
 
-    bool _is_running = false;
+    bool _running = false;
 };
+
+}
 
 }
