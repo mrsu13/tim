@@ -107,12 +107,17 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
             }
             break;
         }
+
         case tim::line_edit::status::Continue:
             break;
 
         case tim::line_edit::status::Exit:
             _d->_ledit->terminal()->protocol()->write_str(tim::p::vt_shell::bye_banner());
             return false;
+
+        case tim::line_edit::status::Break:
+            _d->_ledit->new_line();
+            break;
 
         case tim::line_edit::status::Error:
             _d->_ledit->new_line();

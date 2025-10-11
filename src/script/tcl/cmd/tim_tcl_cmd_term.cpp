@@ -4,11 +4,13 @@
 #include "tim_a_terminal.h"
 #include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
+#include "tim_trace.h"
 #include "tim_translator.h"
 
 #include "lil.hpp"
 
 #include <cassert>
+#include <cstring>
 
 
 // Static
@@ -30,6 +32,40 @@ static lil_value_t tim_tcl_cmd_clear(lil_t lil, size_t argc, lil_value_t *argv)
 
     tcl->terminal()->clear();
 
+    return nullptr;
+}
+
+static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
+{
+    tim::tcl *tcl = (tim::tcl *)lil_get_data(lil);
+    assert(tcl);
+
+    switch (argc)
+    {
+        case 1:
+            tcl->terminal()->protocol()->write_str(lil_to_string(argv[0]));
+            tcl->terminal()->protocol()->write("\n", 1);
+            return nullptr;
+
+        case 2:
+            if (std::strcmp(lil_to_string(argv[0]), "-nonewline"))
+            {
+                lil_set_error(lil,
+                              TIM_TR("The second argument must be -nonewline"_en,
+                                     "Вторым аргументом может быть только -nonewline"_ru));
+                return nullptr;
+            }
+
+            tcl->terminal()->protocol()->write_str(lil_to_string(argv[1]));
+            return nullptr;
+
+        default:
+            break;
+    }
+
+    lil_set_error(lil,
+                  TIM_TR("Invalid number of arguments. Expecting ?-nonewline? string"_en,
+                         "Некорректные аргументы. Ожидается ?-nonewline? string"_ru));
     return nullptr;
 }
 
@@ -72,5 +108,6 @@ void tim::tcl_add_term(lil_t lil)
     assert(lil);
 
     TIM_TCL_REGISTER(lil, clear);
+    TIM_TCL_REGISTER(lil, puts);
     TIM_TCL_REGISTER(lil, palette256);
 }

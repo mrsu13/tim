@@ -41,7 +41,8 @@ public:
     {
         Finished, ///< Editing is finished. Now you can use the edited line.
         Continue, ///< Editing is in progress. You should call get_line() again.
-        Exit, ///< User pressed `[Ctrl+D]` or `[Ctrl+C]`.
+        Exit, ///< User pressed `[Ctrl+D]`.
+        Break, ///< User pressed `[Ctrl+C]`.
         Error ///< Reading from input stream or writing to output stream failed.
     };
 

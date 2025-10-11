@@ -172,7 +172,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
         case (char)tim::key::Ctrl_C:
             _d->_terminal->protocol()->write_str("^C");
             clear();
-            return status::Finished;
+            return status::Break;
 
         case (char)tim::key::Backspace:
         case (char)tim::key::Ctrl_H:

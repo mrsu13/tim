@@ -4,6 +4,7 @@
 
 #include "tim_a_protocol.h"
 #include "tim_a_terminal.h"
+#include "tim_application.h"
 #include "tim_string_tools.h"
 #include "tim_translator.h"
 
@@ -45,6 +46,8 @@ bool tim::tcl::evaluating() const
 bool tim::tcl::eval(const std::string &program, std::string *res)
 {
     assert(!_d->_evaluating && "Recursive evaluating is not allowed.");
+
+    TIM_TRACE(Debug, "Evaluating '%s'", program.c_str());
 
     if (program.empty())
     {
@@ -186,4 +189,6 @@ void tim::p::tcl::write(lil_t lil, const char *msg)
 void tim::p::tcl::dispatch(lil_t lil)
 {
     (void) lil;
+
+    tim::app()->dispatch();
 }

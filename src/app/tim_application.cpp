@@ -94,6 +94,11 @@ void tim::application::set_org_name(const std::string &name)
     tim::p::application::org_name() = name;
 }
 
+void tim::application::dispatch()
+{
+    mg_mgr_poll(&_d->_mg, 0);
+}
+
 void tim::application::exec()
 {
     while (!_d->_quit)

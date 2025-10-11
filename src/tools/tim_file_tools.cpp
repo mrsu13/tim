@@ -125,10 +125,10 @@ std::filesystem::path tim::complete_path(const std::filesystem::path &path,
                     || ec)
             {
                 TIM_TRACE(Error,
-                         TIM_TR("Failed to create path '%s': %s"_en,
-                               "Ошибка при создании файлового пути '%s': %s"_ru),
-                         path_to_create.string().c_str(),
-                         ec.message().c_str());
+                          TIM_TR("Failed to create path '%s': %s"_en,
+                                 "Ошибка при создании файлового пути '%s': %s"_ru),
+                          path_to_create.string().c_str(),
+                          ec.message().c_str());
                 return {};
             }
         }

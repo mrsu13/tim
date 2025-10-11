@@ -32,6 +32,7 @@ public:
     static const std::string &org_name();
     static void set_org_name(const std::string &name);
 
+    void dispatch();
     void exec();
     void quit();
 
