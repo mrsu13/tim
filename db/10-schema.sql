@@ -52,7 +52,8 @@ DROP TABLE IF EXISTS post;
 CREATE TABLE post
 (
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
-    user_id VARCHAR REFERENCES user(id) ON DELETE CASCADE,
+--    user_id VARCHAR REFERENCES user(id) ON DELETE CASCADE,
+    user_id VARCHAR,
     post_id VARCHAR REFERENCES post(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.

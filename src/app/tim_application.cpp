@@ -6,12 +6,15 @@
 #include "tim_file_tools.h"
 #include "tim_inetd.h"
 #include "tim_mqtt_client.h"
-#include "tim_prompt_service.h"
 #include "tim_sqlite_db.h"
 #include "tim_trace.h"
 #include "tim_version.h"
 
 #include "fort.h"
+
+// Services
+#include "tim_post_service.h"
+#include "tim_prompt_service.h"
 
 #include <cassert>
 #include <cstring>
@@ -72,6 +75,7 @@ tim::application::application(int argc, char **argv)
                   _d->_db->path().string().c_str());
 
     _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::TELNET_PORT, false);
+    _d->_post_service.reset(new tim::post_service());
 }
 
 tim::application::~application()
@@ -128,6 +132,11 @@ mg_mgr *tim::application::mongoose() const
 tim::mqtt_client *tim::application::mqtt() const
 {
     return _d->_mqtt.get();
+}
+
+tim::sqlite_db *tim::application::db() const
+{
+    return _d->_db.get();
 }
 
 

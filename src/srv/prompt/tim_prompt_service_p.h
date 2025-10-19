@@ -37,7 +37,12 @@ struct prompt_service
     std::unique_ptr<tim::prompt_shell> _shell;
     std::filesystem::path _topic;
 
-    const tim::user _user{ .nick = "crazy_robot", .icon = "🤖" };
+    const tim::user _user
+    {
+        .id = "7ce5bba5-3eda-46dc-99c0-317f16bc9b3d",
+        .nick = "crazy_robot",
+        .icon = "🤖"
+    };
 };
 
 }

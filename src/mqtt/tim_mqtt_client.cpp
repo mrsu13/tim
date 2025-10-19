@@ -18,7 +18,9 @@ static const int TIM_MQTT_QOS = 1;
 
 tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::filesystem::path &url,
                               const std::chrono::seconds ping_interval)
-    : _d(new tim::p::mqtt_client(this))
+    : connected{}
+    , disconnected{}
+    , _d(new tim::p::mqtt_client(this))
 {
     assert(mg);
     assert(!url.empty() && "MQTT broker URL must not be empty.");
@@ -32,6 +34,11 @@ tim::mqtt_client::mqtt_client(mg_mgr *mg, const std::filesystem::path &url,
 }
 
 tim::mqtt_client::~mqtt_client() = default;
+
+bool tim::mqtt_client::is_connected() const
+{
+    return _d->_connected;
+}
 
 void tim::mqtt_client::publish(const std::filesystem::path &topic,
                                const char *data, std::size_t size,
@@ -118,6 +125,8 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
             TIM_TRACE(Debug,
                       "MQTT handshake with broker '%s' succeeded.",
                       self->_url.string().c_str());
+            self->_connected = true;
+            self->_q->connected();
             break;
 
         case MG_EV_MQTT_CMD:
@@ -158,6 +167,8 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                       "MQTT connection to broker '%s' closed.",
                       self->_url.string().c_str());
             self->_client = nullptr;
+            self->_connected = false;
+            self->_q->disconnected();
             break;
         }
 
@@ -170,6 +181,8 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                           (char *)ev_data);
                 c->is_draining = 1;
             }
+            self->_connected = false;
+            self->_q->disconnected();
             break;
     }
 }

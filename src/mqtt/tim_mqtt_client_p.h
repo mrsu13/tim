@@ -30,6 +30,7 @@ struct mqtt_client
     std::filesystem::path _url;
     mg_connection *_client = nullptr;
     mg_timer *_timer = nullptr;
+    bool _connected = false;
 
     using subscribers = std::vector<std::pair<std::filesystem::path, tim::mqtt_client::message_handler>>;
     subscribers _subscribers;

@@ -25,9 +25,14 @@ class mqtt_client
 
 public:
 
+    tim::signal<> connected;
+    tim::signal<> disconnected;
+
     mqtt_client(mg_mgr *mg, const std::filesystem::path &url = "mqtts://127.0.0.1:8883",
                 const std::chrono::seconds ping_interval = std::chrono::seconds{5});
     ~mqtt_client();
+
+    bool is_connected() const;
 
     void publish(const std::filesystem::path &topic,
                  const char *data, std::size_t size,

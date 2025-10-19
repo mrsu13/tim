@@ -10,6 +10,7 @@ namespace tim
 {
 
 class mqtt_client;
+class sqlite_db;
 
 namespace p
 {
@@ -38,6 +39,7 @@ public:
 
     mg_mgr *mongoose() const;
     tim::mqtt_client *mqtt() const;
+    tim::sqlite_db *db() const;
 
 private:
 

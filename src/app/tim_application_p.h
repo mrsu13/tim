@@ -13,6 +13,7 @@ namespace tim
 
 class inetd;
 class mqtt_client;
+class post_service;
 class sqlite_db;
 
 namespace p
@@ -51,6 +52,7 @@ struct application
     std::unique_ptr<tim::mqtt_client> _mqtt;
     std::unique_ptr<tim::sqlite_db> _db;
     std::unique_ptr<tim::inetd> _prompt_inetd;
+    std::unique_ptr<tim::post_service> _post_service;
 };
 
 }
