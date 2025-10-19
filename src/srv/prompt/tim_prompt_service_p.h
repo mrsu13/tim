@@ -26,6 +26,7 @@ struct prompt_service
         assert(_q);
     }
 
+    void subscribe();
     void on_data_ready(const char *data, std::size_t size);
     void on_post(const std::filesystem::path &topic, const char *data, std::size_t size);
 

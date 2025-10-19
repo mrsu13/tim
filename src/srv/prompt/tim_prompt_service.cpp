@@ -29,21 +29,30 @@ tim::prompt_service::prompt_service(mg_connection *c)
         std::bind(&tim::p::prompt_service::on_data_ready, _d.get(),
                   std::placeholders::_1, std::placeholders::_2));
 
-    tim::app()->mqtt()->subscribe(_d->_topic.parent_path() / "+",
-                                  std::bind(&tim::p::prompt_service::on_post, _d.get(),
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-
     _d->_shell->posted.connect(
         [&](const std::string &text)
         {
-            tim::app()->mqtt()->publish(_d->_topic, text.c_str(), text.size());
+            if (tim::app()->mqtt()->is_connected())
+                tim::app()->mqtt()->publish(_d->_topic, text.c_str(), text.size());
         });
+
+    tim::app()->mqtt()->connected.connect(std::bind(&tim::p::prompt_service::subscribe, _d.get()));
+
+    if (tim::app()->mqtt()->is_connected())
+        _d->subscribe();
 }
 
 tim::prompt_service::~prompt_service() = default;
 
 
 // Private
+
+void tim::p::prompt_service::subscribe()
+{
+    tim::app()->mqtt()->subscribe(_topic.parent_path() / "+",
+                                  std::bind(&tim::p::prompt_service::on_post, this,
+                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+}
 
 void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
 {
