@@ -13,6 +13,7 @@ namespace tim
 
 class inetd;
 class mqtt_client;
+class sqlite_db;
 
 namespace p
 {
@@ -48,6 +49,7 @@ struct application
 
     struct mg_mgr _mg;
     std::unique_ptr<tim::mqtt_client> _mqtt;
+    std::unique_ptr<tim::sqlite_db> _db;
     std::unique_ptr<tim::inetd> _prompt_inetd;
 };
 

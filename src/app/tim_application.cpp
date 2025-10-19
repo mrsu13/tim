@@ -3,9 +3,11 @@
 #include "tim_application_p.h"
 
 #include "tim_config.h"
+#include "tim_file_tools.h"
 #include "tim_inetd.h"
 #include "tim_mqtt_client.h"
 #include "tim_prompt_service.h"
+#include "tim_sqlite_db.h"
 #include "tim_trace.h"
 #include "tim_version.h"
 
@@ -59,7 +61,15 @@ tim::application::application(int argc, char **argv)
 #endif
     mg_mgr_init(&_d->_mg);
 
-    _d->_mqtt.reset(new mqtt_client(&_d->_mg));
+    _d->_mqtt.reset(new tim::mqtt_client(&_d->_mg));
+
+    _d->_db.reset(new tim::sqlite_db());
+    if (!_d->_db->open(tim::standard_location(tim::filesystem_location::AppLocalData)
+                                                   / tim::DB_FILE_NAME))
+        TIM_TRACE(Fatal,
+                  TIM_TR("Failed to open database file '%s'."_en,
+                         "Не могу открыть файл базы данных '%s'."_ru),
+                  _d->_db->path().string().c_str());
 
     _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::TELNET_PORT, false);
 }

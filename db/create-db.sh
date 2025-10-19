@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ARGS=$@
-DB=`uuidgen | sed s/[\{\}]//g`.db
+DB=tim.db
 DB_SCHEMA_VERSION=`cat ../DB_SCHEMA_VERSION`
 SHELL=sqlite3
 TEST_DATA=test-data.sql
