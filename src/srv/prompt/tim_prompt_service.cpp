@@ -49,6 +49,8 @@ tim::prompt_service::~prompt_service() = default;
 
 void tim::p::prompt_service::subscribe()
 {
+    tim::app()->mqtt()->publish("user/connect", _user.id);
+
     tim::app()->mqtt()->subscribe(_topic.parent_path() / "+",
                                   std::bind(&tim::p::prompt_service::on_post, this,
                                             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
