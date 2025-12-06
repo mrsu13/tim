@@ -70,7 +70,6 @@ bool tim::sqlite_db::open(const std::filesystem::path &path)
 
     if (!exec(PRAGMAS))
         return false;
-
 /*
     // \bug Enable trace only when it is explicitly enabled.
     if (const int res = sqlite3_trace_v2(_d->_db.get(),
@@ -80,10 +79,10 @@ bool tim::sqlite_db::open(const std::filesystem::path &path)
                                                 | SQLITE_TRACE_CLOSE,
                                          &tim::p::sqlite_db::trace, this) != SQLITE_OK)
         return TIM_TRACE(Error,
-                        TIM_TR("Failed to enable trace for database '%s': %s"_en,
-                              "Ошибка при включении отладки для базы данных '%s': %s"_ru),
-                        _d->_path.string().c_str(),
-                        sqlite3_errstr(res));
+                         TIM_TR("Failed to enable trace for database '%s': %s"_en,
+                                "Ошибка при включении отладки для базы данных '%s': %s"_ru),
+                         _d->_path.string().c_str(),
+                         sqlite3_errstr(res));
 */
 //    sqlite3_progress_handler(_d->_db.get(), 1, &tim::p::sqlite_db::progress, this);
 

@@ -56,7 +56,8 @@ static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
                 return nullptr;
             }
 
-            tcl->terminal()->protocol()->write_str(lil_to_string(argv[1]));
+            tcl->terminal()->protocol()->write_str(lil_to_string(argv[0]));
+
             return nullptr;
 
         default:
