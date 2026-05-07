@@ -25,7 +25,7 @@ else
 	TIM_STRIP    := $(STRIP)
 endif
 
-TIM_LIBS := -lm
+TIM_LIBS := -lm -lssh
 
 FORT_DEFINES := -DFT_CONGIG_DISABLE_WCHAR # Actually, we need this on Windows only.
 JSON_DEFINES := -DJSON_NOEXCEPTION=1 -DJSON_DIAGNOSTICS=1 -DJSON_DIAGNOSTIC_POSITIONS=1

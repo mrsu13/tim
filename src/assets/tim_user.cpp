@@ -1,14 +1,17 @@
 #include "tim_user.h"
 
 
-// Public
+// Открытые
 
 std::string tim::user::title() const
 {
-    return icon.empty()
-                ? std::string{}
-                : icon
-            + (nick.empty()
-                ? std::string{}
-                : ' ' + nick);
+    if (!icon.empty() && !nick.empty())
+        return icon + ' ' + nick;
+    if (!nick.empty())
+        return nick;
+    if (!icon.empty())
+        return icon;
+    return id.valid()
+                ? id.to_string(tim::uuid::format::Compact).substr(0, 8)
+                : std::string{};
 }

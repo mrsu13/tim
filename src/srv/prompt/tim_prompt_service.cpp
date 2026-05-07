@@ -4,28 +4,30 @@
 
 #include "tim_mqtt_client.h"
 #include "tim_prompt_shell.h"
+#include "tim_ssh_terminal_protocol.h"
 #include "tim_string_tools.h"
 #include "tim_tcl.h"
-#include "tim_telnet_server.h"
 #include "tim_trace.h"
 #include "tim_vt.h"
 
 
-// Public
+// Открытые
 
-tim::prompt_service::prompt_service(mg_connection *c, tim::mqtt_client &mqtt)
-    : tim::a_inetd_service("prompt", c)
+tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt_client &mqtt)
+    : tim::a_ssh_inetd_service("prompt", info)
     , _d(new tim::p::prompt_service(this, mqtt))
 {
-    _d->_telnet.reset(new tim::telnet_server(this));
-    _d->_terminal.reset(new tim::vt(_d->_telnet.get()));
+    _d->_user.id = info.user_id;
+    _d->_proto.reset(new tim::ssh_terminal_protocol(this));
+    _d->_terminal.reset(new tim::vt(_d->_proto.get()));
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt));
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
     _d->_topic = tim::mqtt_topic("post") / std::to_string(id());
 
-    _d->_on_data_ready = _d->_telnet->data_ready.connect(
-        [d = _d.get()](const char *data, std::size_t size){ d->on_data_ready(data, size); });
+    _d->_on_data_ready = _d->_proto->data_ready.connect(
+        [d = _d.get()](const char *data, std::size_t size)
+        { d->on_data_ready(data, size); });
 
     _d->_on_posted = _d->_shell->posted.connect(
         [d = _d.get()](const std::string &text)
@@ -44,12 +46,12 @@ tim::prompt_service::prompt_service(mg_connection *c, tim::mqtt_client &mqtt)
 tim::prompt_service::~prompt_service() = default;
 
 
-// Private
+// Закрытые
 
 void tim::p::prompt_service::subscribe()
 {
     _mqtt.publish("user/connect", _user.id.to_string());
-    _sub_post = _mqtt.subscribe(_topic.parent() / "+",
+    _sub_post = _mqtt.subscribe("post/+",
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 }

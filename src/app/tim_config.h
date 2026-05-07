@@ -7,11 +7,13 @@
 namespace tim
 {
 
-static const std::uint16_t TELNET_PORT = 2323;
+static const std::uint16_t SSH_PORT = 2222;
 static const char COMMAND_PREFIX = '/';
 static const char APP_NAME[] = "tim";
 static const char ORG_NAME[] = "mrsu";
 static const char HISTORY_FNAME[] = "history.txt";
+static const char SSH_HOST_KEY_FNAME[] = "host_ed25519";
+static const char SSH_DATA_SUBDIR[] = "ssh";
 
 /**
  * SQLite

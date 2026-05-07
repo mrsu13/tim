@@ -4,7 +4,8 @@
 
 #include "tim_config.h"
 #include "tim_file_tools.h"
-#include "tim_inetd.h"
+#include "tim_ssh_inetd.h"
+#include "tim_a_ssh_inetd_service.h"
 #include "tim_mqtt_client.h"
 #include "tim_sqlite_db.h"
 #include "tim_trace.h"
@@ -80,18 +81,22 @@ tim::application::application(int argc, char **argv)
                          "Не удалось открыть файл базы данных '%s'; хранение данных недоступно."_ru),
                   _d->_db->path().string().c_str());
 
-    _d->_prompt_inetd = tim::inetd::start(
-        &_d->_mg, tim::TELNET_PORT,
-        [mqtt = _d->_mqtt.get()](mg_connection *c) -> std::unique_ptr<tim::a_inetd_service>
+    const std::filesystem::path host_key_path =
+        tim::standard_location(tim::filesystem_location::AppLocalData)
+            / tim::SSH_DATA_SUBDIR
+            / tim::SSH_HOST_KEY_FNAME;
+    _d->_ssh_inetd = tim::ssh_inetd::start(
+        tim::SSH_PORT,
+        host_key_path,
+        [mqtt = _d->_mqtt.get()](const tim::ssh_session_info &info) -> std::unique_ptr<tim::a_inetd_service>
         {
-            return std::make_unique<tim::prompt_service>(c, *mqtt);
-        },
-        /*tls_enabled=*/false);
-    if (!_d->_prompt_inetd)
+            return std::make_unique<tim::prompt_service>(info, *mqtt);
+        });
+    if (!_d->_ssh_inetd)
         TIM_TRACE(Error,
-                  TIM_TR("Telnet inetd failed to start on port %u; clients cannot connect."_en,
-                         "Не удалось запустить telnet-inetd на порту %u; клиенты не смогут подключиться."_ru),
-                  tim::TELNET_PORT);
+                  TIM_TR("SSH inetd failed to start on port %u; clients cannot connect."_en,
+                         "Не удалось запустить SSH-inetd на порту %u; клиенты не смогут подключиться."_ru),
+                  tim::SSH_PORT);
 
     _d->_post_service.reset(new tim::post_service(*_d->_mqtt, *_d->_db));
     _d->_user_service.reset(new tim::user_service(*_d->_mqtt, *_d->_db));
@@ -99,6 +104,14 @@ tim::application::application(int argc, char **argv)
 
 tim::application::~application()
 {
+    // Сворачиваем подсистемы, пока mg_mgr/event-loop ещё жив:
+    // mqtt_client при уничтожении трогает таймеры из _mg.
+    _d->_user_service.reset();
+    _d->_post_service.reset();
+    _d->_ssh_inetd.reset();
+    _d->_mqtt.reset();
+    _d->_db.reset();
+
     mg_mgr_free(&_d->_mg);
 
 #ifdef TIM_OS_LINUX
@@ -130,12 +143,21 @@ void tim::application::set_org_name(const std::string &name)
 void tim::application::dispatch()
 {
     mg_mgr_poll(&_d->_mg, 0);
+    if (_d->_ssh_inetd)
+        _d->_ssh_inetd->dispatch(0);
 }
 
 void tim::application::exec()
 {
+    // Чередуем опрос mongoose (MQTT) и libssh (входящие SSH-соединения).
+    // 50 мс на каждый — приемлемая задержка для чата и достаточный квант,
+    // чтобы не крутить бессмысленный busy-loop.
     while (!_d->_quit)
-        mg_mgr_poll(&_d->_mg, 1000 /* 1 sec */);
+    {
+        mg_mgr_poll(&_d->_mg, 50);
+        if (_d->_ssh_inetd)
+            _d->_ssh_inetd->dispatch(50);
+    }
 }
 
 void tim::application::quit()
