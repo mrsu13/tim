@@ -15,14 +15,14 @@
 
 static const int TIM_MQTT_QOS = 1;
 
-// Static helpers
+// Статические помощники
 
 namespace
 {
 
-// Returns true iff the topic matches the MQTT topic filter.
-// Implements MQTT-3.1.1 wildcard semantics: '+' matches exactly one level,
-// '#' matches the rest (including zero levels) and must be the last token.
+// Возвращает true тогда и только тогда, когда топик соответствует MQTT-фильтру.
+// Реализует семантику маски MQTT 3.1.1: '+' соответствует ровно одному уровню,
+// '#' соответствует остатку (включая ноль уровней) и должен быть последним токеном.
 bool topic_matches(std::string_view topic, std::string_view filter)
 {
     auto take_level = [](std::string_view &s)
@@ -47,7 +47,7 @@ bool topic_matches(std::string_view topic, std::string_view filter)
         const std::string_view f = take_level(filter);
 
         if (f == "#")
-            return filter.empty(); // '#' must be the last token.
+            return filter.empty(); // '#' должен быть последним токеном.
 
         if (topic.empty()
                 && filter.empty()
@@ -68,33 +68,71 @@ bool topic_matches(std::string_view topic, std::string_view filter)
 
 }
 
-// Public
+// Открытые
 
-tim::mqtt_client::mqtt_client(mg_mgr *mg, std::string_view url,
-                              const std::chrono::seconds ping_interval)
+tim::mqtt_client::mqtt_client(mg_mgr *mg)
     : connected{}
     , disconnected{}
     , _d(new tim::p::mqtt_client(this))
 {
     assert(mg);
+    _d->_mg = mg;
+}
+
+tim::mqtt_client::~mqtt_client()
+{
+    stop();
+}
+
+bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds ping_interval)
+{
     assert(!url.empty() && "MQTT broker URL must not be empty.");
     assert(ping_interval.count() && "ping_interval must not be zero.");
 
-    _d->_mg = mg;
+    if (_d->_timer)
+    {
+        TIM_TRACE(Warning, "mqtt_client::start() called while already started; ignoring.");
+        return true;
+    }
+
     _d->_url = url;
-    _d->_timer = mg_timer_add(mg, ping_interval.count() * 1000,
+    _d->_timer = mg_timer_add(_d->_mg, ping_interval.count() * 1000,
                               MG_TIMER_REPEAT | MG_TIMER_RUN_NOW,
                               &tim::p::mqtt_client::ping, _d.get());
+    if (!_d->_timer)
+    {
+        TIM_TRACE(Error,
+                  TIM_TR("Failed to start MQTT client timer for broker '%.*s'."_en,
+                         "Не могу создать таймер MQTT клиента для брокера '%.*s'."_ru),
+                  (int)url.size(), url.data());
+        _d->_url.clear();
+        return false;
+    }
+    return true;
 }
 
-tim::mqtt_client::~mqtt_client() = default;
+void tim::mqtt_client::stop()
+{
+    if (_d->_timer)
+    {
+        mg_timer_free(&_d->_mg->timers, _d->_timer);
+        _d->_timer = nullptr;
+    }
+    if (_d->_client)
+    {
+        _d->_client->is_draining = 1;
+        _d->_client = nullptr;
+    }
+    _d->_connected = false;
+    _d->_url.clear();
+}
 
 bool tim::mqtt_client::is_connected() const
 {
     return _d->_connected;
 }
 
-void tim::mqtt_client::publish(std::string_view topic,
+void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                const char *data, std::size_t size,
                                std::uint8_t qos,
                                bool retain)
@@ -111,12 +149,12 @@ void tim::mqtt_client::publish(std::string_view topic,
 
     mg_mqtt_pub(_d->_client, &pub_opts);
 
-    TIM_TRACE(Debug, "Published to '%.*s': '%.*s'.",
-              (int)topic.size(), topic.data(),
+    TIM_TRACE(Debug, "Published to '%s': '%.*s'.",
+              topic.c_str(),
               (int)size, data);
 }
 
-void tim::mqtt_client::publish(std::string_view topic,
+void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                std::string_view payload,
                                std::uint8_t qos,
                                bool retain)
@@ -124,7 +162,7 @@ void tim::mqtt_client::publish(std::string_view topic,
     publish(topic, payload.data(), payload.size(), qos, retain);
 }
 
-tim::mqtt_subscription tim::mqtt_client::subscribe(std::string_view topic_filter,
+tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_filter,
                                                    message_handler mh,
                                                    std::uint8_t qos)
 {
@@ -132,7 +170,7 @@ tim::mqtt_subscription tim::mqtt_client::subscribe(std::string_view topic_filter
     assert(mh);
 
     const std::size_t id = _d->_next_subscriber_id++;
-    _d->_subscribers.push_back({ id, std::string(topic_filter), std::move(mh) });
+    _d->_subscribers.push_back({ id, topic_filter, std::move(mh) });
 
     const mg_mqtt_opts sub_opts =
     {
@@ -142,8 +180,7 @@ tim::mqtt_subscription tim::mqtt_client::subscribe(std::string_view topic_filter
 
     mg_mqtt_sub(_d->_client, &sub_opts);
 
-    TIM_TRACE(Debug, "Subscribed to '%.*s'.",
-              (int)topic_filter.size(), topic_filter.data());
+    TIM_TRACE(Debug, "Subscribed to '%s'.", topic_filter.c_str());
 
     return tim::mqtt_subscription(this, id);
 }
@@ -161,7 +198,7 @@ void tim::mqtt_client::unsubscribe(std::size_t id)
 }
 
 
-// Private
+// Закрытые
 
 void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 {
@@ -224,14 +261,14 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
             if (!c->is_draining)
             {
                 mg_mqtt_message *msg = (mg_mqtt_message *)ev_data;
-                const std::string topic(msg->topic.buf, msg->topic.len);
+                const tim::mqtt_topic topic(std::string(msg->topic.buf, msg->topic.len));
 
                 TIM_TRACE(Debug,
                           "MQTT message received at topic '%s': '%.*s'.",
                           topic.c_str(),
                           (int)msg->data.len, msg->data.buf);
 
-                // Snapshot subscriber ids so a handler may safely (un)subscribe during dispatch.
+                // Снимок id подписчиков, чтобы обработчик мог безопасно (от)подписаться во время диспетчеризации.
                 std::vector<std::size_t> ids;
                 ids.reserve(self->_subscribers.size());
                 for (const subscriber_entry &e: self->_subscribers)
@@ -244,7 +281,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                         [id](const subscriber_entry &e){ return e.id == id; });
                     if (it == self->_subscribers.cend())
                         continue;
-                    if (topic_matches(topic, it->filter))
+                    if (topic_matches(topic.view(), it->filter.view()))
                         it->handler(topic, msg->data.buf, msg->data.len);
                 }
             }
@@ -300,8 +337,8 @@ void tim::p::mqtt_client::ping(void *data)
 
     if (!(self->_client = mg_mqtt_connect(self->_mg, self->_url.c_str(), &opts,
                                           &tim::p::mqtt_client::handle_events, self)))
-        TIM_TRACE(Fatal,
-                  TIM_TR("Failed to connect to MQTT broker at '%s'."_en,
-                         "Ошибка при подключении к брокеру MQTT '%s'."_ru),
+        TIM_TRACE(Error,
+                  TIM_TR("Failed to connect to MQTT broker at '%s'; will retry."_en,
+                         "Ошибка при подключении к брокеру MQTT '%s'; повторим попытку."_ru),
                   self->_url.c_str());
 }

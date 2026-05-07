@@ -4,13 +4,13 @@
 #include "tim_signal_connection.h"
 
 #include <cstddef>
-#include <string>
 
 
 namespace tim
 {
 
 class mqtt_client;
+class mqtt_topic;
 class sqlite_db;
 
 namespace p
@@ -24,7 +24,7 @@ struct post_service
     }
 
     void subscribe();
-    void on_post(const std::string &topic, const char *data, std::size_t size);
+    void on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     tim::mqtt_client &_mqtt;
     tim::sqlite_db &_db;

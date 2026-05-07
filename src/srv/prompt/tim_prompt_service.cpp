@@ -22,7 +22,7 @@ tim::prompt_service::prompt_service(mg_connection *c, tim::mqtt_client &mqtt)
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt));
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
-    _d->_topic = "post/" + std::to_string(id());
+    _d->_topic = tim::mqtt_topic("post") / std::to_string(id());
 
     _d->_on_data_ready = _d->_telnet->data_ready.connect(
         [d = _d.get()](const char *data, std::size_t size){ d->on_data_ready(data, size); });
@@ -49,8 +49,8 @@ tim::prompt_service::~prompt_service() = default;
 void tim::p::prompt_service::subscribe()
 {
     _mqtt.publish("user/connect", _user.id.to_string());
-    _sub_post = _mqtt.subscribe("post/+",
-        [this](const std::string &topic, const char *data, std::size_t size)
+    _sub_post = _mqtt.subscribe(_topic.parent() / "+",
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 }
 
@@ -63,15 +63,14 @@ void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
         _q->close();
 }
 
-void tim::p::prompt_service::on_post(const std::string &topic, const char *data, std::size_t size)
+void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size)
 {
     if (topic != _topic)
     {
-        const std::string sender = topic.substr(topic.rfind('/') + 1);
         _shell->cloud(_user.title(),
                       '\n' + std::string(data, size),
                       _shell->terminal()->color(
-                        tim::to_int(sender) % (_shell->terminal()->color_count() - 1) + 1));
+                        tim::to_int(std::string(topic.last_level())) % (_shell->terminal()->color_count() - 1) + 1));
         _shell->new_line();
     }
 }

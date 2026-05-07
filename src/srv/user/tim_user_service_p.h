@@ -3,15 +3,14 @@
 #include "tim_mqtt_subscription.h"
 #include "tim_signal_connection.h"
 
-#include <cassert>
 #include <cstddef>
-#include <string>
 
 
 namespace tim
 {
 
 class mqtt_client;
+class mqtt_topic;
 class sqlite_db;
 
 namespace p
@@ -25,9 +24,9 @@ struct user_service
     }
 
     void subscribe();
-    void connect(const std::string &topic, const char *data, std::size_t size);
-    void setnick(const std::string &topic, const char *data, std::size_t size);
-    void seticon(const std::string &topic, const char *data, std::size_t size);
+    void connect(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+    void setnick(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+    void seticon(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     tim::mqtt_client &_mqtt;
     tim::sqlite_db &_db;

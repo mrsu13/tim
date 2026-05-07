@@ -6,7 +6,7 @@
 #include <cassert>
 
 
-// Public
+// Открытые
 
 tim::signal_connection::signal_connection()
     : tim::non_copyable()

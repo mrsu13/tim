@@ -67,13 +67,17 @@ tim::application::application(int argc, char **argv)
     mg_mgr_init(&_d->_mg);
 
     _d->_mqtt.reset(new tim::mqtt_client(&_d->_mg));
+    if (!_d->_mqtt->start())
+        TIM_TRACE(Error, "%s",
+                  TIM_TR("MQTT client failed to start; messaging will be unavailable."_en,
+                         "Не удалось запустить MQTT-клиент; обмен сообщениями недоступен."_ru));
 
     _d->_db.reset(new tim::sqlite_db());
     if (!_d->_db->open(tim::standard_location(tim::filesystem_location::AppLocalData)
                                                    / tim::DB_FILE_NAME))
-        TIM_TRACE(Fatal,
-                  TIM_TR("Failed to open database file '%s'."_en,
-                         "Не могу открыть файл базы данных '%s'."_ru),
+        TIM_TRACE(Error,
+                  TIM_TR("Failed to open database file '%s'; persistence will be unavailable."_en,
+                         "Не удалось открыть файл базы данных '%s'; хранение данных недоступно."_ru),
                   _d->_db->path().string().c_str());
 
     _d->_prompt_inetd = tim::inetd::start(
@@ -83,6 +87,12 @@ tim::application::application(int argc, char **argv)
             return std::make_unique<tim::prompt_service>(c, *mqtt);
         },
         /*tls_enabled=*/false);
+    if (!_d->_prompt_inetd)
+        TIM_TRACE(Error,
+                  TIM_TR("Telnet inetd failed to start on port %u; clients cannot connect."_en,
+                         "Не удалось запустить telnet-inetd на порту %u; клиенты не смогут подключиться."_ru),
+                  tim::TELNET_PORT);
+
     _d->_post_service.reset(new tim::post_service(*_d->_mqtt, *_d->_db));
     _d->_user_service.reset(new tim::user_service(*_d->_mqtt, *_d->_db));
 }

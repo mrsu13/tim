@@ -35,7 +35,7 @@ struct mqtt_client
     struct subscriber_entry
     {
         std::size_t id;
-        std::string filter;
+        tim::mqtt_topic filter;
         tim::mqtt_client::message_handler handler;
     };
     using subscribers = std::vector<subscriber_entry>;

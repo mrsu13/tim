@@ -41,9 +41,9 @@ private:
 }
 
 
-// Implementation
+// Реализация
 
-// Public
+// Открытые
 
 template<typename... Args>
 tim::signal<Args...>::signal()
@@ -76,7 +76,7 @@ bool tim::signal<Args...>::disconnect(std::size_t connection_id)
 template<typename... Args>
 void tim::signal<Args...>::operator()(Args... args) const
 {
-    // Snapshot connection ids so a slot may safely (dis)connect during emission.
+    // Снимок id подключений, чтобы слот мог безопасно (от)подключиться во время эмиссии.
     std::vector<std::size_t> ids;
     ids.reserve(_slots.size());
     for (const typename slot_map::value_type &pair: _slots)
@@ -91,7 +91,7 @@ void tim::signal<Args...>::operator()(Args... args) const
 }
 
 
-// Private
+// Закрытые
 
 template<typename... Args>
 std::size_t tim::signal<Args...>::next_id()

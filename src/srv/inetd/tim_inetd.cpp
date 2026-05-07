@@ -22,8 +22,11 @@ std::unique_ptr<tim::inetd> tim::inetd::start(mg_mgr *mg,
                                               bool tls_enabled,
                                               const std::string &if_addr)
 {
-    return std::unique_ptr<tim::inetd>(
+    std::unique_ptr<tim::inetd> self(
         new tim::inetd(mg, port, tls_enabled, if_addr, std::move(factory)));
+    if (!self->_d->_server)
+        return nullptr;
+    return self;
 }
 
 
@@ -38,7 +41,7 @@ tim::inetd::inetd(mg_mgr *mg,
     , _d(new tim::p::inetd())
 {
     assert(mg);
-    assert(port && "port must not be positive.");
+    assert(port && "port must be non-zero.");
     assert(factory);
 
     _d->_if_addr = if_addr.empty()
@@ -46,17 +49,14 @@ tim::inetd::inetd(mg_mgr *mg,
                         : if_addr;
     _d->_port = port;
     _d->_tls_enabled = tls_enabled;
-    _d->_factory = factory;
+    _d->_factory = std::move(factory);
 
-    {
-        char url[128];
-        std::snprintf(url, sizeof(url), "tcp://%s:%u", _d->_if_addr.c_str(), _d->_port);
-        if (!(_d->_server = mg_listen(mg, url, tim::p::inetd::handle_events, _d.get())))
-            TIM_TRACE(Fatal,
-                      TIM_TR("Failed to instantiate inetd at '%s:%u'."_en,
-                             "Ошибка при попытке создать экземпляр inetd на '%s:%u'."_ru),
-                      _d->_if_addr.c_str(), _d->_port);
-    }
+    const std::string url = "tcp://" + _d->_if_addr + ":" + std::to_string(_d->_port);
+    if (!(_d->_server = mg_listen(mg, url.c_str(), tim::p::inetd::handle_events, _d.get())))
+        TIM_TRACE(Error,
+                  TIM_TR("Failed to listen for inetd at '%s:%u'."_en,
+                         "Не могу запустить inetd на '%s:%u'."_ru),
+                  _d->_if_addr.c_str(), _d->_port);
 }
 
 void tim::p::inetd::handle_events(mg_connection *c, int ev, void *ev_data)

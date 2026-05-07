@@ -6,7 +6,7 @@
 #include <cassert>
 
 
-// Public
+// Открытые
 
 tim::mqtt_subscription::mqtt_subscription()
     : tim::non_copyable()

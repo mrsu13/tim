@@ -4,6 +4,7 @@
 #include "tim_uuid.h"
 
 #include "tim_mqtt_client.h"
+#include "tim_mqtt_topic.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_trace.h"
@@ -31,19 +32,19 @@ tim::user_service::~user_service() = default;
 void tim::p::user_service::subscribe()
 {
     _sub_connect = _mqtt.subscribe("user/connect",
-        [this](const std::string &topic, const char *data, std::size_t size)
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { connect(topic, data, size); });
 
     _sub_setnick = _mqtt.subscribe("user/setnick/+",
-        [this](const std::string &topic, const char *data, std::size_t size)
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setnick(topic, data, size); });
 
     _sub_seticon = _mqtt.subscribe("user/seticon/+",
-        [this](const std::string &topic, const char *data, std::size_t size)
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { seticon(topic, data, size); });
 }
 
-void tim::p::user_service::connect(const std::string &topic,
+void tim::p::user_service::connect(const tim::mqtt_topic &topic,
                                    const char *data, std::size_t size)
 {
     (void) topic;
@@ -67,10 +68,10 @@ void tim::p::user_service::connect(const std::string &topic,
                   user_id.c_str());
 }
 
-void tim::p::user_service::setnick(const std::string &topic,
+void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
                                    const char *data, std::size_t size)
 {
-    const tim::uuid user_id = topic.substr(topic.rfind('/') + 1);
+    const tim::uuid user_id = std::string(topic.last_level());
 
     TIM_TRACE(Debug, "Setting user nick for '%s' ...",
               user_id.to_string().c_str());
@@ -95,10 +96,10 @@ void tim::p::user_service::setnick(const std::string &topic,
 
 }
 
-void tim::p::user_service::seticon(const std::string &topic,
+void tim::p::user_service::seticon(const tim::mqtt_topic &topic,
                                    const char *data, std::size_t size)
 {
-    const tim::uuid user_id = topic.substr(topic.rfind('/') + 1);
+    const tim::uuid user_id = std::string(topic.last_level());
 
     TIM_TRACE(Debug, "Setting user icon for '%s' ...",
               user_id.to_string().c_str());
