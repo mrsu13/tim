@@ -19,16 +19,18 @@ struct tcl;
 }
 
 class a_terminal;
+class mqtt_client;
 
 class tcl : public tim::a_script_engine
 {
 
 public:
 
-    tcl(tim::a_terminal *term, const tim::uuid &user_id);
+    tcl(tim::a_terminal *term, const tim::uuid &user_id, tim::mqtt_client &mqtt);
     virtual ~tcl();
 
     const tim::uuid &user_id() const;
+    tim::mqtt_client &mqtt() const;
 
     bool evaluating() const override;
     bool eval(const std::string &program, std::string *res = nullptr) override;

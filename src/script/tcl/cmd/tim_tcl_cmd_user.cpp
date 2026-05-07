@@ -1,6 +1,5 @@
 #include "tim_tcl_cmd_user.h"
 
-#include "tim_application.h"
 #include "tim_mqtt_client.h"
 #include "tim_tcl_cmd.h"
 #include "tim_translator.h"
@@ -31,9 +30,8 @@ static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
     const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
     assert(tcl);
 
-    tim::app()->mqtt()->publish(std::filesystem::path("user/setnick")
-                                    / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                                nick.c_str(), nick.size());
+    tcl->mqtt().publish("user/setnick/" + tcl->user_id().to_string(tim::uuid::format::NoBrackets),
+                        nick.c_str(), nick.size());
 
     return nullptr;
 }
@@ -56,9 +54,8 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
     assert(tcl);
 
-    tim::app()->mqtt()->publish(std::filesystem::path("user/seticon")
-                                    / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                                icon.c_str(), icon.size());
+    tcl->mqtt().publish("user/seticon/" + tcl->user_id().to_string(tim::uuid::format::NoBrackets),
+                        icon.c_str(), icon.size());
 
     return nullptr;
 }

@@ -16,7 +16,8 @@ tim::a_protocol::a_protocol(tim::a_io_device *io)
     assert(io);
 
     _d->_io = io;
-    _d->_io->ready_read.connect(std::bind(&tim::p::a_protocol::on_ready_read, _d.get()));
+    _d->_on_ready_read = _d->_io->ready_read.connect(
+        [d = _d.get()]{ d->on_ready_read(); });
 }
 
 tim::a_protocol::~a_protocol() = default;

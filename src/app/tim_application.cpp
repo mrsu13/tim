@@ -13,6 +13,7 @@
 #include "fort.h"
 
 // Services
+#include "tim_a_inetd_service.h"
 #include "tim_post_service.h"
 #include "tim_user_service.h"
 #include "tim_prompt_service.h"
@@ -75,9 +76,15 @@ tim::application::application(int argc, char **argv)
                          "Не могу открыть файл базы данных '%s'."_ru),
                   _d->_db->path().string().c_str());
 
-    _d->_prompt_inetd = tim::inetd::start<tim::prompt_service>(&_d->_mg, tim::TELNET_PORT, false);
-    _d->_post_service.reset(new tim::post_service());
-    _d->_user_service.reset(new tim::user_service());
+    _d->_prompt_inetd = tim::inetd::start(
+        &_d->_mg, tim::TELNET_PORT,
+        [mqtt = _d->_mqtt.get()](mg_connection *c) -> std::unique_ptr<tim::a_inetd_service>
+        {
+            return std::make_unique<tim::prompt_service>(c, *mqtt);
+        },
+        /*tls_enabled=*/false);
+    _d->_post_service.reset(new tim::post_service(*_d->_mqtt, *_d->_db));
+    _d->_user_service.reset(new tim::user_service(*_d->_mqtt, *_d->_db));
 }
 
 tim::application::~application()

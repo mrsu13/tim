@@ -1,14 +1,18 @@
 #pragma once
 
+#include "tim_mqtt_subscription.h"
+#include "tim_signal_connection.h"
 #include "tim_user.h"
 
 #include <cassert>
-#include <filesystem>
+#include <cstddef>
+#include <string>
 
 
 namespace tim
 {
 
+class mqtt_client;
 class prompt_service;
 class prompt_shell;
 class tcl;
@@ -20,23 +24,30 @@ namespace p
 
 struct prompt_service
 {
-    explicit prompt_service(tim::prompt_service *q)
+    prompt_service(tim::prompt_service *q, tim::mqtt_client &mqtt)
         : _q(q)
+        , _mqtt(mqtt)
     {
         assert(_q);
     }
 
     void subscribe();
     void on_data_ready(const char *data, std::size_t size);
-    void on_post(const std::filesystem::path &topic, const char *data, std::size_t size);
+    void on_post(const std::string &topic, const char *data, std::size_t size);
 
     tim::prompt_service *const _q;
+    tim::mqtt_client &_mqtt;
 
     std::unique_ptr<tim::telnet_server> _telnet;
     std::unique_ptr<tim::vt> _terminal;
     std::unique_ptr<tim::tcl> _tcl;
     std::unique_ptr<tim::prompt_shell> _shell;
-    std::filesystem::path _topic;
+    std::string _topic;
+
+    tim::signal_connection _on_data_ready;
+    tim::signal_connection _on_posted;
+    tim::signal_connection _on_connected;
+    tim::mqtt_subscription _sub_post;
 
     const tim::user _user
     {

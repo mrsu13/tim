@@ -2,8 +2,8 @@
 
 #include "tim_mqtt_client.h"
 
-#include <filesystem>
-#include <utility>
+#include <cassert>
+#include <string>
 #include <vector>
 
 
@@ -27,13 +27,20 @@ struct mqtt_client
     tim::mqtt_client *const _q;
 
     mg_mgr *_mg = nullptr;
-    std::filesystem::path _url;
+    std::string _url;
     mg_connection *_client = nullptr;
     mg_timer *_timer = nullptr;
     bool _connected = false;
 
-    using subscribers = std::vector<std::pair<std::filesystem::path, tim::mqtt_client::message_handler>>;
+    struct subscriber_entry
+    {
+        std::size_t id;
+        std::string filter;
+        tim::mqtt_client::message_handler handler;
+    };
+    using subscribers = std::vector<subscriber_entry>;
     subscribers _subscribers;
+    std::size_t _next_subscriber_id = 0;
 };
 
 }

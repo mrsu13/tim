@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tim_signal_connection.h"
+
 #include <cassert>
 
 
@@ -24,6 +26,7 @@ struct a_protocol
 
     tim::a_protocol *const _q;
     tim::a_io_device *_io = nullptr;
+    tim::signal_connection _on_ready_read;
 };
 
 }

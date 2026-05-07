@@ -5,7 +5,9 @@
 
 namespace tim
 {
-    
+
+class mqtt_client;
+
 namespace p
 {
 
@@ -18,7 +20,7 @@ class prompt_service : public tim::a_inetd_service
 
 public:
 
-    explicit prompt_service(mg_connection *c);
+    prompt_service(mg_connection *c, tim::mqtt_client &mqtt);
     ~prompt_service();
 
 private:

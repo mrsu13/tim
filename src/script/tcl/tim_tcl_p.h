@@ -11,6 +11,7 @@ typedef struct _lil_t *lil_t;
 namespace tim
 {
 
+class mqtt_client;
 class tcl;
 
 namespace p
@@ -18,8 +19,9 @@ namespace p
 
 struct tcl
 {
-    explicit tcl(tim::tcl *q)
+    tcl(tim::tcl *q, tim::mqtt_client &mqtt)
         : _q(q)
+        , _mqtt(mqtt)
     {
         assert(_q);
     }
@@ -28,6 +30,7 @@ struct tcl
     static void dispatch(lil_t lil);
 
     tim::tcl *const _q;
+    tim::mqtt_client &_mqtt;
 
     lil_t _lil = nullptr;
     tim::uuid _user_id;

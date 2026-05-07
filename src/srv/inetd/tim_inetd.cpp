@@ -16,6 +16,16 @@
 
 tim::inetd::~inetd() = default;
 
+std::unique_ptr<tim::inetd> tim::inetd::start(mg_mgr *mg,
+                                              std::uint16_t port,
+                                              service_factory factory,
+                                              bool tls_enabled,
+                                              const std::string &if_addr)
+{
+    return std::unique_ptr<tim::inetd>(
+        new tim::inetd(mg, port, tls_enabled, if_addr, std::move(factory)));
+}
+
 
 // Private
 

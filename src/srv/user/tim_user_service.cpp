@@ -3,7 +3,6 @@
 #include "tim_user_service_p.h"
 #include "tim_uuid.h"
 
-#include "tim_application.h"
 #include "tim_mqtt_client.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -13,13 +12,14 @@
 
 // Public
 
-tim::user_service::user_service()
+tim::user_service::user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("user")
-    , _d(new tim::p::user_service())
+    , _d(new tim::p::user_service(mqtt, db))
 {
-    tim::app()->mqtt()->connected.connect(std::bind(&tim::p::user_service::subscribe, _d.get()));
+    _d->_on_connected = mqtt.connected.connect(
+        [d = _d.get()]{ d->subscribe(); });
 
-    if (tim::app()->mqtt()->is_connected())
+    if (mqtt.is_connected())
         _d->subscribe();
 }
 
@@ -30,28 +30,27 @@ tim::user_service::~user_service() = default;
 
 void tim::p::user_service::subscribe()
 {
+    _sub_connect = _mqtt.subscribe("user/connect",
+        [this](const std::string &topic, const char *data, std::size_t size)
+        { connect(topic, data, size); });
 
-    tim::app()->mqtt()->subscribe("user/connect",
-                                  std::bind(&tim::p::user_service::connect, this,
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    _sub_setnick = _mqtt.subscribe("user/setnick/+",
+        [this](const std::string &topic, const char *data, std::size_t size)
+        { setnick(topic, data, size); });
 
-    tim::app()->mqtt()->subscribe("user/setnick/+",
-                                  std::bind(&tim::p::user_service::setnick, this,
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-
-    tim::app()->mqtt()->subscribe("user/seticon/+",
-                                  std::bind(&tim::p::user_service::seticon, this,
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    _sub_seticon = _mqtt.subscribe("user/seticon/+",
+        [this](const std::string &topic, const char *data, std::size_t size)
+        { seticon(topic, data, size); });
 }
 
-void tim::p::user_service::connect(const std::filesystem::path &topic,
+void tim::p::user_service::connect(const std::string &topic,
                                    const char *data, std::size_t size)
 {
     (void) topic;
 
     TIM_TRACE(Debug, "User '%*s' connected.", (int)size, data);
 
-    tim::sqlite_query q(tim::app()->db(),
+    tim::sqlite_query q(&_db,
                         "INSERT OR IGNORE INTO user (id) VALUES (?)");
     if (!q.prepare())
         TIM_TRACE(Fatal,
@@ -68,15 +67,15 @@ void tim::p::user_service::connect(const std::filesystem::path &topic,
                   user_id.c_str());
 }
 
-void tim::p::user_service::setnick(const std::filesystem::path &topic,
+void tim::p::user_service::setnick(const std::string &topic,
                                    const char *data, std::size_t size)
 {
-    const tim::uuid user_id = topic.filename().string();
+    const tim::uuid user_id = topic.substr(topic.rfind('/') + 1);
 
     TIM_TRACE(Debug, "Setting user nick for '%s' ...",
               user_id.to_string().c_str());
 
-    tim::sqlite_query q(tim::app()->db(),
+    tim::sqlite_query q(&_db,
                         "UPDATE user SET nick = ? WHERE id = ?");
     if (!q.prepare())
             TIM_TRACE(Fatal,
@@ -96,15 +95,15 @@ void tim::p::user_service::setnick(const std::filesystem::path &topic,
 
 }
 
-void tim::p::user_service::seticon(const std::filesystem::path &topic,
+void tim::p::user_service::seticon(const std::string &topic,
                                    const char *data, std::size_t size)
 {
-    const tim::uuid user_id = topic.filename().string();
+    const tim::uuid user_id = topic.substr(topic.rfind('/') + 1);
 
     TIM_TRACE(Debug, "Setting user icon for '%s' ...",
               user_id.to_string().c_str());
 
-    tim::sqlite_query q(tim::app()->db(),
+    tim::sqlite_query q(&_db,
                         "UPDATE user SET icon = ? WHERE id = ?");
     if (!q.prepare())
             TIM_TRACE(Fatal,

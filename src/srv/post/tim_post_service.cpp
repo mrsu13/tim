@@ -2,7 +2,6 @@
 
 #include "tim_post_service_p.h"
 
-#include "tim_application.h"
 #include "tim_mqtt_client.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -13,13 +12,14 @@
 
 // Public
 
-tim::post_service::post_service()
+tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("post")
-    , _d(new tim::p::post_service())
+    , _d(new tim::p::post_service(mqtt, db))
 {
-    tim::app()->mqtt()->connected.connect(std::bind(&tim::p::post_service::subscribe, _d.get()));
+    _d->_on_connected = mqtt.connected.connect(
+        [d = _d.get()]{ d->subscribe(); });
 
-    if (tim::app()->mqtt()->is_connected())
+    if (mqtt.is_connected())
         _d->subscribe();
 }
 
@@ -30,16 +30,17 @@ tim::post_service::~post_service() = default;
 
 void tim::p::post_service::subscribe()
 {
-    tim::app()->mqtt()->subscribe("post/+",
-                                  std::bind(&tim::p::post_service::on_post, this,
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    _sub_post = _mqtt.subscribe("post/+",
+        [this](const std::string &topic, const char *data, std::size_t size)
+        { on_post(topic, data, size); });
 }
 
-void tim::p::post_service::on_post(const std::filesystem::path &topic, const char *data, std::size_t size)
+void tim::p::post_service::on_post(const std::string &topic, const char *data, std::size_t size)
 {
-    const tim::uuid user_id = topic.filename().string();
+    const std::string user_id_str = topic.substr(topic.rfind('/') + 1);
+    const tim::uuid user_id = user_id_str;
 
-    tim::sqlite_query q(tim::app()->db(),
+    tim::sqlite_query q(&_db,
                         "INSERT OR REPLACE INTO post (id, user_id, text) VALUES (?, ?, ?)");
     if (!q.prepare())
         TIM_TRACE(Fatal,
@@ -53,5 +54,5 @@ void tim::p::post_service::on_post(const std::filesystem::path &topic, const cha
         TIM_TRACE(Error,
                   TIM_TR("Failed to save post '%s' to the database."_en,
                          "Ошибка при сохранении поста '%s' в базе данных."_ru),
-                  topic.filename().string().c_str());
+                  user_id_str.c_str());
 }

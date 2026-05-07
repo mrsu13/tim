@@ -6,6 +6,9 @@
 namespace tim
 {
 
+class mqtt_client;
+class sqlite_db;
+
 namespace p
 {
 
@@ -18,7 +21,7 @@ class post_service : public tim::service
 
 public:
 
-    post_service();
+    post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db);
     ~post_service();
 
 private:
