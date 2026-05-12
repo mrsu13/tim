@@ -2,6 +2,7 @@
 
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
+#include "tim_mqtt_topics.h"
 #include "tim_prompt_service.h"
 #include "tim_string_tools.h"
 #include "tim_tcl.h"
@@ -66,11 +67,8 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
         return nullptr;
     }
 
-    const tim::mqtt_topic topic =
-        tim::mqtt_topic("react")
-            / prompt->last_seen_post().to_string(tim::uuid::format::NoBrackets)
-            / prompt->user_id().to_string(tim::uuid::format::NoBrackets);
-    prompt->mqtt().publish(topic, std::to_string(weight));
+    prompt->mqtt().publish(tim::topics::react(prompt->last_seen_post(), prompt->user_id()),
+                           std::to_string(weight));
 
     return nullptr;
 }

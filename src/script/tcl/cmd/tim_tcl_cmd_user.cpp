@@ -3,6 +3,7 @@
 #include "tim_a_terminal.h"
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
+#include "tim_mqtt_topics.h"
 #include "tim_prompt_service.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -58,7 +59,7 @@ static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
     if (!prompt)
         return nullptr;
 
-    prompt->mqtt().publish(tim::mqtt_topic("user/setnick") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+    prompt->mqtt().publish(tim::topics::user_setnick(prompt->user_id()),
                            nick.c_str(), nick.size());
 
     return nullptr;
@@ -84,7 +85,7 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     if (!prompt)
         return nullptr;
 
-    prompt->mqtt().publish(tim::mqtt_topic("user/seticon") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+    prompt->mqtt().publish(tim::topics::user_seticon(prompt->user_id()),
                            icon.c_str(), icon.size());
 
     return nullptr;
@@ -117,7 +118,7 @@ static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
     if (!prompt)
         return nullptr;
 
-    prompt->mqtt().publish(tim::mqtt_topic("user/subscribe") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+    prompt->mqtt().publish(tim::topics::user_subscribe(prompt->user_id()),
                            publisher.to_string(tim::uuid::format::NoBrackets));
 
     return nullptr;
@@ -150,7 +151,7 @@ static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
     if (!prompt)
         return nullptr;
 
-    prompt->mqtt().publish(tim::mqtt_topic("user/unsubscribe") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+    prompt->mqtt().publish(tim::topics::user_unsubscribe(prompt->user_id()),
                            publisher.to_string(tim::uuid::format::NoBrackets));
 
     return nullptr;

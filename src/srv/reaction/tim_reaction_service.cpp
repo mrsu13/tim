@@ -4,6 +4,7 @@
 
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
+#include "tim_mqtt_topics.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_string_tools.h"
@@ -32,7 +33,7 @@ tim::reaction_service::~reaction_service() = default;
 
 void tim::p::reaction_service::subscribe()
 {
-    _sub_react = _mqtt.subscribe("react/+/+",
+    _sub_react = _mqtt.subscribe(tim::topics::REACT_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_react(topic, data, size); });
 }
@@ -66,8 +67,6 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
 
     const std::string post_id_canon = post_id.to_string();
     const std::string user_id_canon = user_id.to_string();
-    const std::string post_id_nb = post_id.to_string(tim::uuid::format::NoBrackets);
-    const std::string user_id_nb = user_id.to_string(tim::uuid::format::NoBrackets);
 
     // weight = 0 трактуется как снятие реакции.
     if (weight == 0)
@@ -91,7 +90,7 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
         }
 
         // Уведомляем подписчиков: реакция снята (weight=0).
-        _mqtt.publish(tim::mqtt_topic("react_event") / post_id_nb / user_id_nb, "0");
+        _mqtt.publish(tim::topics::react_event(post_id, user_id), "0");
         return;
     }
 
@@ -117,9 +116,8 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
         return;
     }
 
-    // Уведомление в шину: react_event/<post>/<reactor> = <weight>.
-    // Отдельный топик от исходного react/+/+ — чтобы клиенты видели только
-    // подтверждённые (успешно записанные) реакции.
-    _mqtt.publish(tim::mqtt_topic("react_event") / post_id_nb / user_id_nb,
+    // Уведомление в шину: отдельный топик от исходного react/+/+, чтобы
+    // клиенты видели только подтверждённые (успешно записанные) реакции.
+    _mqtt.publish(tim::topics::react_event(post_id, user_id),
                   std::to_string(weight));
 }

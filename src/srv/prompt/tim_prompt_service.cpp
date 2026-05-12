@@ -3,6 +3,7 @@
 #include "tim_prompt_service_p.h"
 
 #include "tim_mqtt_client.h"
+#include "tim_mqtt_topics.h"
 #include "tim_prompt_shell.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -57,11 +58,7 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
             // post/<publisher-uuid>/<post-uuid>; такой топик однозначно
             // адресует сообщение и используется реакциями.
             const tim::uuid post_uuid = tim::uuid::create();
-            const tim::mqtt_topic topic =
-                tim::mqtt_topic("post")
-                    / d->_user.id.to_string(tim::uuid::format::NoBrackets)
-                    / post_uuid.to_string(tim::uuid::format::NoBrackets);
-            d->_mqtt.publish(topic, text);
+            d->_mqtt.publish(tim::topics::post(d->_user.id, post_uuid), text);
         });
 
     _d->_on_connected = mqtt.connected.connect(
@@ -234,23 +231,21 @@ void tim::p::prompt_service::load_post_history()
 
 void tim::p::prompt_service::subscribe()
 {
-    const std::string user_id_nb = _user.id.to_string(tim::uuid::format::NoBrackets);
-
-    _mqtt.publish("user/connect", _user.id.to_string());
+    _mqtt.publish(tim::topics::USER_CONNECT, _user.id.to_string());
 
     // Открытый ключ клиента — для аудита и привязки личности к ключу.
     const std::string &key = _q->pub_key();
     if (!key.empty())
-        _mqtt.publish(tim::mqtt_topic("user/setpubkey") / user_id_nb, key);
+        _mqtt.publish(tim::topics::user_setpubkey(_user.id), key);
 
-    _sub_post = _mqtt.subscribe("post/+/+",
+    _sub_post = _mqtt.subscribe(tim::topics::POST_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 
     // Слушаем изменения ника/иконки ВСЕХ пользователей — благодаря этому
     // и собственный _user, и кэш других участников остаются актуальными
     // без переподключения и без отдельных запросов в БД.
-    _sub_setnick = _mqtt.subscribe("user/setnick/+",
+    _sub_setnick = _mqtt.subscribe(tim::topics::USER_SETNICK_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         {
             const tim::uuid uid = std::string(topic.last_level());
@@ -267,7 +262,7 @@ void tim::p::prompt_service::subscribe()
             }
         });
 
-    _sub_seticon = _mqtt.subscribe("user/seticon/+",
+    _sub_seticon = _mqtt.subscribe(tim::topics::USER_SETICON_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         {
             const tim::uuid uid = std::string(topic.last_level());
@@ -284,14 +279,14 @@ void tim::p::prompt_service::subscribe()
             }
         });
 
-    _sub_react_event = _mqtt.subscribe("react_event/+/+",
+    _sub_react_event = _mqtt.subscribe(tim::topics::REACT_EVENT_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_react_event(topic, data, size); });
 
     // Свои подписки/отписки — синхронизируем локальный кэш _subscriptions
     // в реальном времени без перезагрузки из БД. Wildcard на всех
     // пользователей здесь не нужен (нас интересует только свой список).
-    _sub_self_subscribe = _mqtt.subscribe(tim::mqtt_topic("user/subscribe") / user_id_nb,
+    _sub_self_subscribe = _mqtt.subscribe(tim::topics::user_subscribe(_user.id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
             const tim::uuid pub = std::string(data, size);
@@ -299,7 +294,7 @@ void tim::p::prompt_service::subscribe()
                 _subscriptions.insert(pub);
         });
 
-    _sub_self_unsubscribe = _mqtt.subscribe(tim::mqtt_topic("user/unsubscribe") / user_id_nb,
+    _sub_self_unsubscribe = _mqtt.subscribe(tim::topics::user_unsubscribe(_user.id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
             const tim::uuid pub = std::string(data, size);

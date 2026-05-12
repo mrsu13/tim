@@ -4,6 +4,7 @@
 #include "tim_uuid.h"
 
 #include "tim_mqtt_client.h"
+#include "tim_mqtt_topics.h"
 #include "tim_mqtt_topic.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -31,27 +32,27 @@ tim::user_service::~user_service() = default;
 
 void tim::p::user_service::subscribe()
 {
-    _sub_connect = _mqtt.subscribe("user/connect",
+    _sub_connect = _mqtt.subscribe(tim::topics::USER_CONNECT,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { connect(topic, data, size); });
 
-    _sub_setnick = _mqtt.subscribe("user/setnick/+",
+    _sub_setnick = _mqtt.subscribe(tim::topics::USER_SETNICK_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setnick(topic, data, size); });
 
-    _sub_seticon = _mqtt.subscribe("user/seticon/+",
+    _sub_seticon = _mqtt.subscribe(tim::topics::USER_SETICON_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { seticon(topic, data, size); });
 
-    _sub_setpubkey = _mqtt.subscribe("user/setpubkey/+",
+    _sub_setpubkey = _mqtt.subscribe(tim::topics::USER_SETPUBKEY_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setpubkey(topic, data, size); });
 
-    _sub_subscribe = _mqtt.subscribe("user/subscribe/+",
+    _sub_subscribe = _mqtt.subscribe(tim::topics::USER_SUBSCRIBE_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { subscribe_to(topic, data, size); });
 
-    _sub_unsubscribe = _mqtt.subscribe("user/unsubscribe/+",
+    _sub_unsubscribe = _mqtt.subscribe(tim::topics::USER_UNSUBSCRIBE_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { unsubscribe_from(topic, data, size); });
 }
