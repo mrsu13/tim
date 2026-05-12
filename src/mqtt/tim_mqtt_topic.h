@@ -53,4 +53,9 @@ private:
 
 tim::mqtt_topic operator/(tim::mqtt_topic lhs, std::string_view level);
 
+// Возвращает true тогда и только тогда, когда `topic` соответствует
+// MQTT-фильтру `filter`. Семантика MQTT 3.1.1: '+' — ровно один уровень,
+// '#' — остаток (включая ноль уровней) и должен быть последним токеном.
+bool topic_matches(std::string_view topic, std::string_view filter);
+
 }

@@ -101,3 +101,50 @@ tim::mqtt_topic tim::operator/(tim::mqtt_topic lhs, std::string_view level)
     lhs /= level;
     return lhs;
 }
+
+bool tim::topic_matches(std::string_view topic, std::string_view filter)
+{
+    // Топик делится на уровни по '/'. N слэшей дают N+1 уровней
+    // (включая пустые). Поэтому "post/" — это два уровня: "post" и ""
+    // и должен матчиться "post/+" по спецификации MQTT 3.1.1.
+    auto take_level = [](std::string_view &s, bool &has_more)
+    {
+        const std::size_t slash = s.find('/');
+        std::string_view level;
+        if (slash == std::string_view::npos)
+        {
+            level = s;
+            s = std::string_view();
+            has_more = false;
+        }
+        else
+        {
+            level = s.substr(0, slash);
+            s.remove_prefix(slash + 1);
+            // has_more остаётся true — после слэша всегда есть как минимум
+            // ещё один уровень, пусть и пустой.
+        }
+        return level;
+    };
+
+    bool topic_has_more = true;
+    bool filter_has_more = true;
+
+    while (filter_has_more)
+    {
+        const std::string_view f = take_level(filter, filter_has_more);
+
+        if (f == "#")
+            return !filter_has_more; // '#' должен быть последним токеном.
+
+        if (!topic_has_more)
+            return false;
+
+        const std::string_view t = take_level(topic, topic_has_more);
+        if (f == "+")
+            continue;
+        if (f != t)
+            return false;
+    }
+    return !topic_has_more;
+}

@@ -15,59 +15,6 @@
 
 static const int TIM_MQTT_QOS = 1;
 
-// Статические помощники
-
-namespace
-{
-
-// Возвращает true тогда и только тогда, когда топик соответствует MQTT-фильтру.
-// Реализует семантику маски MQTT 3.1.1: '+' соответствует ровно одному уровню,
-// '#' соответствует остатку (включая ноль уровней) и должен быть последним токеном.
-bool topic_matches(std::string_view topic, std::string_view filter)
-{
-    auto take_level = [](std::string_view &s)
-    {
-        const std::size_t slash = s.find('/');
-        std::string_view level;
-        if (slash == std::string_view::npos)
-        {
-            level = s;
-            s = std::string_view();
-        }
-        else
-        {
-            level = s.substr(0, slash);
-            s.remove_prefix(slash + 1);
-        }
-        return level;
-    };
-
-    while (!filter.empty())
-    {
-        const std::string_view f = take_level(filter);
-
-        if (f == "#")
-            return filter.empty(); // '#' должен быть последним токеном.
-
-        if (topic.empty()
-                && filter.empty()
-                && f.empty())
-            return true;
-
-        if (topic.empty())
-            return false;
-
-        const std::string_view t = take_level(topic);
-        if (f == "+")
-            continue;
-        if (f != t)
-            return false;
-    }
-    return topic.empty();
-}
-
-}
-
 // Открытые
 
 tim::mqtt_client::mqtt_client(mg_mgr *mg)
@@ -287,7 +234,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                         [id](const subscriber_entry &e){ return e.id == id; });
                     if (it == self->_subscribers.cend())
                         continue;
-                    if (topic_matches(topic.view(), it->filter.view()))
+                    if (tim::topic_matches(topic.view(), it->filter.view()))
                         it->handler(topic, msg->data.buf, msg->data.len);
                 }
             }
