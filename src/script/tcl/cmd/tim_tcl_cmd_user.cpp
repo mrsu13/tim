@@ -3,6 +3,7 @@
 #include "tim_a_terminal.h"
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
+#include "tim_prompt_service.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_tcl_cmd.h"
@@ -17,6 +18,25 @@
 
 
 // Static
+
+// Достаём контекст сессии (prompt_service) из tcl->user_data().
+// Если контекст не выставлен — команда не имеет смысла, возвращаем
+// сообщение об ошибке.
+static tim::prompt_service *session_or_error(lil_t lil, tim::tcl *&tcl_out)
+{
+    tcl_out = (tim::tcl *)lil_get_data(lil);
+    assert(tcl_out);
+    tim::prompt_service *prompt = (tim::prompt_service *)tcl_out->user_data();
+    if (!prompt)
+    {
+        lil_set_error(lil,
+                      TIM_TR("Command requires a chat session context."_en,
+                             "Команда должна выполняться в контексте чат-сессии."_ru));
+        return nullptr;
+    }
+    return prompt;
+}
+
 
 static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
                                        std::size_t argc,
@@ -33,11 +53,13 @@ static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
     }
 
     const std::string nick = lil_to_string(argv[0]);
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tcl->mqtt().publish(tim::mqtt_topic("user/setnick") / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                        nick.c_str(), nick.size());
+    prompt->mqtt().publish(tim::mqtt_topic("user/setnick") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+                           nick.c_str(), nick.size());
 
     return nullptr;
 }
@@ -57,11 +79,13 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     }
 
     const std::string icon = lil_to_string(argv[0]);
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tcl->mqtt().publish(tim::mqtt_topic("user/seticon") / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                        icon.c_str(), icon.size());
+    prompt->mqtt().publish(tim::mqtt_topic("user/seticon") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+                           icon.c_str(), icon.size());
 
     return nullptr;
 }
@@ -88,11 +112,13 @@ static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
         return nullptr;
     }
 
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tcl->mqtt().publish(tim::mqtt_topic("user/subscribe") / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                        publisher.to_string(tim::uuid::format::NoBrackets));
+    prompt->mqtt().publish(tim::mqtt_topic("user/subscribe") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+                           publisher.to_string(tim::uuid::format::NoBrackets));
 
     return nullptr;
 }
@@ -119,11 +145,13 @@ static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
         return nullptr;
     }
 
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tcl->mqtt().publish(tim::mqtt_topic("user/unsubscribe") / tcl->user_id().to_string(tim::uuid::format::NoBrackets),
-                        publisher.to_string(tim::uuid::format::NoBrackets));
+    prompt->mqtt().publish(tim::mqtt_topic("user/unsubscribe") / prompt->user_id().to_string(tim::uuid::format::NoBrackets),
+                           publisher.to_string(tim::uuid::format::NoBrackets));
 
     return nullptr;
 }
@@ -145,10 +173,12 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
         return nullptr;
     }
 
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tim::sqlite_query q(&tcl->db(),
+    tim::sqlite_query q(&prompt->db(),
                         "SELECT u.id, u.nick, u.icon"
                         " FROM subscription s JOIN user u ON s.publisher_id = u.id"
                         " WHERE s.subscriber_id = ?"
@@ -160,7 +190,7 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
                              "Не удалось получить список подписок"_ru));
         return nullptr;
     }
-    q.bind(1, tcl->user_id().to_string());
+    q.bind(1, prompt->user_id().to_string());
 
     std::size_t count = 0;
     bool done = false;
@@ -201,10 +231,12 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
         return nullptr;
     }
 
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
-    assert(tcl);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
 
-    tim::sqlite_query q(&tcl->db(),
+    tim::sqlite_query q(&prompt->db(),
                         "SELECT u.id, u.nick, u.icon"
                         " FROM subscription s JOIN user u ON s.subscriber_id = u.id"
                         " WHERE s.publisher_id = ?"
@@ -216,7 +248,7 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
                              "Не удалось получить список подписчиков"_ru));
         return nullptr;
     }
-    q.bind(1, tcl->user_id().to_string());
+    q.bind(1, prompt->user_id().to_string());
 
     std::size_t count = 0;
     bool done = false;

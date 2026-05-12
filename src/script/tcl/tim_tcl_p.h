@@ -1,8 +1,7 @@
 #pragma once
 
-#include "tim_uuid.h"
-
 #include <cassert>
+#include <cstddef>
 #include <functional>
 #include <string>
 
@@ -12,8 +11,6 @@ typedef struct _lil_t *lil_t;
 namespace tim
 {
 
-class mqtt_client;
-class sqlite_db;
 class tcl;
 
 namespace p
@@ -21,10 +18,8 @@ namespace p
 
 struct tcl
 {
-    tcl(tim::tcl *q, tim::mqtt_client &mqtt, tim::sqlite_db &db)
+    explicit tcl(tim::tcl *q)
         : _q(q)
-        , _mqtt(mqtt)
-        , _db(db)
     {
         assert(_q);
     }
@@ -33,13 +28,11 @@ struct tcl
     static void dispatch(lil_t lil);
 
     tim::tcl *const _q;
-    tim::mqtt_client &_mqtt;
-    tim::sqlite_db &_db;
 
     lil_t _lil = nullptr;
-    tim::uuid _user_id;
-    tim::uuid _last_post_id;
+    void *_user_data = nullptr;
     std::function<void()> _quit_handler;
+    std::function<void()> _dispatch_handler;
     bool _evaluating = false;
     std::string _prompt = "► ";
     std::string _error_msg;

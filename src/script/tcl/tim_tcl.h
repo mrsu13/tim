@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tim_a_script_engine.h"
-#include "tim_uuid.h"
 
 #include <cstddef>
 #include <functional>
@@ -20,33 +19,33 @@ struct tcl;
 }
 
 class a_terminal;
-class mqtt_client;
-class sqlite_db;
 
 class tcl : public tim::a_script_engine
 {
 
 public:
 
-    tcl(tim::a_terminal *term, const tim::uuid &user_id,
-        tim::mqtt_client &mqtt, tim::sqlite_db &db);
+    explicit tcl(tim::a_terminal *term);
     virtual ~tcl();
 
-    const tim::uuid &user_id() const;
-    tim::mqtt_client &mqtt() const;
-    tim::sqlite_db &db() const;
-
-    // UUID последнего сообщения, увиденного в чате этой сессии. Команды
-    // (например /react) используют его как неявный аргумент. Пустой uuid
-    // означает, что ещё ни одно чужое сообщение не получено.
-    void set_last_post_id(const tim::uuid &post_id);
-    const tim::uuid &last_post_id() const;
+    // Произвольный непрозрачный указатель, который владелец сохраняет
+    // в момент регистрации. Команды Tcl могут достать его через
+    // user_data() и привести к нужному типу — это позволяет держать
+    // tim::tcl независимым от конкретного контекста, в котором он
+    // используется (например, prompt_service).
+    void set_user_data(void *data);
+    void *user_data() const;
 
     // Обработчик запроса /quit. Владелец (prompt_service) регистрирует
     // здесь действие, которое закрывает СВОЁ соединение, не трогая
     // остальной сервер.
     void set_quit_handler(std::function<void()> handler);
     void request_quit();
+
+    // Обработчик "тика" между Tcl-операторами: LIL вызывает его через
+    // свой DISPATCH-callback, чтобы пока скрипт работает не зависали
+    // внешние event-loop-ы.
+    void set_dispatch_handler(std::function<void()> handler);
 
     bool evaluating() const override;
     bool eval(const std::string &program, std::string *res = nullptr) override;
@@ -62,6 +61,10 @@ public:
     std::unordered_set<std::string> functions() const override;
 
 private:
+
+    // p::tcl — внутренняя реализация tim::tcl и держит часть его
+    // приватного состояния (в т.ч. зарегистрированные обработчики).
+    friend struct tim::p::tcl;
 
     std::unique_ptr<tim::p::tcl> _d;
 };

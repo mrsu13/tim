@@ -20,7 +20,10 @@
 
 // Открытые
 
-tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt_client &mqtt, tim::sqlite_db &db)
+tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
+                                    tim::mqtt_client &mqtt,
+                                    tim::sqlite_db &db,
+                                    std::function<void()> dispatch_handler)
     : tim::a_ssh_inetd_service("prompt", info)
     , _d(new tim::p::prompt_service(this, mqtt, db))
 {
@@ -28,8 +31,12 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
     _d->load_subscriptions();
     _d->_proto.reset(new tim::ssh_terminal_protocol(this));
     _d->_terminal.reset(new tim::vt(_d->_proto.get()));
-    _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt, db));
+    _d->_tcl.reset(new tim::tcl(_d->_terminal.get()));
     _d->_tcl->set_quit_handler([this]{ close(); });
+    _d->_tcl->set_dispatch_handler(std::move(dispatch_handler));
+    // Tcl-команды (например /react) достают prompt_service через
+    // tcl->user_data() и приводят его обратно к нужному типу.
+    _d->_tcl->set_user_data(this);
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
     // Печатаем последние сообщения из БД сразу после приглашения,
@@ -73,6 +80,21 @@ void tim::prompt_service::interrupt() noexcept
     // eval, поэтому защищаемся проверкой evaluating().
     if (_d->_tcl && _d->_tcl->evaluating())
         _d->_tcl->break_eval();
+}
+
+const tim::uuid &tim::prompt_service::last_seen_post() const noexcept
+{
+    return _d->_last_seen_post;
+}
+
+tim::mqtt_client &tim::prompt_service::mqtt() noexcept
+{
+    return _d->_mqtt;
+}
+
+tim::sqlite_db &tim::prompt_service::db() noexcept
+{
+    return _d->_db;
 }
 
 
@@ -189,7 +211,6 @@ void tim::p::prompt_service::load_post_history()
         _last_seen_post = it->id;
         _last_seen_post_author = it->author;
     }
-    _tcl->set_last_post_id(_last_seen_post);
     _shell->new_line();
     _shell->show_input();
 }
@@ -293,7 +314,6 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     // Сохраняем как "последний увиденный" — на него можно реагировать через /react.
     _last_seen_post = post_id;
     _last_seen_post_author = publisher_id;
-    _tcl->set_last_post_id(post_id);
 
     render_post(publisher_id, std::string_view(data, size));
     _shell->new_line();

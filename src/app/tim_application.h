@@ -46,6 +46,4 @@ private:
     std::unique_ptr<tim::p::application> _d;
 };
 
-tim::application *app();
-
 }

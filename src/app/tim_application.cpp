@@ -25,12 +25,6 @@
 #include <locale>
 
 
-tim::application *tim::app()
-{
-    return tim::p::application::instance();
-}
-
-
 // Public
 
 tim::application::application(int argc, char **argv)
@@ -89,9 +83,12 @@ tim::application::application(int argc, char **argv)
     _d->_ssh_inetd = tim::ssh_inetd::start(
         tim::SSH_PORT,
         host_key_path,
-        [mqtt = _d->_mqtt.get(), db = _d->_db.get()](const tim::ssh_session_info &info) -> std::unique_ptr<tim::a_inetd_service>
+        [this, mqtt = _d->_mqtt.get(), db = _d->_db.get()](const tim::ssh_session_info &info)
+            -> std::unique_ptr<tim::a_inetd_service>
         {
-            return std::make_unique<tim::prompt_service>(info, *mqtt, *db);
+            return std::make_unique<tim::prompt_service>(
+                info, *mqtt, *db,
+                [this]{ dispatch(); });
         });
     if (!_d->_ssh_inetd)
         TIM_TRACE(Error,

@@ -2,6 +2,7 @@
 
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
+#include "tim_prompt_service.h"
 #include "tim_string_tools.h"
 #include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
@@ -44,10 +45,20 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
         }
     }
 
-    const tim::tcl *tcl = (const tim::tcl *)lil_get_data(lil);
+    tim::tcl *tcl = (tim::tcl *)lil_get_data(lil);
     assert(tcl);
 
-    if (!tcl->last_post_id().valid())
+    // /react цепляется к чат-сессии: владелец tim::tcl (prompt_service)
+    // регистрирует себя как user_data.
+    tim::prompt_service *prompt = (tim::prompt_service *)tcl->user_data();
+    if (!prompt)
+    {
+        lil_set_error(lil,
+                      TIM_TR("Command requires a chat session context."_en,
+                             "Команда должна выполняться в контексте чат-сессии."_ru));
+        return nullptr;
+    }
+    if (!prompt->last_seen_post().valid())
     {
         lil_set_error(lil,
                       TIM_TR("No post to react to yet"_en,
@@ -57,9 +68,9 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
 
     const tim::mqtt_topic topic =
         tim::mqtt_topic("react")
-            / tcl->last_post_id().to_string(tim::uuid::format::NoBrackets)
-            / tcl->user_id().to_string(tim::uuid::format::NoBrackets);
-    tcl->mqtt().publish(topic, std::to_string(weight));
+            / prompt->last_seen_post().to_string(tim::uuid::format::NoBrackets)
+            / prompt->user_id().to_string(tim::uuid::format::NoBrackets);
+    prompt->mqtt().publish(topic, std::to_string(weight));
 
     return nullptr;
 }

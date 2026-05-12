@@ -60,7 +60,12 @@ CREATE TABLE post
     id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '' AND id != '{00000000-0000-0000-0000-000000000000}'),
     user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 
-    timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
+    -- Метка времени в миллисекундах. unixepoch('subsec') даёт секунды
+    -- с дробной частью (SQLite 3.42+); *1000 и приведение к INTEGER
+    -- сохраняют точность до миллисекунды. Прежнее strftime('%s','now')*1000
+    -- округлялось до целой секунды, поэтому события в пределах одной
+    -- секунды сравнивались как одновременные.
+    timestamp INTEGER NOT NULL DEFAULT (CAST(unixepoch('subsec') * 1000 AS INTEGER)),
 
     text VARCHAR NOT NULL
 );
@@ -81,7 +86,12 @@ CREATE TABLE reaction
     post_id VARCHAR NOT NULL REFERENCES post(id) ON DELETE CASCADE,
     user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 
-    timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
+    -- Метка времени в миллисекундах. unixepoch('subsec') даёт секунды
+    -- с дробной частью (SQLite 3.42+); *1000 и приведение к INTEGER
+    -- сохраняют точность до миллисекунды. Прежнее strftime('%s','now')*1000
+    -- округлялось до целой секунды, поэтому события в пределах одной
+    -- секунды сравнивались как одновременные.
+    timestamp INTEGER NOT NULL DEFAULT (CAST(unixepoch('subsec') * 1000 AS INTEGER)),
 
     weight INTEGER DEFAULT 1,
 

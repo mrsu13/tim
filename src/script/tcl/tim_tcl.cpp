@@ -4,7 +4,6 @@
 
 #include "tim_a_protocol.h"
 #include "tim_a_terminal.h"
-#include "tim_application.h"
 #include "tim_string_tools.h"
 #include "tim_translator.h"
 
@@ -22,13 +21,11 @@
 
 // Public
 
-tim::tcl::tcl(tim::a_terminal *term, const tim::uuid &user_id,
-              tim::mqtt_client &mqtt, tim::sqlite_db &db)
+tim::tcl::tcl(tim::a_terminal *term)
     : tim::a_script_engine("Tcl", term)
-    , _d(new tim::p::tcl(this, mqtt, db))
+    , _d(new tim::p::tcl(this))
 {
     _d->_lil = lil_new();
-    _d->_user_id = user_id;
 
     lil_callback(_d->_lil, LIL_CALLBACK_WRITE, (lil_callback_proc_t)tim::p::tcl::write);
     lil_callback(_d->_lil, LIL_CALLBACK_DISPATCH, (lil_callback_proc_t)tim::p::tcl::dispatch);
@@ -44,29 +41,14 @@ tim::tcl::~tcl()
     lil_free(_d->_lil);
 }
 
-const tim::uuid &tim::tcl::user_id() const
+void tim::tcl::set_user_data(void *data)
 {
-    return _d->_user_id;
+    _d->_user_data = data;
 }
 
-tim::mqtt_client &tim::tcl::mqtt() const
+void *tim::tcl::user_data() const
 {
-    return _d->_mqtt;
-}
-
-tim::sqlite_db &tim::tcl::db() const
-{
-    return _d->_db;
-}
-
-void tim::tcl::set_last_post_id(const tim::uuid &post_id)
-{
-    _d->_last_post_id = post_id;
-}
-
-const tim::uuid &tim::tcl::last_post_id() const
-{
-    return _d->_last_post_id;
+    return _d->_user_data;
 }
 
 void tim::tcl::set_quit_handler(std::function<void()> handler)
@@ -78,6 +60,11 @@ void tim::tcl::request_quit()
 {
     if (_d->_quit_handler)
         _d->_quit_handler();
+}
+
+void tim::tcl::set_dispatch_handler(std::function<void()> handler)
+{
+    _d->_dispatch_handler = std::move(handler);
 }
 
 bool tim::tcl::evaluating() const
@@ -230,7 +217,13 @@ void tim::p::tcl::write(lil_t lil, const char *msg)
 
 void tim::p::tcl::dispatch(lil_t lil)
 {
-    (void) lil;
-
-    tim::app()->dispatch();
+    // Во время eval lil_get_data возвращает tim::tcl* (выставляется
+    // в tim::tcl::eval). Зовём зарегистрированный обработчик; если
+    // его нет — просто ничего не делаем, бесконечный скрипт просто
+    // не будет давать дышать внешним event-loop-ам.
+    tim::tcl *self = (tim::tcl *)lil_get_data(lil);
+    if (!self)
+        return;
+    if (self->_d->_dispatch_handler)
+        self->_d->_dispatch_handler();
 }
