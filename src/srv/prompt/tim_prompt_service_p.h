@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 
 namespace tim
@@ -51,6 +52,11 @@ struct prompt_service
     tim::user                                   _user;
     tim::uuid                                   _last_seen_post;
     tim::uuid                                   _last_seen_post_author;
+    // UUID сообщений, опубликованных именно из этой сессии. Используется
+    // в on_post, чтобы не показывать пользователю эхо собственного ввода.
+    // Фильтрация по publisher_id == _user.id не годится — у нескольких
+    // одновременных сессий одного пользователя совпадает _user.id.
+    std::unordered_set<tim::uuid>               _own_posts;
 
     tim::signal_connection                      _on_data_ready;
     tim::signal_connection                      _on_posted;

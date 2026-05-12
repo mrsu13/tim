@@ -101,7 +101,7 @@ bool tim::prompt_shell::accept_command(const std::string &line, std::string &com
         const std::string &l = line == "lorem"
                                     ? LOREM_IPSUM
                                     : line;
-        cloud(TIM_TR("You"_en, "Вы"_ru), l);
+        cloud(TIM_TR("Me"_en, "Я"_ru), l);
         posted(l);
         return false;
     }

@@ -43,6 +43,7 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
             // post/<publisher-uuid>/<post-uuid>; такой топик однозначно
             // адресует сообщение и используется реакциями.
             const tim::uuid post_uuid = tim::uuid::create();
+            d->_own_posts.insert(post_uuid);
             const tim::mqtt_topic topic =
                 tim::mqtt_topic("post")
                     / d->_user.id.to_string(tim::uuid::format::NoBrackets)
@@ -133,22 +134,41 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     if (!post_id.valid() || !publisher_id.valid())
         return;
 
-    if (publisher_id == _user.id)
-        return; // Свой же пост — не показываем второй раз.
+    // Эхо собственного ввода: фильтруем только посты, опубликованные ИЗ
+    // ЭТОЙ сессии. Другие сессии того же пользователя (тот же ssh-ключ →
+    // тот же user_id) увидят сообщение в чате как обычно.
+    const std::unordered_set<tim::uuid>::iterator own_it = _own_posts.find(post_id);
+    if (own_it != _own_posts.end())
+    {
+        _own_posts.erase(own_it);
+        return;
+    }
 
     // Сохраняем как "последний увиденный" — на него можно реагировать через /react.
     _last_seen_post = post_id;
     _last_seen_post_author = publisher_id;
     _tcl->set_last_post_id(post_id);
 
-    tim::user sender;
-    sender.id = publisher_id;
+    // Если пост опубликован другой сессией того же пользователя, заголовок
+    // в чате — локализованное "Me"/"Я", чтобы было видно, что это собственное
+    // сообщение, а не чужое с совпадающим UUID.
+    std::string title;
+    if (publisher_id == _user.id)
+    {
+        title = TIM_TR("Me"_en, "Я"_ru);
+    }
+    else
+    {
+        tim::user sender;
+        sender.id = publisher_id;
+        title = sender.title();
+    }
 
     const std::size_t color_count = _shell->terminal()->color_count();
     const std::size_t color_idx = color_count > 1
             ? std::hash<std::string>{}(publisher_id_str) % (color_count - 1) + 1
             : 0;
-    _shell->cloud(sender.title(),
+    _shell->cloud(title,
                   '\n' + std::string(data, size),
                   _shell->terminal()->color(color_idx));
     _shell->new_line();
