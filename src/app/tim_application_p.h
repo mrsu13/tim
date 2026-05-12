@@ -2,6 +2,7 @@
 
 #include "mongoose.h"
 
+#include <filesystem>
 #include <memory>
 
 #ifdef TIM_OS_LINUX
@@ -39,6 +40,12 @@ struct application
     {
         static std::string _name;
         return _name;
+    }
+
+    static std::filesystem::path &data_dir()
+    {
+        static std::filesystem::path _data_dir;
+        return _data_dir;
     }
 
 #ifdef TIM_OS_LINUX

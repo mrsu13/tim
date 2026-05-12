@@ -31,6 +31,19 @@ const tim::translator &tim::translator::instance()
  * \param line Line number where this method call is located.
  * \return Translation on the base of the current locale.
  */
+void tim::translator::set_language(tim::language lang)
+{
+    // Через const_cast — instance() возвращает const& из соображений API;
+    // язык же — единственное мутируемое состояние, выставляется один раз
+    // на старте и далее остаётся read-only по факту.
+    const_cast<tim::translator &>(tim::translator::instance())._d->_language = lang;
+}
+
+tim::language tim::translator::language()
+{
+    return tim::translator::instance()._d->_language;
+}
+
 const char *tim::translator::translate(const tim::translations &translations,
                                        const char *file_path, int line)
 {

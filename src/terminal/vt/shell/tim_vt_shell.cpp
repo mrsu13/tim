@@ -4,6 +4,7 @@
 
 #include "tim_a_protocol.h"
 #include "tim_a_script_engine.h"
+#include "tim_application.h"
 #include "tim_config.h"
 #include "tim_file_tools.h"
 #include "tim_line_edit.h"
@@ -25,8 +26,7 @@ tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
     assert(engine);
 
     _d->_history_path
-        = tim::complete_path(tim::standard_location(tim::filesystem_location::AppData)
-                                / tim::HISTORY_FNAME,
+        = tim::complete_path(tim::application::data_dir() / tim::HISTORY_FNAME,
                              tim::create_path::Base);
 
     _d->_engine = engine;

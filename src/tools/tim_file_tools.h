@@ -12,25 +12,6 @@
 namespace tim
 {
 
-enum class filesystem_location
-{
-    AppConfig,
-    AppData,
-    AppLocalData,
-    AppTlsData,
-    Current,
-    Home,
-    Desktop,
-    Documents,
-    Download,
-    Pictures,
-    Music,
-    Videos,
-    Temp
-};
-
-std::filesystem::path standard_location(tim::filesystem_location location);
-
 enum class create_path
 {
     None,

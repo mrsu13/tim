@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -27,6 +28,11 @@ public:
 
     static const std::string &org_name();
     static void set_org_name(const std::string &name);
+
+    // Каталог, в котором живут БД, SSH host-key, история шелла и TLS-сертификаты.
+    // Выставляется в конструкторе application из tim::settings::load_or_create();
+    // после этого доступен как глобальная константа времени жизни приложения.
+    static const std::filesystem::path &data_dir();
 
     void dispatch();
     void exec();

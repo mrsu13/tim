@@ -4,11 +4,13 @@
 
 #include "tim_config.h"
 #include "tim_file_tools.h"
+#include "tim_settings.h"
 #include "tim_ssh_inetd.h"
 #include "tim_a_ssh_inetd_service.h"
 #include "tim_mqtt_client.h"
 #include "tim_sqlite_db.h"
 #include "tim_trace.h"
+#include "tim_translator.h"
 #include "tim_version.h"
 
 #include "fort.h"
@@ -57,31 +59,34 @@ tim::application::application(int argc, char **argv)
 
     ft_set_default_border_style(FT_SOLID_ROUND_STYLE);
 
+    // Конфиг читается первым: язык TIM_TR должен быть выставлен до того,
+    // как сообщения об ошибках инициализации подсистем уйдут в лог.
+    const tim::settings settings = tim::settings::load_or_create();
+    tim::translator::set_language(settings.language);
+    tim::p::application::data_dir() = settings.data_dir;
+
 #ifdef TIM_DEBUG
     // mg_log_set(MG_LL_VERBOSE);
 #endif
     mg_mgr_init(&_d->_mg);
 
     _d->_mqtt.reset(new tim::mqtt_client(&_d->_mg));
-    if (!_d->_mqtt->start())
+    if (!_d->_mqtt->start(settings.mqtt_url))
         TIM_TRACE(Error, "%s",
                   TIM_TR("MQTT client failed to start; messaging will be unavailable."_en,
                          "Не удалось запустить MQTT-клиент; обмен сообщениями недоступен."_ru));
 
     _d->_db.reset(new tim::sqlite_db());
-    if (!_d->_db->open(tim::standard_location(tim::filesystem_location::AppLocalData)
-                                                   / tim::DB_FILE_NAME))
+    if (!_d->_db->open(settings.data_dir / tim::DB_FILE_NAME))
         TIM_TRACE(Error,
                   TIM_TR("Failed to open database file '%s'; persistence will be unavailable."_en,
                          "Не удалось открыть файл базы данных '%s'; хранение данных недоступно."_ru),
                   _d->_db->path().string().c_str());
 
     const std::filesystem::path host_key_path =
-        tim::standard_location(tim::filesystem_location::AppLocalData)
-            / tim::SSH_DATA_SUBDIR
-            / tim::SSH_HOST_KEY_FNAME;
+        settings.data_dir / tim::SSH_DATA_SUBDIR / tim::SSH_HOST_KEY_FNAME;
     _d->_ssh_inetd = tim::ssh_inetd::start(
-        tim::SSH_PORT,
+        settings.ssh_port,
         host_key_path,
         [this, mqtt = _d->_mqtt.get(), db = _d->_db.get()](const tim::ssh_session_info &info)
             -> std::unique_ptr<tim::a_inetd_service>
@@ -94,7 +99,7 @@ tim::application::application(int argc, char **argv)
         TIM_TRACE(Error,
                   TIM_TR("SSH inetd failed to start on port %u; clients cannot connect."_en,
                          "Не удалось запустить SSH-inetd на порту %u; клиенты не смогут подключиться."_ru),
-                  tim::SSH_PORT);
+                  settings.ssh_port);
 
     _d->_post_service.reset(new tim::post_service(*_d->_mqtt, *_d->_db));
     _d->_user_service.reset(new tim::user_service(*_d->_mqtt, *_d->_db));
@@ -138,6 +143,11 @@ const std::string &tim::application::org_name()
 void tim::application::set_org_name(const std::string &name)
 {
     tim::p::application::org_name() = name;
+}
+
+const std::filesystem::path &tim::application::data_dir()
+{
+    return tim::p::application::data_dir();
 }
 
 void tim::application::dispatch()

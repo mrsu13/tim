@@ -7,7 +7,6 @@
 namespace tim
 {
 
-static const std::uint16_t SSH_PORT = 2222;
 static const char COMMAND_PREFIX = '/';
 static const char APP_NAME[] = "tim";
 static const char ORG_NAME[] = "mrsu";

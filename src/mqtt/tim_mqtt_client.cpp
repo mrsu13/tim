@@ -170,7 +170,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                       self->_url.c_str());
             if (c->is_tls)
             {
-                const std::filesystem::path base_path = tim::standard_location(tim::filesystem_location::AppTlsData);
+                const std::filesystem::path base_path = tim::application::data_dir() / "tls";
                 mg_tls_opts opts =
                 {
                     .ca = mg_unpacked((base_path / "ca-cert.pem").string().c_str()),

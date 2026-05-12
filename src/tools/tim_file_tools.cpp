@@ -5,92 +5,9 @@
 #include "tim_trace.h"
 #include "tim_translator.h"
 
+#include <cstdlib>
 #include <fstream>
 
-
-#ifndef TIM_OS_WINDOWS
-
-std::filesystem::path tim::standard_location(tim::filesystem_location location)
-{
-    switch (location)
-    {
-        case tim::filesystem_location::AppConfig:
-            return std::filesystem::path(std::getenv("HOME"))
-                            / ".config"
-                            / tim::to_lower(tim::application::org_name())
-                            / tim::to_lower(tim::application::name());
-        case tim::filesystem_location::AppData:
-        case tim::filesystem_location::AppLocalData:
-            return std::filesystem::path(std::getenv("HOME"))
-                            / ".local/share"
-                            / tim::to_lower(tim::application::org_name())
-                            / tim::to_lower(tim::application::name());
-        case tim::filesystem_location::AppTlsData:
-            return std::filesystem::path(std::getenv("HOME"))
-                            / ".config"
-                            / tim::to_lower(tim::application::org_name())
-                            / tim::to_lower(tim::application::name())
-                            / "tls";
-        case tim::filesystem_location::Current:
-            return std::filesystem::current_path();
-        case tim::filesystem_location::Home:
-            return std::getenv("HOME");
-        case tim::filesystem_location::Desktop:
-            return std::filesystem::path(std::getenv("HOME")) / "Desktop";
-        case tim::filesystem_location::Documents:
-            return std::filesystem::path(std::getenv("HOME")) / "Documents";
-        case tim::filesystem_location::Download:
-            return std::filesystem::path(std::getenv("HOME")) / "Downloads";
-        case tim::filesystem_location::Pictures:
-            return std::filesystem::path(std::getenv("HOME")) / "Pictures";
-        case tim::filesystem_location::Music:
-            return std::filesystem::path(std::getenv("HOME")) / "Music";
-        case tim::filesystem_location::Videos:
-            return std::filesystem::path(std::getenv("HOME")) / "Videos";
-        case tim::filesystem_location::Temp:
-            return std::filesystem::temp_directory_path();
-    }
-    return std::filesystem::path();
-}
-
-#else
-
-std::filesystem::path tim::standard_location(tim::filesystem_location location)
-{
-    switch (location)
-    {
-        case tim::filesystem_location::AppConfig:
-        case tim::filesystem_location::AppData:
-            return std::filesystem::path(std::getenv("APPDATA"))
-                                / tim::to_lower(tim::application::org_name())
-                                / tim::to_lower(tim::application::name());
-        case tim::filesystem_location::AppLocalData:
-            return std::filesystem::path(std::getenv("LOCALAPPDATA"))
-                                / tim::to_lower(tim::application::org_name())
-                                / tim::to_lower(tim::application::name());
-        case tim::filesystem_location::Current:
-            return std::filesystem::current_path();
-        case tim::filesystem_location::Home:
-            return std::getenv("USERPROFILE");
-        case tim::filesystem_location::Desktop:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Desktop";
-        case tim::filesystem_location::Documents:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Documents";
-        case tim::filesystem_location::Download:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Downloads";
-        case tim::filesystem_location::Pictures:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Pictures";
-        case tim::filesystem_location::Music:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Music";
-        case tim::filesystem_location::Videos:
-            return std::filesystem::path(std::getenv("USERPROFILE")) / "Videos";
-        case tim::filesystem_location::Temp:
-            return std::filesystem::temp_directory_path();
-    }
-    return std::filesystem::path();
-}
-
-#endif
 
 std::filesystem::path tim::complete_path(const std::filesystem::path &path,
                                          tim::create_path f)
@@ -104,8 +21,11 @@ std::filesystem::path tim::complete_path(const std::filesystem::path &path,
         switch (c)
         {
             case '~':
-                completed += tim::standard_location(tim::filesystem_location::Home).string();
+            {
+                const char *home = std::getenv("HOME");
+                completed += (home && *home) ? home : "";
                 break;
+            }
 
             default:
                 completed += c;
