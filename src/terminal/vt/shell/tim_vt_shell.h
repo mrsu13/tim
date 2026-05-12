@@ -30,6 +30,11 @@ public:
     void new_line();
     bool write(const char *data, std::size_t size);
 
+    // Скрыть приглашение и введённую строку (если есть), чтобы напечатать
+    // в терминал что-то "поверх". show_input() возвращает приглашение.
+    void hide_input();
+    void show_input();
+
 protected:
 
     virtual bool accept_command(const std::string &line, std::string &command);

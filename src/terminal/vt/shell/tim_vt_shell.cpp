@@ -52,6 +52,16 @@ void tim::vt_shell::new_line()
     _d->_ledit->new_line();
 }
 
+void tim::vt_shell::hide_input()
+{
+    _d->_ledit->hide();
+}
+
+void tim::vt_shell::show_input()
+{
+    _d->_ledit->show();
+}
+
 bool tim::vt_shell::write(const char *data, std::size_t size)
 {
     assert(data);

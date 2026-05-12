@@ -45,11 +45,16 @@ struct prompt_service
     tim::user user_for(const tim::uuid &id);
     // Подтягивает текущие подписки пользователя из БД в локальный кэш.
     void load_subscriptions();
+    // Печатает в терминал последние N сообщений из БД, чтобы при входе
+    // в чат пользователь сразу видел контекст разговора.
+    void load_post_history();
 
     void subscribe();
     void on_data_ready(const char *data, std::size_t size);
     void on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void on_react_event(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+    // Рендер одного сообщения: общая часть on_post и load_post_history.
+    void render_post(const tim::uuid &publisher_id, std::string_view text);
 
     tim::prompt_service *const _q;
     tim::mqtt_client &_mqtt;

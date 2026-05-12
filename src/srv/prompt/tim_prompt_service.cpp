@@ -32,6 +32,10 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
     _d->_tcl->set_quit_handler([this]{ close(); });
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
+    // Печатаем последние сообщения из БД сразу после приглашения,
+    // чтобы новый клиент видел контекст разговора.
+    _d->load_post_history();
+
     _d->_on_data_ready = _d->_proto->data_ready.connect(
         [d = _d.get()](const char *data, std::size_t size)
         { d->on_data_ready(data, size); });
@@ -136,6 +140,60 @@ void tim::p::prompt_service::load_subscriptions()
     }
 }
 
+void tim::p::prompt_service::load_post_history()
+{
+    static const int HISTORY_LIMIT = 20;
+
+    // Берём последние HISTORY_LIMIT сообщений в обратном порядке, затем
+    // выводим их в хронологическом — чтобы новые оказались внизу, ближе
+    // к приглашению.
+    tim::sqlite_query q(&_db,
+                        "SELECT id, user_id, text FROM post"
+                        " ORDER BY timestamp DESC LIMIT ?");
+    if (!q.prepare())
+    {
+        TIM_TRACE(Warning, "%s",
+                  TIM_TR("Failed to prepare query for loading post history."_en,
+                         "Не удалось подготовить запрос на загрузку истории сообщений."_ru));
+        return;
+    }
+    q.bind(1, HISTORY_LIMIT);
+
+    struct entry
+    {
+        tim::uuid     id;
+        tim::uuid     author;
+        std::string   text;
+    };
+    std::vector<entry> history;
+
+    bool done = false;
+    while (q.next(&done) && !done)
+    {
+        entry e;
+        e.id = q.to_string(0);
+        e.author = q.to_string(1);
+        e.text = q.to_string(2);
+        if (e.id.valid() && e.author.valid())
+            history.push_back(std::move(e));
+    }
+
+    if (history.empty())
+        return;
+
+    _shell->hide_input();
+    for (std::vector<entry>::reverse_iterator it = history.rbegin();
+         it != history.rend(); ++it)
+    {
+        render_post(it->author, it->text);
+        _last_seen_post = it->id;
+        _last_seen_post_author = it->author;
+    }
+    _tcl->set_last_post_id(_last_seen_post);
+    _shell->new_line();
+    _shell->show_input();
+}
+
 void tim::p::prompt_service::subscribe()
 {
     const std::string user_id_nb = _user.id.to_string(tim::uuid::format::NoBrackets);
@@ -237,6 +295,12 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     _last_seen_post_author = publisher_id;
     _tcl->set_last_post_id(post_id);
 
+    render_post(publisher_id, std::string_view(data, size));
+    _shell->new_line();
+}
+
+void tim::p::prompt_service::render_post(const tim::uuid &publisher_id, std::string_view text)
+{
     // Свои сообщения — без цвета фона (transparent), заголовок "Me"/"Я".
     // Чужие — заголовок из tim::user::title() и цвет, выведенный из UUID
     // автора, чтобы для одного и того же пользователя цвет был стабильным.
@@ -253,6 +317,7 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
         const tim::user sender = user_for(publisher_id);
         title = sender.title();
 
+        const std::string publisher_id_str = publisher_id.to_string(tim::uuid::format::NoBrackets);
         const std::size_t color_count = _shell->terminal()->color_count();
         const std::size_t color_idx = color_count > 1
                 ? std::hash<std::string>{}(publisher_id_str) % (color_count - 1) + 1
@@ -264,8 +329,7 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
             marker_color = tim::color{ 255, 255, 0 };
     }
 
-    _shell->cloud(title, '\n' + std::string(data, size), bg_color, marker_color);
-    _shell->new_line();
+    _shell->cloud(title, '\n' + std::string(text), bg_color, marker_color);
 }
 
 void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
