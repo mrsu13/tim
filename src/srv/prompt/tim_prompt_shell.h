@@ -25,9 +25,14 @@ public:
     prompt_shell(tim::vt *term, tim::a_script_engine *engine);
     ~prompt_shell();
 
+    // Если задан marker_color, перед заголовком в полосе плашки рисуется
+    // маркер ('★') этим цветом; сам заголовок отображается обычным
+    // авто-контрастным цветом текста. Используется для пометки сообщений
+    // от пользователей, на которых вы подписаны.
     void cloud(const std::string &title,
                const std::string &text,
-               const tim::color &bg_color = tim::color::transparent());
+               const tim::color &bg_color = tim::color::transparent(),
+               const tim::color &marker_color = tim::color{});
 
 protected:
 

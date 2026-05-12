@@ -25,6 +25,7 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
     , _d(new tim::p::prompt_service(this, mqtt, db))
 {
     _d->_user = _d->load_user(info.user_id);
+    _d->load_subscriptions();
     _d->_proto.reset(new tim::ssh_terminal_protocol(this));
     _d->_terminal.reset(new tim::vt(_d->_proto.get()));
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt, db));
@@ -112,6 +113,29 @@ tim::user tim::p::prompt_service::user_for(const tim::uuid &id)
     return u;
 }
 
+void tim::p::prompt_service::load_subscriptions()
+{
+    tim::sqlite_query q(&_db,
+                        "SELECT publisher_id FROM subscription WHERE subscriber_id = ?");
+    if (!q.prepare())
+    {
+        TIM_TRACE(Warning,
+                  TIM_TR("Failed to prepare query for loading subscriptions of '%s'."_en,
+                         "Не удалось подготовить запрос на загрузку подписок '%s'."_ru),
+                  _user.id.to_string().c_str());
+        return;
+    }
+    q.bind(1, _user.id.to_string());
+
+    bool done = false;
+    while (q.next(&done) && !done)
+    {
+        const tim::uuid pid = q.to_string(0);
+        if (pid.valid())
+            _subscriptions.insert(pid);
+    }
+}
+
 void tim::p::prompt_service::subscribe()
 {
     const std::string user_id_nb = _user.id.to_string(tim::uuid::format::NoBrackets);
@@ -167,6 +191,25 @@ void tim::p::prompt_service::subscribe()
     _sub_react_event = _mqtt.subscribe("react_event/+/+",
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_react_event(topic, data, size); });
+
+    // Свои подписки/отписки — синхронизируем локальный кэш _subscriptions
+    // в реальном времени без перезагрузки из БД. Wildcard на всех
+    // пользователей здесь не нужен (нас интересует только свой список).
+    _sub_self_subscribe = _mqtt.subscribe(tim::mqtt_topic("user/subscribe") / user_id_nb,
+        [this](const tim::mqtt_topic &, const char *data, std::size_t size)
+        {
+            const tim::uuid pub = std::string(data, size);
+            if (pub.valid())
+                _subscriptions.insert(pub);
+        });
+
+    _sub_self_unsubscribe = _mqtt.subscribe(tim::mqtt_topic("user/unsubscribe") / user_id_nb,
+        [this](const tim::mqtt_topic &, const char *data, std::size_t size)
+        {
+            const tim::uuid pub = std::string(data, size);
+            if (pub.valid())
+                _subscriptions.erase(pub);
+        });
 }
 
 void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
@@ -199,6 +242,7 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     // автора, чтобы для одного и того же пользователя цвет был стабильным.
     std::string title;
     tim::color bg_color;
+    tim::color marker_color; // пустой по умолчанию — звёздочки не будет
     if (publisher_id == _user.id)
     {
         title = TIM_TR("Me"_en, "Я"_ru);
@@ -214,9 +258,13 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
                 ? std::hash<std::string>{}(publisher_id_str) % (color_count - 1) + 1
                 : 0;
         bg_color = _shell->terminal()->color(color_idx);
+
+        // Жёлтая звезда для сообщений от тех, на кого мы подписаны.
+        if (_subscriptions.find(publisher_id) != _subscriptions.end())
+            marker_color = tim::color{ 255, 255, 0 };
     }
 
-    _shell->cloud(title, '\n' + std::string(data, size), bg_color);
+    _shell->cloud(title, '\n' + std::string(data, size), bg_color, marker_color);
     _shell->new_line();
 }
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 
 namespace tim
@@ -42,6 +43,8 @@ struct prompt_service
     // Возвращает пользователя из локального кэша; при первом обращении
     // подтягивает запись из БД. Для собственного UUID возвращает _user.
     tim::user user_for(const tim::uuid &id);
+    // Подтягивает текущие подписки пользователя из БД в локальный кэш.
+    void load_subscriptions();
 
     void subscribe();
     void on_data_ready(const char *data, std::size_t size);
@@ -70,10 +73,18 @@ struct prompt_service
     tim::mqtt_subscription                      _sub_setnick;
     tim::mqtt_subscription                      _sub_seticon;
     tim::mqtt_subscription                      _sub_react_event;
+    // Свои события subscribe/unsubscribe — чтобы поддерживать актуальным
+    // локальный кэш подписок без дополнительного запроса в БД.
+    tim::mqtt_subscription                      _sub_self_subscribe;
+    tim::mqtt_subscription                      _sub_self_unsubscribe;
 
     // Кэш профилей других пользователей. Заполняется лениво из БД и
     // обновляется по событиям user/setnick/+ и user/seticon/+.
     std::unordered_map<tim::uuid, tim::user>    _known_users;
+
+    // UUID пользователей, на которых подписан текущий пользователь.
+    // Используется в on_post для пометки сообщений (звёздочка перед ником).
+    std::unordered_set<tim::uuid>               _subscriptions;
 };
 
 }

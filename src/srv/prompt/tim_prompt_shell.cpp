@@ -34,7 +34,8 @@ tim::prompt_shell::~prompt_shell() = default;
 
 void tim::prompt_shell::cloud(const std::string &title,
                               const std::string &text,
-                              const tim::color &bg_color)
+                              const tim::color &bg_color,
+                              const tim::color &marker_color)
 {
     const std::string t = tim::trim(text);
     if (t.empty())
@@ -65,6 +66,13 @@ void tim::prompt_shell::cloud(const std::string &title,
     if (ttl_len > 2) // Not only padding spaces.
     {
         terminal()->set_bg_color(bg_color);
+        // Если задан цвет маркера — рисуем ' ★' этим цветом, удерживая bg;
+        // потом переключаем цвет на text_color и пишем сам заголовок.
+        if (!marker_color.empty())
+        {
+            terminal()->set_color(marker_color);
+            terminal()->protocol()->write_str(" \xe2\x98\x85"); // " ★"
+        }
         terminal()->set_color(text_color);
         terminal()->protocol()->write_str(ttl);
         terminal()->reset_colors();
