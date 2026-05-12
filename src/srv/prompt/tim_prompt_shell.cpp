@@ -101,7 +101,10 @@ bool tim::prompt_shell::accept_command(const std::string &line, std::string &com
         const std::string &l = line == "lorem"
                                     ? LOREM_IPSUM
                                     : line;
-        cloud(TIM_TR("Me"_en, "Я"_ru), l);
+        // Локального эха здесь нет: сообщение пройдёт через MQTT и
+        // вернётся через on_post в prompt_service. Это даёт единый путь
+        // отображения и одинаковый цвет для собственных сообщений во
+        // всех сессиях того же пользователя.
         posted(l);
         return false;
     }
