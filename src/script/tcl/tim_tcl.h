@@ -50,7 +50,7 @@ public:
     void request_quit();
 
     // Обработчик "тика" между Tcl-операторами: LIL вызывает его через
-    // свой DISPATCH-callback, чтобы пока скрипт работает не зависали
+    // свой DISPATCH-обработчик, чтобы пока скрипт работает не зависали
     // внешние event-loop-ы.
     void set_dispatch_handler(std::function<void()> handler);
 

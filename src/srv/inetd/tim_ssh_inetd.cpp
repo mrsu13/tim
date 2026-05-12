@@ -155,6 +155,13 @@ std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
     return self;
 }
 
+void tim::ssh_inetd::interrupt_all()
+{
+    for (tim::p::ssh_inetd::session_map::value_type &p: _d->_sessions)
+        if (p.second && p.second->_service)
+            p.second->_service->interrupt();
+}
+
 void tim::ssh_inetd::dispatch(int timeout_ms)
 {
     if (!_d->_event)
@@ -164,10 +171,10 @@ void tim::ssh_inetd::dispatch(int timeout_ms)
     ssh_event_dopoll(_d->_event, timeout_ms);
     --_d->_dispatch_depth;
 
-    // Сбор сессий, помеченных к закрытию во время колбэков. Освобождение
+    // Сбор сессий, помеченных к закрытию во время обработчиков. Освобождение
     // ssh_session/ssh_channel изнутри стека событий libssh — UAF: библиотека
     // ещё работает с этими структурами. Кроме того, во время выполнения
-    // Tcl-скрипта dispatch() вызывается рекурсивно через DISPATCH-колбэк;
+    // Tcl-скрипта dispatch() вызывается рекурсивно через DISPATCH-обработчик;
     // в этом случае стек уже может включать сервис закрываемой сессии —
     // sweep отложим до самого внешнего уровня.
     if (_d->_dispatch_depth != 0)

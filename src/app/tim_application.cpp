@@ -144,7 +144,15 @@ void tim::application::dispatch()
 {
     mg_mgr_poll(&_d->_mg, 0);
     if (_d->_ssh_inetd)
+    {
         _d->_ssh_inetd->dispatch(0);
+        // Этот метод вызывается LIL-ом между Tcl-операторами через
+        // DISPATCH-обработчик. Если в этот момент инициирован выход
+        // (SIGINT выставил _quit), прерываем все живые скрипты —
+        // иначе долгий `while 1 {}` блокировал бы возврат из exec().
+        if (_d->_quit)
+            _d->_ssh_inetd->interrupt_all();
+    }
 }
 
 void tim::application::exec()

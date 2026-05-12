@@ -1,5 +1,6 @@
 #include "tim_user_service.h"
 
+#include "tim_user_db.h"
 #include "tim_user_service_p.h"
 #include "tim_uuid.h"
 
@@ -8,6 +9,7 @@
 #include "tim_mqtt_topic.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
+#include "tim_sqlite_tx.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
@@ -75,20 +77,7 @@ void tim::p::user_service::connect(const tim::mqtt_topic &topic,
 
     TIM_TRACE(Debug, "User '%s' connected.", uid_canon.c_str());
 
-    tim::sqlite_query q(&_db,
-                        "INSERT OR IGNORE INTO user (id) VALUES (?)");
-    if (!q.prepare())
-        TIM_TRACE(Fatal,
-                  TIM_TR("Failed to prepare query '%s'."_en,
-                         "Не могу подготовить запрос '%s' к базе данных."_ru),
-                  q.sql().c_str());
-
-    q.bind(1, uid_canon);
-    if (!q.exec())
-        TIM_TRACE(Error,
-                  TIM_TR("Failed to create user '%s'."_en,
-                         "Ошибка при создании пользователя '%s'."_ru),
-                  uid_canon.c_str());
+    tim::ensure_user(_db, uid_canon);
 }
 
 void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
@@ -194,7 +183,8 @@ void tim::p::user_service::setpubkey(const tim::mqtt_topic &topic,
     // обеспечивает, что один и тот же ключ не привязан к двум разным id;
     // совпадение id (один и тот же пользователь повторно подключился с тем же
     // ключом) штатно обрабатывается WHERE id = ?.
-    if (!_db.begin())
+    tim::sqlite_tx tx(_db);
+    if (!tx.active())
     {
         TIM_TRACE(Error, "%s",
                   TIM_TR("Failed to begin transaction for setpubkey."_en,
@@ -202,24 +192,8 @@ void tim::p::user_service::setpubkey(const tim::mqtt_topic &topic,
         return;
     }
 
-    {
-        tim::sqlite_query q(&_db, "INSERT OR IGNORE INTO user (id) VALUES (?)");
-        if (!q.prepare())
-            TIM_TRACE(Fatal,
-                      TIM_TR("Failed to prepare query '%s'."_en,
-                             "Не могу подготовить запрос '%s' к базе данных."_ru),
-                      q.sql().c_str());
-        q.bind(1, user_id_canon);
-        if (!q.exec())
-        {
-            TIM_TRACE(Error,
-                      TIM_TR("Failed to ensure user '%s' exists for setpubkey."_en,
-                             "Не удалось создать пользователя '%s' для setpubkey."_ru),
-                      user_id_canon.c_str());
-            _db.rollback();
-            return;
-        }
-    }
+    if (!tim::ensure_user(_db, user_id_canon))
+        return;
 
     {
         tim::sqlite_query q(&_db, "UPDATE user SET pub_key = ? WHERE id = ?");
@@ -236,12 +210,11 @@ void tim::p::user_service::setpubkey(const tim::mqtt_topic &topic,
                       TIM_TR("Failed to set pub_key for user '%s'."_en,
                              "Не удалось установить pub_key пользователю '%s'."_ru),
                       user_id_canon.c_str());
-            _db.rollback();
             return;
         }
     }
 
-    if (!_db.commit())
+    if (!tx.commit())
         TIM_TRACE(Error,
                   TIM_TR("Failed to commit setpubkey for user '%s'."_en,
                          "Не удалось зафиксировать setpubkey для пользователя '%s'."_ru),
@@ -270,7 +243,8 @@ void tim::p::user_service::subscribe_to(const tim::mqtt_topic &topic,
 
     // Гарантируем существование обеих сторон до INSERT-а в subscription
     // (внешние ключи требуют наличия и publisher_id, и subscriber_id).
-    if (!_db.begin())
+    tim::sqlite_tx tx(_db);
+    if (!tx.active())
     {
         TIM_TRACE(Error, "%s",
                   TIM_TR("Failed to begin transaction for subscribe."_en,
@@ -278,23 +252,8 @@ void tim::p::user_service::subscribe_to(const tim::mqtt_topic &topic,
         return;
     }
 
-    auto ensure_user = [this](const std::string &id) -> bool
-    {
-        tim::sqlite_query q(&_db, "INSERT OR IGNORE INTO user (id) VALUES (?)");
-        if (!q.prepare())
-            return false;
-        q.bind(1, id);
-        return q.exec();
-    };
-
-    if (!ensure_user(sub_canon) || !ensure_user(pub_canon))
-    {
-        TIM_TRACE(Error, "%s",
-                  TIM_TR("Failed to ensure users exist for subscribe."_en,
-                         "Не удалось создать пользователей для subscribe."_ru));
-        _db.rollback();
+    if (!tim::ensure_user(_db, sub_canon) || !tim::ensure_user(_db, pub_canon))
         return;
-    }
 
     {
         tim::sqlite_query q(&_db,
@@ -312,12 +271,11 @@ void tim::p::user_service::subscribe_to(const tim::mqtt_topic &topic,
                       TIM_TR("Failed to record subscription '%s' -> '%s'."_en,
                              "Не удалось сохранить подписку '%s' -> '%s'."_ru),
                       sub_canon.c_str(), pub_canon.c_str());
-            _db.rollback();
             return;
         }
     }
 
-    if (!_db.commit())
+    if (!tx.commit())
         TIM_TRACE(Error, "%s",
                   TIM_TR("Failed to commit subscribe."_en,
                          "Не удалось зафиксировать subscribe."_ru));

@@ -23,7 +23,7 @@ class prompt_service : public tim::a_ssh_inetd_service
 
 public:
 
-    // dispatch_handler — что вызывать из LIL DISPATCH-колбэка (между
+    // dispatch_handler — что вызывать из LIL DISPATCH-обработчика (между
     // Tcl-операторами), чтобы внешние event-loop-ы продолжали тикать,
     // пока скрипт работает. Обычно application::dispatch().
     prompt_service(const tim::ssh_session_info &info,

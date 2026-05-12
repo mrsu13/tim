@@ -31,7 +31,7 @@ struct ssh_session_info
 };
 
 // Реализация a_inetd_service поверх SSH-канала libssh. read() отдаёт байты,
-// которые libssh принёс через channel_data callback; write() пишет в канал.
+// которые libssh принёс через обработчик channel_data; write() пишет в канал.
 // Идентификатор пользователя (user_id) — UUID, выведенный из SHA-256
 // открытого ключа клиента.
 class a_ssh_inetd_service : public tim::a_inetd_service

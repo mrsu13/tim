@@ -38,8 +38,8 @@ struct ssh_session_state
     ::ssh_session                                 _session = nullptr;
     ::ssh_channel                                 _channel = nullptr;
     bool                                          _authed = false;
-    // Помечается из колбэков eof/close; реальная очистка происходит вне
-    // колбэка libssh в ssh_inetd::dispatch — нельзя освобождать сессию
+    // Помечается из обработчиков eof/close; реальная очистка происходит вне
+    // обработчика libssh в ssh_inetd::dispatch — нельзя освобождать сессию
     // изнутри её же события, libssh ещё работает с её внутренним состоянием.
     bool                                          _pending_close = false;
     tim::uuid                                     _user_id;
@@ -84,7 +84,7 @@ struct ssh_inetd
     // Счётчик вложенности dispatch(). Освобождать ssh_session/state можно
     // только на самом внешнем уровне — иначе мы рискуем уничтожить ту
     // самую сессию, в чьём же стеке вызовов сейчас находимся (например,
-    // если Tcl-скрипт через DISPATCH callback дёрнул нас рекурсивно).
+    // если Tcl-скрипт через DISPATCH-обработчик дёрнул нас рекурсивно).
     int _dispatch_depth = 0;
 };
 

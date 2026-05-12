@@ -7,8 +7,10 @@
 #include "tim_mqtt_topics.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
+#include "tim_sqlite_tx.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
+#include "tim_user_db.h"
 #include "tim_uuid.h"
 
 
@@ -57,7 +59,8 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
 
     // Гарантируем наличие автора и сохраняем сообщение единой транзакцией —
     // FK post.user_id → user(id) требует, чтобы автор существовал.
-    if (!_db.begin())
+    tim::sqlite_tx tx(_db);
+    if (!tx.active())
     {
         TIM_TRACE(Error, "%s",
                   TIM_TR("Failed to begin transaction for storing post."_en,
@@ -65,24 +68,8 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
         return;
     }
 
-    {
-        tim::sqlite_query q(&_db, "INSERT OR IGNORE INTO user (id) VALUES (?)");
-        if (!q.prepare())
-            TIM_TRACE(Fatal,
-                      TIM_TR("Failed to prepare database query '%s'."_en,
-                             "Не могу подготовить запрос '%s' к базе данных."_ru),
-                      q.sql().c_str());
-        q.bind(1, publisher_id_canon);
-        if (!q.exec())
-        {
-            TIM_TRACE(Error,
-                      TIM_TR("Failed to ensure user '%s' exists before saving post."_en,
-                             "Не удалось создать запись пользователя '%s' перед сохранением сообщения."_ru),
-                      publisher_id_canon.c_str());
-            _db.rollback();
-            return;
-        }
-    }
+    if (!tim::ensure_user(_db, publisher_id_canon))
+        return;
 
     {
         tim::sqlite_query q(&_db,
@@ -101,12 +88,11 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
                       TIM_TR("Failed to save post '%s' to the database."_en,
                              "Ошибка при сохранении поста '%s' в базе данных."_ru),
                       post_id_canon.c_str());
-            _db.rollback();
             return;
         }
     }
 
-    if (!_db.commit())
+    if (!tx.commit())
         TIM_TRACE(Error,
                   TIM_TR("Failed to commit transaction for post '%s'."_en,
                          "Не удалось зафиксировать транзакцию для сообщения '%s'."_ru),
