@@ -16,15 +16,17 @@ else
     OPT="-g -O0"
 fi
 
-INCLUDES="-I../src -I../src/mqtt -I../src/types -I../src/signal"
+INCLUDES="-I../src -I../src/mqtt -I../src/types -I../src/signal -I../src/tools"
 
 $CXX -std=c++17 -Wall -Wextra -Werror $OPT $INCLUDES \
     -o tim_test \
     test_main.cpp \
     test_mqtt_topic.cpp \
     test_signal.cpp \
+    test_uuid.cpp \
     ../src/mqtt/tim_mqtt_topic.cpp \
-    ../src/signal/tim_signal_connection.cpp
+    ../src/signal/tim_signal_connection.cpp \
+    ../src/types/tim_uuid.cpp
 
 echo "----"
 ./tim_test
