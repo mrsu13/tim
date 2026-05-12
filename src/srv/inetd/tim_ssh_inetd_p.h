@@ -38,6 +38,10 @@ struct ssh_session_state
     ::ssh_session                                 _session = nullptr;
     ::ssh_channel                                 _channel = nullptr;
     bool                                          _authed = false;
+    // Помечается из колбэков eof/close; реальная очистка происходит вне
+    // колбэка libssh в ssh_inetd::dispatch — нельзя освобождать сессию
+    // изнутри её же события, libssh ещё работает с её внутренним состоянием.
+    bool                                          _pending_close = false;
     tim::uuid                                     _user_id;
     std::string                                   _pub_key;
     std::string                                   _term_name;
@@ -65,8 +69,6 @@ struct ssh_inetd
                                int is_stderr, void *userdata);
     static void on_channel_close(::ssh_session, ::ssh_channel, void *userdata);
     static void on_channel_eof(::ssh_session, ::ssh_channel, void *userdata);
-
-    void close_session(::ssh_session session);
 
     std::string                  _if_addr;
     std::uint16_t                _port = 0;

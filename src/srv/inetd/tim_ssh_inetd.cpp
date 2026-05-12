@@ -157,8 +157,40 @@ std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
 
 void tim::ssh_inetd::dispatch(int timeout_ms)
 {
-    if (_d->_event)
-        ssh_event_dopoll(_d->_event, timeout_ms);
+    if (!_d->_event)
+        return;
+
+    ssh_event_dopoll(_d->_event, timeout_ms);
+
+    // Сбор сессий, помеченных к закрытию во время колбэков. Освобождение
+    // ssh_session/ssh_channel изнутри стека событий libssh — UAF: библиотека
+    // ещё работает с этими структурами. Делаем это здесь, после dopoll.
+    for (tim::p::ssh_inetd::session_map::iterator it = _d->_sessions.begin();
+         it != _d->_sessions.end(); )
+    {
+        if (!it->second->_pending_close)
+        {
+            ++it;
+            continue;
+        }
+
+        // Сначала уничтожаем наш сервис: его деструктор может писать в канал
+        // (прощальное сообщение, очистка терминала), поэтому канал должен
+        // ещё существовать. Только после этого освобождаем libssh-ресурсы.
+        it->second->_service.reset();
+
+        ::ssh_session sess = it->first;
+        ssh_event_remove_session(_d->_event, sess);
+        if (it->second->_channel)
+        {
+            ssh_channel_free(it->second->_channel);
+            it->second->_channel = nullptr;
+        }
+        ssh_disconnect(sess);
+        ssh_free(sess);
+
+        it = _d->_sessions.erase(it);
+    }
 }
 
 
@@ -240,24 +272,6 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
 
     TIM_TRACE(Debug, "ssh_inetd is listening at '%s:%u'.",
               _d->_if_addr.c_str(), _d->_port);
-}
-
-void tim::p::ssh_inetd::close_session(::ssh_session session)
-{
-    const session_map::iterator it = _sessions.find(session);
-    if (it == _sessions.end())
-        return;
-
-    if (_event)
-        ssh_event_remove_session(_event, session);
-    if (it->second->_channel)
-    {
-        ssh_channel_free(it->second->_channel);
-        it->second->_channel = nullptr;
-    }
-    ssh_disconnect(session);
-    ssh_free(session);
-    _sessions.erase(it);
 }
 
 int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
@@ -473,20 +487,20 @@ int tim::p::ssh_inetd::on_channel_data(::ssh_session, ::ssh_channel, void *data,
     return (int)len;
 }
 
-void tim::p::ssh_inetd::on_channel_close(::ssh_session session, ::ssh_channel, void *userdata)
+void tim::p::ssh_inetd::on_channel_close(::ssh_session, ::ssh_channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
     assert(st);
 
     TIM_TRACE(Debug, "SSH channel closed.");
-    st->_owner->close_session(session);
+    st->_pending_close = true;
 }
 
-void tim::p::ssh_inetd::on_channel_eof(::ssh_session session, ::ssh_channel, void *userdata)
+void tim::p::ssh_inetd::on_channel_eof(::ssh_session, ::ssh_channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
     assert(st);
 
     TIM_TRACE(Debug, "SSH channel EOF.");
-    st->_owner->close_session(session);
+    st->_pending_close = true;
 }
