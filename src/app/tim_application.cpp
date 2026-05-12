@@ -16,8 +16,9 @@
 // Services
 #include "tim_a_inetd_service.h"
 #include "tim_post_service.h"
-#include "tim_user_service.h"
 #include "tim_prompt_service.h"
+#include "tim_reaction_service.h"
+#include "tim_user_service.h"
 
 #include <cassert>
 #include <cstring>
@@ -88,9 +89,9 @@ tim::application::application(int argc, char **argv)
     _d->_ssh_inetd = tim::ssh_inetd::start(
         tim::SSH_PORT,
         host_key_path,
-        [mqtt = _d->_mqtt.get()](const tim::ssh_session_info &info) -> std::unique_ptr<tim::a_inetd_service>
+        [mqtt = _d->_mqtt.get(), db = _d->_db.get()](const tim::ssh_session_info &info) -> std::unique_ptr<tim::a_inetd_service>
         {
-            return std::make_unique<tim::prompt_service>(info, *mqtt);
+            return std::make_unique<tim::prompt_service>(info, *mqtt, *db);
         });
     if (!_d->_ssh_inetd)
         TIM_TRACE(Error,
@@ -100,12 +101,14 @@ tim::application::application(int argc, char **argv)
 
     _d->_post_service.reset(new tim::post_service(*_d->_mqtt, *_d->_db));
     _d->_user_service.reset(new tim::user_service(*_d->_mqtt, *_d->_db));
+    _d->_reaction_service.reset(new tim::reaction_service(*_d->_mqtt, *_d->_db));
 }
 
 tim::application::~application()
 {
     // Сворачиваем подсистемы, пока mg_mgr/event-loop ещё жив:
     // mqtt_client при уничтожении трогает таймеры из _mg.
+    _d->_reaction_service.reset();
     _d->_user_service.reset();
     _d->_post_service.reset();
     _d->_ssh_inetd.reset();

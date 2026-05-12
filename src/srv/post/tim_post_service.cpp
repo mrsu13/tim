@@ -31,29 +31,83 @@ tim::post_service::~post_service() = default;
 
 void tim::p::post_service::subscribe()
 {
-    _sub_post = _mqtt.subscribe("post/+",
+    _sub_post = _mqtt.subscribe("post/+/+",
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 }
 
 void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size)
 {
-    const std::string user_id_str(topic.last_level());
-    const tim::uuid user_id = user_id_str;
+    // topic = post/<publisher-uuid>/<post-uuid>
+    const std::string post_id_str(topic.last_level());
+    const std::string publisher_id_str(topic.parent().last_level());
 
-    tim::sqlite_query q(&_db,
-                        "INSERT OR REPLACE INTO post (id, user_id, text) VALUES (?, ?, ?)");
-    if (!q.prepare())
-        TIM_TRACE(Fatal,
-                  TIM_TR("Failed to prepare database query '%s'."_en,
-                         "Не могу подготовить запрос '%s' к базе данных."_ru),
-                  q.sql().c_str());
-    q.bind(1, tim::uuid::create().to_string());
-    q.bind(2, user_id.to_string());
-    q.bind(3, std::string(data, size));
-    if (!q.exec())
+    const tim::uuid post_id(post_id_str);
+    const tim::uuid publisher_id(publisher_id_str);
+    if (!post_id.valid() || !publisher_id.valid())
+    {
+        TIM_TRACE(Warning, "%s",
+                  TIM_TR("Ignoring post with invalid UUID(s)."_en,
+                         "Игнорируем сообщение с некорректным UUID."_ru));
+        return;
+    }
+    const std::string publisher_id_canon = publisher_id.to_string();
+    const std::string post_id_canon = post_id.to_string();
+
+    // Гарантируем наличие автора и сохраняем сообщение единой транзакцией —
+    // FK post.user_id → user(id) требует, чтобы автор существовал.
+    if (!_db.begin())
+    {
+        TIM_TRACE(Error, "%s",
+                  TIM_TR("Failed to begin transaction for storing post."_en,
+                         "Не удалось начать транзакцию для сохранения сообщения."_ru));
+        return;
+    }
+
+    {
+        tim::sqlite_query q(&_db, "INSERT OR IGNORE INTO user (id) VALUES (?)");
+        if (!q.prepare())
+            TIM_TRACE(Fatal,
+                      TIM_TR("Failed to prepare database query '%s'."_en,
+                             "Не могу подготовить запрос '%s' к базе данных."_ru),
+                      q.sql().c_str());
+        q.bind(1, publisher_id_canon);
+        if (!q.exec())
+        {
+            TIM_TRACE(Error,
+                      TIM_TR("Failed to ensure user '%s' exists before saving post."_en,
+                             "Не удалось создать запись пользователя '%s' перед сохранением сообщения."_ru),
+                      publisher_id_canon.c_str());
+            _db.rollback();
+            return;
+        }
+    }
+
+    {
+        tim::sqlite_query q(&_db,
+                            "INSERT OR REPLACE INTO post (id, user_id, text) VALUES (?, ?, ?)");
+        if (!q.prepare())
+            TIM_TRACE(Fatal,
+                      TIM_TR("Failed to prepare database query '%s'."_en,
+                             "Не могу подготовить запрос '%s' к базе данных."_ru),
+                      q.sql().c_str());
+        q.bind(1, post_id_canon);
+        q.bind(2, publisher_id_canon);
+        q.bind(3, std::string(data, size));
+        if (!q.exec())
+        {
+            TIM_TRACE(Error,
+                      TIM_TR("Failed to save post '%s' to the database."_en,
+                             "Ошибка при сохранении поста '%s' в базе данных."_ru),
+                      post_id_canon.c_str());
+            _db.rollback();
+            return;
+        }
+    }
+
+    if (!_db.commit())
         TIM_TRACE(Error,
-                  TIM_TR("Failed to save post '%s' to the database."_en,
-                         "Ошибка при сохранении поста '%s' в базе данных."_ru),
-                  user_id_str.c_str());
+                  TIM_TR("Failed to commit transaction for post '%s'."_en,
+                         "Не удалось зафиксировать транзакцию для сообщения '%s'."_ru),
+                  post_id_canon.c_str());
 }

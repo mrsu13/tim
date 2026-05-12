@@ -32,6 +32,12 @@ public:
     const tim::uuid &user_id() const;
     tim::mqtt_client &mqtt() const;
 
+    // UUID последнего сообщения, увиденного в чате этой сессии. Команды
+    // (например /react) используют его как неявный аргумент. Пустой uuid
+    // означает, что ещё ни одно чужое сообщение не получено.
+    void set_last_post_id(const tim::uuid &post_id);
+    const tim::uuid &last_post_id() const;
+
     bool evaluating() const override;
     bool eval(const std::string &program, std::string *res = nullptr) override;
     void break_eval() override;

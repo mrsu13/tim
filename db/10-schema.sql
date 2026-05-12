@@ -24,7 +24,7 @@ CREATE UNIQUE INDEX configuration_title ON configuration(title);
 DROP TABLE IF EXISTS user;
 CREATE TABLE user
 (
-    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
+    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '' AND id != '{00000000-0000-0000-0000-000000000000}'),
 
     pub_key VARCHAR UNIQUE, -- Public key.
     nick VARCHAR UNIQUE,
@@ -35,26 +35,30 @@ CREATE UNIQUE INDEX user_pub_key ON user(pub_key);
 CREATE UNIQUE INDEX user_nick ON user(nick);
 
 
--- Подписки
+-- Подписки.
+-- Композитный (publisher_id, subscriber_id) — естественный ключ подписки,
+-- поэтому делаем его PRIMARY KEY и не заводим отдельный UNIQUE-индекс.
 DROP TABLE IF EXISTS subscription;
 CREATE TABLE subscription
 (
     publisher_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
     subscriber_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE CHECK(subscriber_id != publisher_id),
-    UNIQUE(publisher_id, subscriber_id)
+    PRIMARY KEY (publisher_id, subscriber_id)
 );
-CREATE INDEX subscription_publisher_id ON subscription(publisher_id);
+-- PRIMARY KEY покрывает поиск по publisher_id; для обратной выборки
+-- "на кого подписан этот subscriber" нужен отдельный индекс.
 CREATE INDEX subscription_subscriber_id ON subscription(subscriber_id);
 
 
--- Сообщения пользователя
+-- Сообщения пользователя.
+-- user_id ссылается на user(id); ON DELETE CASCADE удаляет сообщения вместе
+-- с удалением автора. Перед INSERT-ом поста сервис обязан гарантировать
+-- наличие соответствующей строки в user (INSERT OR IGNORE).
 DROP TABLE IF EXISTS post;
 CREATE TABLE post
 (
-    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
---    user_id VARCHAR REFERENCES user(id) ON DELETE CASCADE,
-    user_id VARCHAR,
-    post_id VARCHAR REFERENCES post(id) ON DELETE CASCADE,
+    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '' AND id != '{00000000-0000-0000-0000-000000000000}'),
+    user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
 
@@ -64,18 +68,26 @@ CREATE INDEX post_user_id ON post(user_id);
 CREATE INDEX post_timestamp ON post(timestamp);
 
 
--- Реакция на сообщение
+-- Реакция на сообщение.
+-- Один пользователь может оставить только одну реакцию на конкретное
+-- сообщение (UNIQUE(post_id, user_id)); повторная реакция должна
+-- выполняться как INSERT OR REPLACE по этой паре. UNIQUE-индекс по
+-- (post_id, user_id) также покрывает поиск всех реакций к сообщению,
+-- поэтому отдельный reaction_post_id не нужен.
 DROP TABLE IF EXISTS reaction;
 CREATE TABLE reaction
 (
-    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '""' AND id != '"{00000000-0000-0000-0000-000000000000}"'),
+    id VARCHAR PRIMARY KEY NOT NULL CHECK(id != '' AND id != '{00000000-0000-0000-0000-000000000000}'),
     post_id VARCHAR NOT NULL REFERENCES post(id) ON DELETE CASCADE,
+    user_id VARCHAR NOT NULL REFERENCES user(id) ON DELETE CASCADE,
 
     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000), -- In milliseconds.
 
-    weight INTEGER DEFAULT 1
+    weight INTEGER DEFAULT 1,
+
+    UNIQUE(post_id, user_id)
 );
-CREATE INDEX reaction_post_id ON reaction(post_id);
+CREATE INDEX reaction_user_id ON reaction(user_id);
 CREATE INDEX reaction_timestamp ON reaction(timestamp);
 
 COMMIT;

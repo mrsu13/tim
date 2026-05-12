@@ -43,6 +43,11 @@ const tim::uuid &tim::a_ssh_inetd_service::user_id() const noexcept
     return _user_id;
 }
 
+const std::string &tim::a_ssh_inetd_service::pub_key() const noexcept
+{
+    return _pub_key;
+}
+
 const std::string &tim::a_ssh_inetd_service::term_name() const noexcept
 {
     return _term_name;
@@ -81,6 +86,7 @@ tim::a_ssh_inetd_service::a_ssh_inetd_service(const std::string &name, const tim
     , _session(info.session)
     , _channel(info.channel)
     , _user_id(info.user_id)
+    , _pub_key(info.pub_key)
     , _term_name(info.term_name)
     , _rows(info.rows)
     , _cols(info.cols)

@@ -17,11 +17,14 @@ namespace tim
 
 // Параметры SSH-сессии, передаваемые в фабрику сервиса в момент,
 // когда клиент уже аутентифицирован и запросил shell.
+// pub_key — открытый ключ клиента в OpenSSH-формате ("<type> <base64>"),
+// без комментария.
 struct ssh_session_info
 {
     ssh_session  session;
     ssh_channel  channel;
     tim::uuid    user_id;
+    std::string  pub_key;
     std::string  term_name;
     std::size_t  rows;
     std::size_t  cols;
@@ -41,6 +44,7 @@ public:
     bool write(const char *data, std::size_t size) override;
 
     const tim::uuid &user_id() const noexcept;
+    const std::string &pub_key() const noexcept;
     const std::string &term_name() const noexcept;
     std::size_t rows() const noexcept;
     std::size_t cols() const noexcept;
@@ -62,6 +66,7 @@ private:
     ssh_session         _session;
     ssh_channel         _channel;
     tim::uuid           _user_id;
+    std::string         _pub_key;
     std::string         _term_name;
     std::size_t         _rows;
     std::size_t         _cols;

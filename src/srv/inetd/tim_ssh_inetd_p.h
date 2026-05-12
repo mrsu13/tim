@@ -39,6 +39,7 @@ struct ssh_session_state
     ::ssh_channel                                 _channel = nullptr;
     bool                                          _authed = false;
     tim::uuid                                     _user_id;
+    std::string                                   _pub_key;
     std::string                                   _term_name;
     std::size_t                                   _rows = 24;
     std::size_t                                   _cols = 80;

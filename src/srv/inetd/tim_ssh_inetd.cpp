@@ -58,6 +58,28 @@ bool ensure_host_key(const std::filesystem::path &path)
     return true;
 }
 
+// Сериализует открытый ключ в OpenSSH-формате без комментария:
+// "<type> <base64>" (например, "ssh-ed25519 AAAA...").
+// Возвращает пустую строку при ошибке.
+std::string pubkey_to_openssh(::ssh_key pubkey)
+{
+    const char *type = ssh_key_type_to_char(ssh_key_type(pubkey));
+    if (!type)
+        return {};
+
+    char *b64 = nullptr;
+    if (ssh_pki_export_pubkey_base64(pubkey, &b64) != SSH_OK || !b64)
+        return {};
+
+    std::string out;
+    out.reserve(std::strlen(type) + 1 + std::strlen(b64));
+    out.append(type);
+    out.push_back(' ');
+    out.append(b64);
+    ssh_string_free_char(b64);
+    return out;
+}
+
 // Выводит UUID пользователя из открытого ключа: SHA-256(blob), первые 16
 // байт, в которые проставлены биты версии 4 и варианта DCE.
 tim::uuid uuid_from_pubkey(::ssh_key pubkey)
@@ -336,6 +358,7 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     }
 
     st->_user_id = id;
+    st->_pub_key = pubkey_to_openssh(pubkey);
     st->_authed = true;
     TIM_TRACE(Debug, "SSH user authenticated: %s.", id.to_string().c_str());
     return SSH_AUTH_SUCCESS;
@@ -400,6 +423,7 @@ int tim::p::ssh_inetd::on_shell_request(::ssh_session, ::ssh_channel channel, vo
         .session = st->_session,
         .channel = channel,
         .user_id = st->_user_id,
+        .pub_key = st->_pub_key,
         .term_name = st->_term_name,
         .rows = st->_rows,
         .cols = st->_cols,

@@ -13,6 +13,7 @@ namespace tim
 
 class mqtt_client;
 class post_service;
+class reaction_service;
 class ssh_inetd;
 class user_service;
 class sqlite_db;
@@ -55,6 +56,7 @@ struct application
     std::unique_ptr<tim::ssh_inetd> _ssh_inetd;
     std::unique_ptr<tim::post_service> _post_service;
     std::unique_ptr<tim::user_service> _user_service;
+    std::unique_ptr<tim::reaction_service> _reaction_service;
 };
 
 }

@@ -10,6 +10,7 @@
 
 // Commands
 #include "tim_tcl_cmd_general.h"
+#include "tim_tcl_cmd_post.h"
 #include "tim_tcl_cmd_term.h"
 #include "tim_tcl_cmd_user.h"
 
@@ -34,6 +35,7 @@ tim::tcl::tcl(tim::a_terminal *term, const tim::uuid &user_id, tim::mqtt_client 
     tim::tcl_add_general(_d->_lil);
     tim::tcl_add_term(_d->_lil);
     tim::tcl_add_user(_d->_lil);
+    tim::tcl_add_post(_d->_lil);
 }
 
 tim::tcl::~tcl()
@@ -49,6 +51,16 @@ const tim::uuid &tim::tcl::user_id() const
 tim::mqtt_client &tim::tcl::mqtt() const
 {
     return _d->_mqtt;
+}
+
+void tim::tcl::set_last_post_id(const tim::uuid &post_id)
+{
+    _d->_last_post_id = post_id;
+}
+
+const tim::uuid &tim::tcl::last_post_id() const
+{
+    return _d->_last_post_id;
 }
 
 bool tim::tcl::evaluating() const
