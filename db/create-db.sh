@@ -4,7 +4,6 @@ ARGS=$@
 DB=tim.db
 DB_SCHEMA_VERSION=`cat ../DB_SCHEMA_VERSION`
 SHELL=sqlite3
-TEST_DATA=test-data.sql
 
 # Console Colors
 ECHO_ESCAPE=-e
@@ -83,12 +82,6 @@ do
     _exec $SHELL -bail -batch -init $i -cmd .quit $DB
 done
 _print "> Done!"
-
-if [ `expr match "$ARGS" '.*\brelease\b.*'` -eq "0" ]; then
-    _print "> Adding test data..."
-    _exec $SHELL -bail -batch -init $TEST_DATA -cmd .quit $DB
-    _print "> Done!"
-fi
 
 # Set Schema Version
 _print "> Setting the database schema version ..."

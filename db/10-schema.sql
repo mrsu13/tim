@@ -7,19 +7,6 @@ BEGIN;
 -- Таблицы --
 -------------
 
--- Конфигурация
-DROP TABLE IF EXISTS configuration;
-CREATE TABLE configuration
-(
-    name VARCHAR UNIQUE COLLATE NOCASE NOT NULL,
-    value VARCHAR NOT NULL,
-    title VARCHAR UNIQUE NOT NULL,
-    read_only INTEGER DEFAULT 0
-);
-CREATE UNIQUE INDEX configuration_name ON configuration(name);
-CREATE UNIQUE INDEX configuration_title ON configuration(title);
-
-
 -- Пользователи
 DROP TABLE IF EXISTS user;
 CREATE TABLE user
