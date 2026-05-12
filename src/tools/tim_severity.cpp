@@ -3,7 +3,8 @@
 
 /**
  * Возвращает короткую отображаемую метку уровня для печати в stderr:
- * "[F]" для fatal, "[E]" для error и т.д.
+ * "[F]" для fatal, "[E]" для error, "[W]" для warning, "[I]" для info,
+ * "[D]" для debug, "[T]" для trace.
  */
 const char *tim::severity_title(tim::severity severity)
 {
