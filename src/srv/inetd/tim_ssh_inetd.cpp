@@ -160,11 +160,19 @@ void tim::ssh_inetd::dispatch(int timeout_ms)
     if (!_d->_event)
         return;
 
+    ++_d->_dispatch_depth;
     ssh_event_dopoll(_d->_event, timeout_ms);
+    --_d->_dispatch_depth;
 
     // Сбор сессий, помеченных к закрытию во время колбэков. Освобождение
     // ssh_session/ssh_channel изнутри стека событий libssh — UAF: библиотека
-    // ещё работает с этими структурами. Делаем это здесь, после dopoll.
+    // ещё работает с этими структурами. Кроме того, во время выполнения
+    // Tcl-скрипта dispatch() вызывается рекурсивно через DISPATCH-колбэк;
+    // в этом случае стек уже может включать сервис закрываемой сессии —
+    // sweep отложим до самого внешнего уровня.
+    if (_d->_dispatch_depth != 0)
+        return;
+
     for (tim::p::ssh_inetd::session_map::iterator it = _d->_sessions.begin();
          it != _d->_sessions.end(); )
     {
@@ -493,6 +501,8 @@ void tim::p::ssh_inetd::on_channel_close(::ssh_session, ::ssh_channel, void *use
     assert(st);
 
     TIM_TRACE(Debug, "SSH channel closed.");
+    if (st->_service)
+        st->_service->interrupt();
     st->_pending_close = true;
 }
 
@@ -502,5 +512,7 @@ void tim::p::ssh_inetd::on_channel_eof(::ssh_session, ::ssh_channel, void *userd
     assert(st);
 
     TIM_TRACE(Debug, "SSH channel EOF.");
+    if (st->_service)
+        st->_service->interrupt();
     st->_pending_close = true;
 }

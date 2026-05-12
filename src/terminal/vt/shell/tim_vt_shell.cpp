@@ -56,9 +56,23 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
 {
     assert(data);
 
-    if (!size
-            || _d->_engine->evaluating())
+    if (!size)
         return true;
+
+    if (_d->_engine->evaluating())
+    {
+        // Во время выполнения скрипта line_edit не работает (он будет
+        // вызван по окончании eval). Но Ctrl-C (ETX, 0x03) пробрасываем
+        // в движок — это единственный способ прервать долгий или
+        // бесконечный скрипт из своей же сессии.
+        for (std::size_t i = 0; i < size; ++i)
+            if (data[i] == 0x03)
+            {
+                _d->_engine->break_eval();
+                break;
+            }
+        return true;
+    }
 
     switch (_d->_ledit->get_line(data, size))
     {

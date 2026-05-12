@@ -59,6 +59,15 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
 
 tim::prompt_service::~prompt_service() = default;
 
+void tim::prompt_service::interrupt() noexcept
+{
+    // Прерываем активный Tcl-скрипт, если он сейчас выполняется.
+    // Вызов lil_break_run в неактивном состоянии "съел" бы следующий
+    // eval, поэтому защищаемся проверкой evaluating().
+    if (_d->_tcl && _d->_tcl->evaluating())
+        _d->_tcl->break_eval();
+}
+
 
 // Закрытые
 

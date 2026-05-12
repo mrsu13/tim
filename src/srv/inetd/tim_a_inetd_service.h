@@ -15,6 +15,14 @@ class a_inetd_service : public tim::service,
                         public tim::a_io_device
 {
 
+public:
+
+    // Сообщение сервису "сворачивайся, мы тебя закрываем". Реализация по
+    // умолчанию — no-op; сервисы, которые могут оказаться внутри долгой
+    // синхронной работы (например, prompt_service внутри Tcl-скрипта),
+    // переопределяют, чтобы прервать её.
+    virtual void interrupt() noexcept {}
+
 protected:
 
     explicit a_inetd_service(const std::string &name);

@@ -80,6 +80,12 @@ struct ssh_inetd
 
     using session_map = std::unordered_map<::ssh_session, std::unique_ptr<ssh_session_state>>;
     session_map _sessions;
+
+    // Счётчик вложенности dispatch(). Освобождать ssh_session/state можно
+    // только на самом внешнем уровне — иначе мы рискуем уничтожить ту
+    // самую сессию, в чьём же стеке вызовов сейчас находимся (например,
+    // если Tcl-скрипт через DISPATCH callback дёрнул нас рекурсивно).
+    int _dispatch_depth = 0;
 };
 
 }

@@ -24,6 +24,8 @@ public:
     prompt_service(const tim::ssh_session_info &info, tim::mqtt_client &mqtt, tim::sqlite_db &db);
     ~prompt_service();
 
+    void interrupt() noexcept override;
+
 private:
 
     std::unique_ptr<tim::p::prompt_service> _d;
