@@ -22,7 +22,9 @@ $CXX -std=c++17 -Wall -Wextra -Werror $OPT $INCLUDES \
     -o tim_test \
     test_main.cpp \
     test_mqtt_topic.cpp \
-    ../src/mqtt/tim_mqtt_topic.cpp
+    test_signal.cpp \
+    ../src/mqtt/tim_mqtt_topic.cpp \
+    ../src/signal/tim_signal_connection.cpp
 
 echo "----"
 ./tim_test
