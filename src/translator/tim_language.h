@@ -11,38 +11,51 @@ namespace tim
 {
 
 /**
- * Languages supported by tim::tr.
+ * Языки, на которых TIM выводит сообщения (TIM_TR/tim::translator).
  *
- * \see tim::tr TIM_TR()
+ * \see TIM_TR
  */
 enum class language
 {
-    Unknown = 0, ///< Not defined.
-
-    en_US = 1 << 0, ///< English USA.
-    ru_RU = 1 << 1  ///< Russian.
+    unknown = 0,    ///< Не определён.
+    en_us = 1 << 0, ///< Английский (США).
+    ru_ru = 1 << 1  ///< Русский.
 };
 
-// JSON-сериализация: в файле конфигурации язык хранится как короткая
-// строка "en"/"ru" — оператору так понятнее, чем числовой код.
+/**
+ * nlohmann-сериализация tim::language → JSON.
+ *
+ * В файле конфигурации язык хранится как короткая строка "en"/"ru" —
+ * оператору так понятнее, чем числовой код.
+ *
+ * \param j Цель сериализации.
+ * \param lang Значение для записи.
+ */
 inline void to_json(nlohmann::json &j, const tim::language &lang)
 {
     switch (lang)
     {
-        case tim::language::en_US: j = "en"; return;
-        case tim::language::ru_RU: j = "ru"; return;
-        case tim::language::Unknown: break;
+        case tim::language::en_us: j = "en"; return;
+        case tim::language::ru_ru: j = "ru"; return;
+        case tim::language::unknown: break;
     }
     j = "ru";
 }
 
+/**
+ * Десериализация JSON → tim::language.
+ *
+ * \param j Источник: строка "en"/"en_US" → en_us, всё прочее → ru_ru
+ *          (безопасный fallback на дефолтный язык).
+ * \param lang Сюда записывается результат.
+ */
 inline void from_json(const nlohmann::json &j, tim::language &lang)
 {
     const std::string s = j.get<std::string>();
     if (s == "en" || s == "en_US")
-        lang = tim::language::en_US;
+        lang = tim::language::en_us;
     else
-        lang = tim::language::ru_RU;
+        lang = tim::language::ru_ru;
 }
 
 }

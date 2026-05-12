@@ -6,9 +6,13 @@
 namespace tim::p
 {
 
+/**
+ * Внутреннее состояние tim::translator (PIMPL).
+ */
 struct translator
 {
-    tim::language _language = tim::language::ru_RU;
+    /** Текущий выбранный язык. По умолчанию русский. */
+    tim::language _language = tim::language::ru_ru;
 };
 
 }

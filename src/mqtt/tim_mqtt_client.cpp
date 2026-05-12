@@ -13,10 +13,15 @@
 #include <cassert>
 
 
+/** QoS, с которым шлются keep-alive публикации client/status. */
 static const int TIM_MQTT_QOS = 1;
 
 // Открытые
 
+/**
+ * Конструктор. Запоминает mongoose-менеджер; реальное соединение
+ * с брокером открывается в start().
+ */
 tim::mqtt_client::mqtt_client(mg_mgr *mg)
     : connected{}
     , disconnected{}
@@ -26,11 +31,18 @@ tim::mqtt_client::mqtt_client(mg_mgr *mg)
     _d->_mg = mg;
 }
 
+/**
+ * Деструктор. Закрывает соединение и таймер через stop().
+ */
 tim::mqtt_client::~mqtt_client()
 {
     stop();
 }
 
+/**
+ * Запускает периодический таймер: при первом тике он попытается
+ * подключиться к брокеру, при последующих — слать keep-alive PING.
+ */
 bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds ping_interval)
 {
     assert(!url.empty() && "MQTT broker URL must not be empty.");
@@ -38,7 +50,7 @@ bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds pi
 
     if (_d->_timer)
     {
-        TIM_TRACE(Warning, "mqtt_client::start() called while already started; ignoring.");
+        TIM_TRACE(warning, "mqtt_client::start() called while already started; ignoring.");
         return true;
     }
 
@@ -48,7 +60,7 @@ bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds pi
                               &tim::p::mqtt_client::ping, _d.get());
     if (!_d->_timer)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to start MQTT client timer for broker '%.*s'."_en,
                          "Не могу создать таймер MQTT клиента для брокера '%.*s'."_ru),
                   (int)url.size(), url.data());
@@ -58,6 +70,10 @@ bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds pi
     return true;
 }
 
+/**
+ * Останавливает таймер и инициирует закрытие живого соединения.
+ * Идемпотентно: повторный вызов на остановленном клиенте — no-op.
+ */
 void tim::mqtt_client::stop()
 {
     if (_d->_timer)
@@ -79,11 +95,16 @@ void tim::mqtt_client::stop()
     _d->_url.clear();
 }
 
+/** \return Установлено ли сейчас соединение и завершён MQTT-handshake. */
 bool tim::mqtt_client::is_connected() const
 {
     return _d->_connected;
 }
 
+/**
+ * Публикует сообщение в топик. Если соединение не установлено, sub
+ * mg_mqtt_pub на nullptr-соединении тихо отбрасывает сообщение.
+ */
 void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                const char *data, std::size_t size,
                                std::uint8_t qos,
@@ -101,11 +122,14 @@ void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
 
     mg_mqtt_pub(_d->_client, &pub_opts);
 
-    TIM_TRACE(Debug, "Published to '%s': '%.*s'.",
+    TIM_TRACE(debug, "Published to '%s': '%.*s'.",
               topic.c_str(),
               (int)size, data);
 }
 
+/**
+ * Перегруз publish() для string_view; делегирует на основной публишер.
+ */
 void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                std::string_view payload,
                                std::uint8_t qos,
@@ -114,6 +138,10 @@ void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
     publish(topic, payload.data(), payload.size(), qos, retain);
 }
 
+/**
+ * Регистрирует подписчика в списке и вызывает mg_mqtt_sub. Возвращает
+ * RAII-токен, который отзовёт подписку при разрушении.
+ */
 tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_filter,
                                                    message_handler mh,
                                                    std::uint8_t qos)
@@ -132,26 +160,36 @@ tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_
 
     mg_mqtt_sub(_d->_client, &sub_opts);
 
-    TIM_TRACE(Debug, "Subscribed to '%s'.", topic_filter.c_str());
+    TIM_TRACE(debug, "Subscribed to '%s'.", topic_filter.c_str());
 
     return tim::mqtt_subscription(this, id);
 }
 
+/**
+ * Удаляет подписчика из списка по id. Вызывается деструктором
+ * mqtt_subscription; на остановленном клиенте безопасен.
+ */
 void tim::mqtt_client::unsubscribe(std::size_t id)
 {
+    // Линейный поиск по id; список подписчиков обычно невелик.
     const tim::p::mqtt_client::subscribers::iterator it = std::find_if(
         _d->_subscribers.begin(), _d->_subscribers.end(),
         [id](const tim::p::mqtt_client::subscriber_entry &e){ return e.id == id; });
     if (it == _d->_subscribers.end())
         return;
 
-    TIM_TRACE(Debug, "Unsubscribed from '%s'.", it->filter.c_str());
+    TIM_TRACE(debug, "Unsubscribed from '%s'.", it->filter.c_str());
     _d->_subscribers.erase(it);
 }
 
 
 // Закрытые
 
+/**
+ * Mongoose-обработчик событий соединения. Маршрутизирует MG_EV_*
+ * по веткам switch; при MG_EV_MQTT_MSG проходит по списку подписчиков,
+ * проверяя соответствие топика их фильтрам.
+ */
 void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 {
     tim::p::mqtt_client *self = (tim::p::mqtt_client *)c->fn_data;
@@ -165,7 +203,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 
         case MG_EV_CONNECT:
         {
-            TIM_TRACE(Debug,
+            TIM_TRACE(debug,
                       "TCP connection to MQTT broker '%s' established.",
                       self->_url.c_str());
             if (c->is_tls)
@@ -188,7 +226,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         }
 
         case MG_EV_MQTT_OPEN:
-            TIM_TRACE(Debug,
+            TIM_TRACE(debug,
                       "MQTT handshake with broker '%s' succeeded.",
                       self->_url.c_str());
             self->_connected = true;
@@ -216,7 +254,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                 mg_mqtt_message *msg = (mg_mqtt_message *)ev_data;
                 const tim::mqtt_topic topic(std::string(msg->topic.buf, msg->topic.len));
 
-                TIM_TRACE(Debug,
+                TIM_TRACE(debug,
                           "MQTT message received at topic '%s': '%.*s'.",
                           topic.c_str(),
                           (int)msg->data.len, msg->data.buf);
@@ -229,6 +267,8 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 
                 for (std::size_t id: ids)
                 {
+                    // Подписчик мог быть удалён предыдущим обработчиком;
+                    // перепроверяем найдём ли его перед вызовом handler.
                     const subscribers::const_iterator it = std::find_if(
                         self->_subscribers.cbegin(), self->_subscribers.cend(),
                         [id](const subscriber_entry &e){ return e.id == id; });
@@ -242,7 +282,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 
         case MG_EV_CLOSE:
         {
-            TIM_TRACE(Debug,
+            TIM_TRACE(debug,
                       "MQTT connection to broker '%s' closed.",
                       self->_url.c_str());
             self->_client = nullptr;
@@ -254,7 +294,7 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
         case MG_EV_ERROR:
             if (!c->is_draining)
             {
-                TIM_TRACE(Error,
+                TIM_TRACE(error,
                           TIM_TR("MQTT network error: %s"_en,
                                  "Сетевая ошибка MQTT: %s"_ru),
                           (char *)ev_data);
@@ -266,6 +306,10 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
     }
 }
 
+/**
+ * Mongoose-обработчик таймера. На каждом тике: если соединение живо —
+ * шлёт PING, если нет — открывает новое (повторная попытка подключения).
+ */
 void tim::p::mqtt_client::ping(void *data)
 {
     tim::p::mqtt_client *self = (tim::p::mqtt_client *)data;
@@ -290,7 +334,7 @@ void tim::p::mqtt_client::ping(void *data)
 
     if (!(self->_client = mg_mqtt_connect(self->_mg, self->_url.c_str(), &opts,
                                           &tim::p::mqtt_client::handle_events, self)))
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to connect to MQTT broker at '%s'; will retry."_en,
                          "Ошибка при подключении к брокеру MQTT '%s'; повторим попытку."_ru),
                   self->_url.c_str());

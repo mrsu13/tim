@@ -22,8 +22,13 @@
 namespace
 {
 
-// Проверяет наличие файла host-ключа; если его нет — генерирует ed25519
-// ключ и сохраняет на диск. Возвращает true при успехе.
+/**
+ * Проверяет наличие файла host-ключа; если его нет — генерирует
+ * ed25519-ключ и сохраняет на диск с правами owner-read/write.
+ *
+ * \param path Путь к файлу host-key.
+ * \return true при наличии или успешной генерации; false при ошибке.
+ */
 bool ensure_host_key(const std::filesystem::path &path)
 {
     std::error_code ec;
@@ -35,7 +40,7 @@ bool ensure_host_key(const std::filesystem::path &path)
     ::ssh_key key = nullptr;
     if (ssh_pki_generate(SSH_KEYTYPE_ED25519, 0, &key) != SSH_OK)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to generate SSH host key for '%s'."_en,
                          "Не удалось сгенерировать SSH host-ключ для '%s'."_ru),
                   path.string().c_str());
@@ -47,7 +52,7 @@ bool ensure_host_key(const std::filesystem::path &path)
 
     if (rc != SSH_OK)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to write SSH host key file '%s'."_en,
                          "Не удалось записать SSH host-ключ '%s'."_ru),
                   path.string().c_str());
@@ -57,13 +62,17 @@ bool ensure_host_key(const std::filesystem::path &path)
     std::filesystem::permissions(path,
                                  std::filesystem::perms::owner_read | std::filesystem::perms::owner_write,
                                  std::filesystem::perm_options::replace, ec);
-    TIM_TRACE(Info, "Generated new SSH host key at '%s'.", path.string().c_str());
+    TIM_TRACE(info, "Generated new SSH host key at '%s'.", path.string().c_str());
     return true;
 }
 
-// Сериализует открытый ключ в OpenSSH-формате без комментария:
-// "<type> <base64>" (например, "ssh-ed25519 AAAA...").
-// Возвращает пустую строку при ошибке.
+/**
+ * Сериализует открытый ключ в OpenSSH-формате без комментария:
+ * "<type> <base64>" (например, "ssh-ed25519 AAAA...").
+ *
+ * \param pubkey Открытый ключ libssh.
+ * \return OpenSSH-строка или пустая строка при ошибке.
+ */
 std::string pubkey_to_openssh(::ssh_key pubkey)
 {
     const char *type = ssh_key_type_to_char(ssh_key_type(pubkey));
@@ -83,8 +92,13 @@ std::string pubkey_to_openssh(::ssh_key pubkey)
     return out;
 }
 
-// Выводит UUID пользователя из открытого ключа: SHA-256(blob), первые 16
-// байт, в которые проставлены биты версии 4 и варианта DCE.
+/**
+ * Выводит UUID пользователя из открытого ключа: SHA-256(blob), первые
+ * 16 байт, в которые проставлены биты версии 4 и варианта DCE.
+ *
+ * \param pubkey Открытый ключ libssh.
+ * \return UUID; nil-UUID при ошибке хеширования.
+ */
 tim::uuid uuid_from_pubkey(::ssh_key pubkey)
 {
     unsigned char *hash = nullptr;
@@ -119,6 +133,10 @@ tim::uuid uuid_from_pubkey(::ssh_key pubkey)
 
 // Открытые
 
+/**
+ * Деструктор. Корректно сворачивает все живые SSH-сессии и
+ * освобождает ssh_event/ssh_bind.
+ */
 tim::ssh_inetd::~ssh_inetd()
 {
     if (_d->_event)
@@ -143,6 +161,11 @@ tim::ssh_inetd::~ssh_inetd()
     }
 }
 
+/**
+ * Создаёт и запускает inetd. Гарантирует наличие host-key (генерирует
+ * при первом запуске), затем конструирует ssh_inetd и проверяет, что
+ * ssh_bind и ssh_event поднялись.
+ */
 std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
                                                       const std::filesystem::path &host_key_path,
                                                       service_factory factory,
@@ -158,6 +181,10 @@ std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
     return self;
 }
 
+/**
+ * Зовёт interrupt() у всех живых прикладных сервисов — например,
+ * чтобы прервать долгие Tcl-скрипты при завершении работы сервера.
+ */
 void tim::ssh_inetd::interrupt_all()
 {
     for (tim::p::ssh_inetd::session_map::value_type &p: _d->_sessions)
@@ -165,6 +192,11 @@ void tim::ssh_inetd::interrupt_all()
             p.second->_service->interrupt();
 }
 
+/**
+ * Опрашивает libssh-события и, на самом внешнем уровне вложенности,
+ * освобождает сессии, помеченные _pending_close в обработчиках
+ * eof/close. Re-entrancy guard через _dispatch_depth.
+ */
 void tim::ssh_inetd::dispatch(int timeout_ms)
 {
     if (!_d->_event)
@@ -214,6 +246,11 @@ void tim::ssh_inetd::dispatch(int timeout_ms)
 
 // Закрытые
 
+/**
+ * Закрытый конструктор. Открывает ssh_bind на указанном порту,
+ * настраивает host-key, создаёт ssh_event и регистрирует обработчик
+ * новых подключений (on_bind_ready).
+ */
 tim::ssh_inetd::ssh_inetd(std::uint16_t port,
                           const std::filesystem::path &host_key_path,
                           const std::string &if_addr,
@@ -232,7 +269,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
     _d->_bind = ssh_bind_new();
     if (!_d->_bind)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to allocate SSH bind."_en,
                          "Не удалось создать SSH bind."_ru));
         return;
@@ -243,7 +280,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
             || ssh_bind_options_set(_d->_bind, SSH_BIND_OPTIONS_BINDPORT_STR, port_str.c_str()) != SSH_OK
             || ssh_bind_options_set(_d->_bind, SSH_BIND_OPTIONS_HOSTKEY, _d->_host_key_path.string().c_str()) != SSH_OK)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to configure SSH bind: %s"_en,
                          "Не удалось настроить SSH bind: %s"_ru),
                   ssh_get_error(_d->_bind));
@@ -254,7 +291,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
 
     if (ssh_bind_listen(_d->_bind) < 0)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to listen for ssh_inetd at '%s:%u': %s"_en,
                          "Не могу запустить ssh_inetd на '%s:%u': %s"_ru),
                   _d->_if_addr.c_str(), _d->_port, ssh_get_error(_d->_bind));
@@ -267,7 +304,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
     _d->_event = ssh_event_new();
     if (!_d->_event)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to allocate SSH event poller."_en,
                          "Не удалось создать SSH event poller."_ru));
         ssh_bind_free(_d->_bind);
@@ -278,7 +315,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
     if (ssh_event_add_fd(_d->_event, ssh_bind_get_fd(_d->_bind), POLLIN,
                          &tim::p::ssh_inetd::on_bind_ready, _d.get()) != SSH_OK)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to register SSH bind fd with event poller."_en,
                          "Не удалось добавить SSH bind в event poller."_ru));
         ssh_event_free(_d->_event);
@@ -288,10 +325,16 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
         return;
     }
 
-    TIM_TRACE(Debug, "ssh_inetd is listening at '%s:%u'.",
+    TIM_TRACE(debug, "ssh_inetd is listening at '%s:%u'.",
               _d->_if_addr.c_str(), _d->_port);
 }
 
+/**
+ * libssh-обработчик готовности bind-сокета принять новое соединение.
+ * Принимает соединение, выставляет TCP keep-alive, регистрирует
+ * callbacks pubkey-аутентификации и channel-open, запускает
+ * key-exchange и добавляет сессию в ssh_event.
+ */
 int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
 {
     (void) fd;
@@ -303,7 +346,7 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
     ::ssh_session session = ssh_new();
     if (!session)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to allocate SSH session."_en,
                          "Не удалось создать SSH-сессию."_ru));
         return 0;
@@ -312,7 +355,7 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
     if (ssh_bind_accept(self->_bind, session) != SSH_OK)
     {
         const char *err = ssh_get_error(self->_bind);
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("ssh_bind_accept failed: %s"_en,
                          "ssh_bind_accept не удался: %s"_ru),
                   err ? err : "");
@@ -357,7 +400,7 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
         const int err = ssh_get_error_code(session);
         if (err != SSH_AGAIN)
         {
-            TIM_TRACE(Error,
+            TIM_TRACE(error,
                       TIM_TR("SSH key exchange failed: %s"_en,
                              "SSH key exchange не удался: %s"_ru),
                       ssh_get_error(session));
@@ -369,7 +412,7 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
 
     if (ssh_event_add_session(self->_event, session) != SSH_OK)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to add SSH session to event poller."_en,
                          "Не удалось добавить SSH-сессию в event poller."_ru));
         ssh_disconnect(session);
@@ -377,11 +420,16 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
         return 0;
     }
 
-    TIM_TRACE(Debug, "ssh_inetd accepted a connection.");
+    TIM_TRACE(debug, "ssh_inetd accepted a connection.");
     self->_sessions.emplace(session, std::move(state));
     return 0;
 }
 
+/**
+ * libssh-обработчик pubkey-аутентификации. Любой валидный ключ
+ * принимается: идентификатор пользователя выводится из SHA-256
+ * самого ключа (uuid_from_pubkey).
+ */
 int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, ::ssh_key pubkey,
                                       char signature_state, void *userdata)
 {
@@ -402,7 +450,7 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     const tim::uuid id = uuid_from_pubkey(pubkey);
     if (!id.valid())
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to derive user id from SSH pubkey."_en,
                          "Не удалось вычислить идентификатор пользователя из SSH-ключа."_ru));
         return SSH_AUTH_DENIED;
@@ -411,10 +459,15 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     st->_user_id = id;
     st->_pub_key = pubkey_to_openssh(pubkey);
     st->_authed = true;
-    TIM_TRACE(Debug, "SSH user authenticated: %s.", id.to_string().c_str());
+    TIM_TRACE(debug, "SSH user authenticated: %s.", id.to_string().c_str());
     return SSH_AUTH_SUCCESS;
 }
 
+/**
+ * libssh-обработчик открытия канала. Только аутентифицированному
+ * клиенту и только одному каналу на сессию. Регистрирует callbacks
+ * pty/shell/window/data/close/eof.
+ */
 ::ssh_channel tim::p::ssh_inetd::on_channel_open(::ssh_session session, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
@@ -427,7 +480,7 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     ::ssh_channel channel = ssh_channel_new(session);
     if (!channel)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to allocate SSH channel."_en,
                          "Не удалось создать SSH-канал."_ru));
         return nullptr;
@@ -448,6 +501,10 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     return channel;
 }
 
+/**
+ * libssh-обработчик pty-request. Сохраняет $TERM и геометрию в
+ * ssh_session_state — они будут переданы в фабрику при shell-request.
+ */
 int tim::p::ssh_inetd::on_pty_request(::ssh_session, ::ssh_channel, const char *term,
                                       int x, int y, int /*px*/, int /*py*/, void *userdata)
 {
@@ -458,10 +515,15 @@ int tim::p::ssh_inetd::on_pty_request(::ssh_session, ::ssh_channel, const char *
     st->_cols = (std::size_t)x;
     st->_rows = (std::size_t)y;
 
-    TIM_TRACE(Debug, "SSH pty-req: term='%s', %dx%d.", term ? term : "", x, y);
+    TIM_TRACE(debug, "SSH pty-req: term='%s', %dx%d.", term ? term : "", x, y);
     return SSH_OK;
 }
 
+/**
+ * libssh-обработчик shell-request. Собирает ssh_session_info из
+ * накопленных полей и зовёт фабрику для создания прикладного сервиса
+ * (обычно prompt_service).
+ */
 int tim::p::ssh_inetd::on_shell_request(::ssh_session, ::ssh_channel channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
@@ -483,16 +545,20 @@ int tim::p::ssh_inetd::on_shell_request(::ssh_session, ::ssh_channel channel, vo
     st->_service = st->_owner->_factory(info);
     if (!st->_service)
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to instantiate SSH service."_en,
                          "Не удалось создать SSH-сервис."_ru));
         return SSH_ERROR;
     }
 
-    TIM_TRACE(Debug, "SSH shell ready for user %s.", st->_user_id.to_string().c_str());
+    TIM_TRACE(debug, "SSH shell ready for user %s.", st->_user_id.to_string().c_str());
     return SSH_OK;
 }
 
+/**
+ * libssh-обработчик window-change. Обновляет геометрию терминала
+ * клиента в ssh_session_state и пробрасывает в сервис (если он уже создан).
+ */
 int tim::p::ssh_inetd::on_window_change(::ssh_session, ::ssh_channel, int x, int y,
                                         int /*px*/, int /*py*/, void *userdata)
 {
@@ -508,6 +574,10 @@ int tim::p::ssh_inetd::on_window_change(::ssh_session, ::ssh_channel, int x, int
     return SSH_OK;
 }
 
+/**
+ * libssh-обработчик прихода байт в канал. Передаёт данные в сервис
+ * через on_channel_data() (a_ssh_inetd_service). stderr-байты игнорирует.
+ */
 int tim::p::ssh_inetd::on_channel_data(::ssh_session, ::ssh_channel, void *data, uint32_t len,
                                        int is_stderr, void *userdata)
 {
@@ -524,23 +594,33 @@ int tim::p::ssh_inetd::on_channel_data(::ssh_session, ::ssh_channel, void *data,
     return (int)len;
 }
 
+/**
+ * libssh-обработчик закрытия канала. Прерывает сервис (если он есть)
+ * и помечает сессию _pending_close; реальная очистка произойдёт
+ * в dispatch() на внешнем уровне вложенности.
+ */
 void tim::p::ssh_inetd::on_channel_close(::ssh_session, ::ssh_channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
     assert(st);
 
-    TIM_TRACE(Debug, "SSH channel closed.");
+    TIM_TRACE(debug, "SSH channel closed.");
     if (st->_service)
         st->_service->interrupt();
     st->_pending_close = true;
 }
 
+/**
+ * libssh-обработчик EOF на канале. Поведение идентично on_channel_close —
+ * libssh может позвать одно, другое или оба, в зависимости от поведения
+ * клиента.
+ */
 void tim::p::ssh_inetd::on_channel_eof(::ssh_session, ::ssh_channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;
     assert(st);
 
-    TIM_TRACE(Debug, "SSH channel EOF.");
+    TIM_TRACE(debug, "SSH channel EOF.");
     if (st->_service)
         st->_service->interrupt();
     st->_pending_close = true;

@@ -1,6 +1,5 @@
 #include "tim_file_tools.h"
 
-#include "tim_application.h"
 #include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
@@ -32,10 +31,10 @@ std::filesystem::path tim::complete_path(const std::filesystem::path &path,
                 break;
         }
 
-    if (f != tim::create_path::None)
+    if (f != tim::create_path::none)
     {
         std::filesystem::path path_to_create(completed);
-        if (f == tim::create_path::Base)
+        if (f == tim::create_path::base)
             path_to_create = path_to_create.parent_path();
         if (!path_to_create.empty()
                 && !std::filesystem::exists(path_to_create))
@@ -44,7 +43,7 @@ std::filesystem::path tim::complete_path(const std::filesystem::path &path,
             if (!std::filesystem::create_directories(path_to_create, ec)
                     || ec)
             {
-                TIM_TRACE(Error,
+                TIM_TRACE(error,
                           TIM_TR("Failed to create path '%s': %s"_en,
                                  "Ошибка при создании файлового пути '%s': %s"_ru),
                           path_to_create.string().c_str(),
@@ -63,7 +62,7 @@ bool tim::read_file(const std::filesystem::path &path, std::string &text)
 
     std::ifstream is(epath, std::ios::binary | std::ios::ate);
     if (!is)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to open file '%s' for reading: %s"_en,
                                 "Ошибка при открытии файла '%s' на чтение: %s"_ru),
                          epath.string().c_str(),
@@ -73,7 +72,7 @@ bool tim::read_file(const std::filesystem::path &path, std::string &text)
     text.resize(size, '\0'); // Construct string to stream size.
     is.seekg(0);
     if (!is.read(&text[0], size))
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to read file '%s': %s"_en,
                                 "Ошибка при чтении файла '%s': %s"_ru),
                          epath.string().c_str(),
@@ -87,7 +86,7 @@ bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
     const std::filesystem::path epath = tim::complete_path(path);
 
     if (epath.empty())
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          "%s",
                          TIM_TR("Empty file path."_en,
                                 "Пустой путь к файлу."_ru));
@@ -103,7 +102,7 @@ bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
                                   false, // Allow exceptions.
                                   true); // Ignore comments.
         if (j.is_discarded())
-            return TIM_TRACE(Error,
+            return TIM_TRACE(error,
                              TIM_TR("Failed to parse JSON file '%s' at position %s-%s."_en,
                                     "Ошибка при разборе JSON-файла '%s' в позиции %s-%s."_ru),
                              epath.string().c_str(),
@@ -122,21 +121,21 @@ bool tim::write_to_file(const std::filesystem::path &path,
                         const std::string &text,
                         tim::file_write_mode mode)
 {
-    const std::filesystem::path epath = tim::complete_path(path, tim::create_path::Base);
+    const std::filesystem::path epath = tim::complete_path(path, tim::create_path::base);
 
-    TIM_TRACE(Debug, "Writing to '%s' ...", epath.string().c_str());
+    TIM_TRACE(debug, "Writing to '%s' ...", epath.string().c_str());
 
     if (epath.empty())
-        return TIM_TRACE(Error, "%s",
+        return TIM_TRACE(error, "%s",
                          TIM_TR("Empty file path."_en,
                                 "Пустой путь к файлу."_ru));
 
     std::ofstream os;
-    os.open(epath, mode == tim::file_write_mode::Append
+    os.open(epath, mode == tim::file_write_mode::append
                         ? std::ios_base::app
                         : std::ios_base::out);
     if (!os)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to open file '%s' for writing: %s"_en,
                                 "Ошибка при открытии файла '%s' на чтение: %s"_ru),
                          epath.string().c_str(),
@@ -144,7 +143,7 @@ bool tim::write_to_file(const std::filesystem::path &path,
     os << text;
     if (os.bad()
             || os.fail())
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to write to file '%s': %s"_en,
                                 "Ошибка записи в файл '%s': %s"_ru),
                          epath.string().c_str(),
@@ -155,9 +154,9 @@ bool tim::write_to_file(const std::filesystem::path &path,
 
 bool tim::write_json(const std::filesystem::path &path, const nlohmann::json &j, int indent)
 {
-    const std::filesystem::path epath = tim::complete_path(path, tim::create_path::Base);
+    const std::filesystem::path epath = tim::complete_path(path, tim::create_path::base);
     if (epath.empty())
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          "%s",
                          TIM_TR("Empty file path."_en,
                                 "Пустое имя файла."_ru));
@@ -180,7 +179,7 @@ std::size_t tim::process_file(const std::filesystem::path &path,
     std::ifstream is(epath, std::ios::binary);
 
     if (!is.is_open())
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to open file '%s': %s"_en,
                                 "Ошибка при открытии файла '%s': %s"_ru),
                          epath.string().c_str(),
@@ -202,7 +201,7 @@ std::size_t tim::process_file(const std::filesystem::path &path,
 
         if (!is.read((char *)(&buf[0]), bytes_to_read))
         {
-            TIM_TRACE(Error,
+            TIM_TRACE(error,
                       TIM_TR("Failed to read file '%s': %s"_en,
                              "Ошибка при чтении файла '%s': %s"_ru),
                       epath.string().c_str(),

@@ -4,6 +4,13 @@
 #include <cstdlib>
 
 
+/**
+ * Печатает строку в stderr с префиксом уровня и местом вызова.
+ * В debug-сборке выводит file:line + имя функции; в release —
+ * только метку уровня. Fatal завершает процесс через std::abort().
+ *
+ * \return true для строгих ошибок (severity > error); fatal не возвращает.
+ */
 bool tim::vtracef(tim::severity severity,
                  const char *file_name, std::size_t line,
                  const char *function,
@@ -29,12 +36,15 @@ bool tim::vtracef(tim::severity severity,
     va_end(args_copy);
     std::fprintf(stderr, "%s", "\n");
 
-    if (severity == tim::severity::Fatal)
+    if (severity == tim::severity::fatal)
         std::abort();
 
-    return severity > tim::severity::Error;
+    return severity > tim::severity::error;
 }
 
+/**
+ * Variadic-обёртка над vtracef(). Используется TIM_TRACE-макросом.
+ */
 bool tim::tracef(tim::severity severity,
                  const char *file_name, std::size_t line,
                  const char *function,

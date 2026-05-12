@@ -57,7 +57,7 @@ const char *tim::translator::translate(const tim::translations &translations,
         return f->second;
 
 #ifdef TIM_DEBUG
-    TIM_TRACE(Warning,
+    TIM_TRACE(warning,
               "No translation for language %d defined in file '%s' at line %d.",
               static_cast<int>(tim::translator::instance()._d->_language),
               file_path,

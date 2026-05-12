@@ -14,7 +14,12 @@
 namespace tim
 {
 
-// See <https://gist.github.com/MicahElliott/719710>.
+/**
+ * Стандартная палитра xterm-256color (256 цветов RGB).
+ * Источник: https://gist.github.com/MicahElliott/719710 .
+ * Индексы 0..15 — базовые ANSI-цвета, 16..231 — 6×6×6 RGB-куб,
+ * 232..255 — оттенки серого.
+ */
 static const tim::color VT_PALETTE256[] =
 {
     "#000000",
@@ -286,6 +291,9 @@ static const tim::color VT_PALETTE256[] =
 
 // Public
 
+/**
+ * Конструктор. Запоминает указатель на терминальный протокол.
+ */
 tim::vt::vt(tim::a_terminal_protocol *proto)
     : tim::a_terminal(proto)
     , _d(new tim::p::vt(this))
@@ -293,36 +301,49 @@ tim::vt::vt(tim::a_terminal_protocol *proto)
     _d->_term_proto = proto;
 }
 
+/** Деструктор по умолчанию. */
 tim::vt::~vt() = default;
 
+/** \return Высота окна клиента; не меньше 10 (защита от 0). */
 std::size_t tim::vt::rows() const
 {
     return std::max(10UL, _d->_term_proto->rows());
 }
 
+/** \return Ширина окна клиента; не меньше 20 (защита от 0). */
 std::size_t tim::vt::cols() const
 {
     return std::max(20UL, _d->_term_proto->cols());
 }
 
+/**
+ * Шлёт в терминал ANSI-последовательность очистки экрана и перевода
+ * курсора в (1, 1): ESC [H ESC [2J.
+ */
 void tim::vt::clear()
 {
     static const char cmd[] = "\x1b[H\x1b[2J";
     protocol()->write(cmd, sizeof(cmd) - 1);
 }
 
+/** \return Размер палитры терминала (256). */
 std::size_t tim::vt::color_count() const
 {
     return sizeof(tim::VT_PALETTE256) / sizeof(tim::VT_PALETTE256[0]);
 }
 
+/**
+ * \return Цвет из палитры по индексу. Индекс берётся по модулю
+ *         color_count(), чтобы не выйти за границу.
+ */
 tim::color tim::vt::color(std::size_t index) const
 {
     return tim::VT_PALETTE256[index % color_count()];
 }
 
 /**
- * Set text color.
+ * Устанавливает цвет текста через ANSI SGR ESC [38;2;R;G;Bm
+ * (true-color). Пустой цвет (transparent) не отправляет ничего.
  */
 void tim::vt::set_color(const tim::color &c)
 {
@@ -330,34 +351,42 @@ void tim::vt::set_color(const tim::color &c)
         tim::vt::printf("\x1b[38;2;%u;%u;%um", c.r, c.g, c.b);
 }
 
+/** Устанавливает цвет текста по индексу палитры. */
 void tim::vt::set_color(std::size_t index)
 {
     set_color(color(index));
 }
 
+/** Возвращает цвет текста к default (ANSI SGR ESC [39m). */
 void tim::vt::set_default_color()
 {
     protocol()->write("\x1b[39m", 5);
 }
 
+/**
+ * Устанавливает цвет фона через ANSI SGR ESC [48;2;R;G;Bm
+ * (true-color). Пустой цвет (transparent) не отправляет ничего.
+ */
 void tim::vt::set_bg_color(const tim::color &c)
 {
     if (!c.empty())
         tim::vt::printf("\x1b[48;2;%u;%u;%um", c.r, c.g, c.b);
 }
 
+/** Устанавливает цвет фона по индексу палитры. */
 void tim::vt::set_bg_color(std::size_t index)
 {
     set_bg_color(color(index));
 }
 
+/** Включает reverse video (ANSI SGR ESC [7m). */
 void tim::vt::reverse_colors()
 {
     protocol()->write("\x1b[7m", 4);
 }
 
 /**
- * Reset text and background colors to their default values.
+ * Сбрасывает все SGR-атрибуты (ANSI ESC [0m).
  */
 void tim::vt::reset_colors()
 {
@@ -365,6 +394,11 @@ void tim::vt::reset_colors()
     protocol()->write(cmd, sizeof(cmd) - 1);
 }
 
+/**
+ * Оборачивает строку в SGR-последовательности для заданных цветов
+ * и завершает её ESC [0m. Удобно для построения буферов, которые
+ * потом печатаются как одно целое.
+ */
 std::string tim::vt::colorized(const std::string &s,
                                const tim::color &text_color,
                                const tim::color &bg_color)
@@ -386,28 +420,32 @@ std::string tim::vt::colorized(const std::string &s,
     return cs;
 }
 
-/** \param s Colorized string.
- *  \return Number of glyphs in string \a s.
+/**
+ * Считает видимые символы строки, не учитывая ANSI ESC-обвязку.
+ * Используется для центрирования/выравнивания colorized-строк.
+ *
+ * \param s Строка, возможно содержащая SGR-последовательности
+ *          вида "\x1b" "[" [0-9;]+ "m".
+ * \return Число видимых символов.
  */
 std::size_t tim::vt::strlen(const std::string &s)
 {
     if (s.empty())
         return 0;
 
-    /* ANSI color control sequences have the form:
-     * "\x1b" "[" [0-9;]+ "m"
-     * We parse them with a simple state machine.
+    /**
+     * Состояния парсера ANSI SGR-последовательностей. Простая
+     * state-machine на единичные байты.
      */
-
     enum class state
     {
-        SearchEsc,
-        ExpectBracket,
-        ExpectInner,
-        ExpectTrail
+        search_esc,      ///< Ищем начало последовательности (ESC).
+        expect_bracket,  ///< Ожидаем '['.
+        expect_inner,    ///< Ожидаем цифры и/или ';'.
+        expect_trail     ///< Ожидаем завершающий символ ('m', и т.п.).
     };
 
-    state st = state::SearchEsc;
+    state st = state::search_esc;
 
     std::size_t len = 0;
     std::size_t found = 0;
@@ -419,46 +457,46 @@ std::size_t tim::vt::strlen(const std::string &s)
 
         switch (st)
         {
-            case state::SearchEsc:
+            case state::search_esc:
                 len = 0;
                 if (c == '\x1b')
                 {
-                    st = state::ExpectBracket;
+                    st = state::expect_bracket;
                     ++len;
                 }
                 break;
 
-            case state::ExpectBracket:
+            case state::expect_bracket:
                 if (c == '[')
                 {
-                    st = state::ExpectInner;
+                    st = state::expect_inner;
                     ++len;
                 }
                 else
-                    st = state::SearchEsc;
+                    st = state::search_esc;
                 break;
 
-            case state::ExpectInner:
+            case state::expect_inner:
                 if (c >= '0'
                         && c <= '9')
                 {
                     ++len;
-                    st = state::ExpectTrail;
+                    st = state::expect_trail;
                 }
                 else
-                    st = state::SearchEsc;
+                    st = state::search_esc;
                 break;
 
-            case state::ExpectTrail:
+            case state::expect_trail:
                 if (c == 'm')
                 {
                     ++len;
                     found += len;
-                    st = state::SearchEsc;
+                    st = state::search_esc;
                 }
                 else if (c != ';'
                             && ((c < '0') || (c > '9')))
-                    st = state::SearchEsc;
+                    st = state::search_esc;
                 /* 0-9, or semicolon */
                 ++len;
                 break;

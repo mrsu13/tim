@@ -15,6 +15,14 @@
 
 // Static
 
+/**
+ * Команда `/clear`: очищает терминал (ANSI ESC [2J + перевод курсора).
+ *
+ * \param lil LIL-сессия.
+ * \param argc Должен быть 0.
+ * \param argv Не используется.
+ * \return nullptr.
+ */
 static lil_value_t tim_tcl_cmd_clear(lil_t lil, size_t argc, lil_value_t *argv)
 {
     (void) argv;
@@ -35,6 +43,15 @@ static lil_value_t tim_tcl_cmd_clear(lil_t lil, size_t argc, lil_value_t *argv)
     return nullptr;
 }
 
+/**
+ * Команда `/puts [-nonewline] <string>`: выводит строку в терминал.
+ * При -nonewline не печатает завершающий перевод строки.
+ *
+ * \param lil LIL-сессия.
+ * \param argc 1 или 2.
+ * \param argv Аргументы.
+ * \return nullptr.
+ */
 static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
 {
     tim::tcl *tcl = (tim::tcl *)lil_get_data(lil);
@@ -70,6 +87,15 @@ static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
     return nullptr;
 }
 
+/**
+ * Команда `/palette256`: печатает таблицу всех цветов палитры
+ * терминала с индексами — отладочно-демонстрационный инструмент.
+ *
+ * \param lil LIL-сессия.
+ * \param argc Должен быть 0.
+ * \param argv Не используется.
+ * \return nullptr.
+ */
 static lil_value_t tim_tcl_cmd_palette256(lil_t lil, size_t argc, lil_value_t *argv)
 {
     (void) argv;
@@ -104,6 +130,10 @@ static lil_value_t tim_tcl_cmd_palette256(lil_t lil, size_t argc, lil_value_t *a
 
 // Public
 
+/**
+ * Регистрирует терминал-связанные Tcl-команды (`clear`, `puts`,
+ * `palette256`) в указанной LIL-сессии.
+ */
 void tim::tcl_add_term(lil_t lil)
 {
     assert(lil);

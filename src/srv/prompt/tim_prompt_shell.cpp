@@ -56,7 +56,7 @@ void tim::prompt_shell::cloud(const std::string &title,
                                               terminal()->cols() - 6);
     ft_table_t *table = ft_create_table();
 
-    ft_u8write_ln(table, tim::aligned(t, tim::text_align::Justify, text_width).c_str());
+    ft_u8write_ln(table, tim::aligned(t, tim::text_align::justify, text_width).c_str());
 
     const std::vector<std::string> lines = tim::split_v(std::string((const char *)ft_to_u8string(table)), "\n");
     ft_destroy_table(table);

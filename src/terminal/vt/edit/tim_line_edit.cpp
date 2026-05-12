@@ -65,7 +65,7 @@ bool tim::line_edit::empty() const
 }
 
 /**
- * Use this method when get_line() returns status::Finished.
+ * Use this method when get_line() returns status::finished.
  *
  * \return Edited line.
  */
@@ -82,8 +82,8 @@ std::string tim::line_edit::line() const
  *    each time there is some data coming from the input stream.
  *
  * Here is how you call the function. You call tim_ledit_new_line(), then you
- * call get_line() until it returns \c status::Finished,
- * \c status::Exit or \c status::Error.
+ * call get_line() until it returns \c status::finished,
+ * \c status::exit or \c status::error.
  *
  * Between get_line() calls you may call hide() and
  * show() if you want to show some input coming asynchronously,
@@ -126,7 +126,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
     assert(data);
 
     if (!size)
-        return status::Continue;
+        return status::in_progress;
 
     std::int32_t c;
     {
@@ -137,22 +137,22 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
     }
 
     if ((_d->_in_completion
-                || c == (char)tim::key::Tab)
+                || c == (char)tim::key::tab)
             && _d->_completer)
     {
         c = _d->complete_line(c);
         if (c < 0)
-            return status::Error;
+            return status::error;
         if (c == 0)
-            return status::Continue;
+            return status::in_progress;
     }
 
     char seq[3];
 
     switch (c)
     {
-        case (char)tim::key::Enter:
-        case (char)tim::key::Cr:
+        case (char)tim::key::enter:
+        case (char)tim::key::cr:
             if (!_d->_history.empty())
                 _d->_history.pop_back();
             if (_d->_ml_mode)
@@ -167,19 +167,19 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                 _d->_hinter = hc;
             }
             _d->history_add(_d->_line);
-            return status::Finished;
+            return status::finished;
 
-        case (char)tim::key::Ctrl_C:
+        case (char)tim::key::ctrl_c:
             _d->_terminal->protocol()->write_str("^C");
             clear();
-            return status::Break;
+            return status::interrupted;
 
-        case (char)tim::key::Backspace:
-        case (char)tim::key::Ctrl_H:
+        case (char)tim::key::backspace:
+        case (char)tim::key::ctrl_h:
             _d->edit_backspace();
             break;
 
-        case (char)tim::key::Ctrl_D: /* Remove char at right of cursor, or if the
+        case (char)tim::key::ctrl_d: /* Remove char at right of cursor, or if the
                                        line is empty, act as end-of-file. */
             if (!_d->_line.empty())
                 _d->edit_delete();
@@ -187,11 +187,11 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             {
                 if (!_d->_history.empty())
                     _d->_history.pop_back();
-                return status::Exit;
+                return status::exit;
             }
             break;
 
-        case (char)tim::key::Ctrl_T: /* Swaps current character with previous. */
+        case (char)tim::key::ctrl_t: /* Swaps current character with previous. */
             if (_d->_pos > 0
                     && _d->_pos < _d->_line.size())
             {
@@ -204,23 +204,23 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             }
             break;
 
-        case (char)tim::key::Ctrl_B:
+        case (char)tim::key::ctrl_b:
             _d->edit_move_left();
             break;
 
-        case (char)tim::key::Ctrl_F:
+        case (char)tim::key::ctrl_f:
             _d->edit_move_right();
             break;
 
-        case (char)tim::key::Ctrl_P:
-            _d->edit_history_next(tim::p::line_edit::history_dir::Prev);
+        case (char)tim::key::ctrl_p:
+            _d->edit_history_next(tim::p::line_edit::history_dir::prev);
             break;
 
-        case (char)tim::key::Ctrl_N:
-            _d->edit_history_next(tim::p::line_edit::history_dir::Next);
+        case (char)tim::key::ctrl_n:
+            _d->edit_history_next(tim::p::line_edit::history_dir::next);
             break;
 
-        case (char)tim::key::Esc: /* Escape sequence */
+        case (char)tim::key::esc: /* Escape sequence */
             /* Read the next two bytes representing the escape sequence.
              * Use two calls to handle slow terminals returning the two
              * chars at different times. */
@@ -256,10 +256,10 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                     switch (seq[1])
                     {
                         case 'A': /* Up */
-                            _d->edit_history_next(tim::p::line_edit::history_dir::Prev);
+                            _d->edit_history_next(tim::p::line_edit::history_dir::prev);
                             break;
                         case 'B': /* Down */
-                            _d->edit_history_next(tim::p::line_edit::history_dir::Next);
+                            _d->edit_history_next(tim::p::line_edit::history_dir::next);
                             break;
                         case 'C': /* Right */
                             _d->edit_move_right();
@@ -292,31 +292,31 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             }
             break;
 
-        case (char)tim::key::Ctrl_U: /* Delete the whole line. */
+        case (char)tim::key::ctrl_u: /* Delete the whole line. */
             _d->_line.clear();
             _d->_pos = 0;
             _d->refresh_line();
             break;
 
-        case (char)tim::key::Ctrl_K: /* Delete from current to end of line. */
+        case (char)tim::key::ctrl_k: /* Delete from current to end of line. */
             _d->_line.erase(_d->_line.cbegin() + _d->_pos, _d->_line.cend());
             _d->refresh_line();
             break;
 
-        case (char)tim::key::Ctrl_A: /* Go to the start of the line. */
+        case (char)tim::key::ctrl_a: /* Go to the start of the line. */
             _d->edit_move_home();
             break;
 
-        case (char)tim::key::Ctrl_E: /* Go to the end of the line. */
+        case (char)tim::key::ctrl_e: /* Go to the end of the line. */
             _d->edit_move_end();
             break;
 
-        case (char)tim::key::Ctrl_L: /* Clear screen. */
+        case (char)tim::key::ctrl_l: /* Clear screen. */
             _d->_terminal->clear();
             _d->refresh_line();
             break;
 
-        case (char)tim::key::Ctrl_W: /* Delete previous word. */
+        case (char)tim::key::ctrl_w: /* Delete previous word. */
             _d->edit_delete_prev_word();
             break;
 
@@ -325,7 +325,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             break;
     }
 
-    return status::Continue;
+    return status::in_progress;
 }
 
 void tim::line_edit::clear()
@@ -344,9 +344,9 @@ void tim::line_edit::clear()
 void tim::line_edit::hide()
 {
     if (_d->_ml_mode)
-        _d->refresh_multi_line(tim::p::line_edit::refresh_flag::Clean);
+        _d->refresh_multi_line(tim::p::line_edit::refresh_flag::clean);
     else
-        _d->refresh_single_line(tim::p::line_edit::refresh_flag::Clean);
+        _d->refresh_single_line(tim::p::line_edit::refresh_flag::clean);
 }
 
 /**
@@ -358,9 +358,9 @@ void tim::line_edit::hide()
 void tim::line_edit::show()
 {
     if (_d->_in_completion)
-        _d->refresh_line_with_completion(nullptr, tim::p::line_edit::refresh_flag::Write);
+        _d->refresh_line_with_completion(nullptr, tim::p::line_edit::refresh_flag::write);
     else
-        _d->refresh_line_with_flags(tim::p::line_edit::refresh_flag::Write);
+        _d->refresh_line_with_flags(tim::p::line_edit::refresh_flag::write);
 }
 
 /**
@@ -396,7 +396,7 @@ bool tim::line_edit::history_save(const std::filesystem::path &path) const
     std::FILE *fp = std::fopen(path.string().c_str(), "w");
     if (!fp)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to open History file '%s' for writing: %s"_en,
                          "Ошибка при открытии файла истории '%s' на запись: %s"_ru),
                   path.string().c_str(), std::strerror(errno));
@@ -408,7 +408,7 @@ bool tim::line_edit::history_save(const std::filesystem::path &path) const
         if (!s.empty()
                 && std::fprintf(fp, "%s\n", tim::from_wstring(s).c_str()) < 0)
         {
-            TIM_TRACE(Error,
+            TIM_TRACE(error,
                       TIM_TR("Failed to write to History file '%s': %s"_en,
                              "Ошибка записи в файл истории '%s': %s"_ru),
                       path.string().c_str(), std::strerror(errno));
@@ -434,7 +434,7 @@ bool tim::line_edit::history_load(const std::filesystem::path &path)
     std::FILE *fp = std::fopen(path.string().c_str(), "r");
     if (!fp)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to open History file '%s' for reading: %s"_en,
                          "Ошибка при открытии файла истории '%s' на чтение: %s"_ru),
                   path.string().c_str(), std::strerror(errno));
@@ -554,7 +554,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
     {
         switch (c)
         {
-            case (char)tim::key::Tab:
+            case (char)tim::key::tab:
                 if (!_in_completion)
                 {
                     _in_completion = true;
@@ -569,7 +569,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
                 c = 0;
                 break;
 
-            case (char)tim::key::Esc:
+            case (char)tim::key::esc:
                 /* Re-show original buffer. */
                 if (_completion_idx < lc.size())
                     refresh_line();
@@ -591,7 +591,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
         /* Show completion or original buffer. */
         if (_in_completion
                 && _completion_idx < lc.size())
-            refresh_line_with_completion(&lc, refresh_flag::All);
+            refresh_line_with_completion(&lc, refresh_flag::all);
         else
             refresh_line();
     }
@@ -657,7 +657,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     /* Cursor to the left edge. */
     std::wstring ws(L"\r");
 
-    if (flags.test(refresh_flag::Write))
+    if (flags.test(refresh_flag::write))
     {
         /* Write the prompt and the current buffer content. */
         ws += _prompt;
@@ -672,7 +672,7 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     /* Erase to right. */
     ws += L"\x1b[0K";
 
-    if (flags.test(refresh_flag::Write))
+    if (flags.test(refresh_flag::write))
     {
         /* Move cursor to the original position. */
         ws += tim::to_wstring(tim::sprintf("\r\x1b[%dC", (int)(pos + _plen)));
@@ -710,7 +710,7 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
 
     std::wstring ws;
 
-    if (flags.test(refresh_flag::Clean))
+    if (flags.test(refresh_flag::clean))
     {
         if (old_rows - rpos > 0)
             ws += tim::to_wstring(tim::sprintf("\x1b[%dB", old_rows - rpos));
@@ -720,13 +720,13 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
             ws += L"\r\x1b[0K\x1b[1A";
     }
 
-    if (flags.test(refresh_flag::All))
+    if (flags.test(refresh_flag::all))
     {
         /* Clean the top line. */
         ws += L"\r\x1b[0K";
     }
 
-    if (flags.test(refresh_flag::Write))
+    if (flags.test(refresh_flag::write))
     {
         /* Write the prompt and the current buffer content. */
         ws += _prompt;
@@ -789,7 +789,7 @@ void tim::p::line_edit::refresh_line_with_flags(refresh_flags flags)
   */
 void tim::p::line_edit::refresh_line()
 {
-    refresh_line_with_flags(refresh_flag::All);
+    refresh_line_with_flags(refresh_flag::all);
 }
 
 /** Insert the character \a c at cursor current position.
@@ -877,7 +877,7 @@ void tim::p::line_edit::edit_history_next(history_dir dir)
         _history[_history.size() - 1 - _history_idx] = _line;
         /* Show the new entry. */
         _history_idx +=
-            dir == history_dir::Prev
+            dir == history_dir::prev
                 ? 1
                 : -1;
         if (_history_idx < 0)

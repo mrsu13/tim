@@ -55,7 +55,7 @@ bool tim::sqlite_query::prepare()
                 return true;
 
             case SQLITE_BUSY:
-                TIM_TRACE(Debug,
+                TIM_TRACE(debug,
                          TIM_TR("Database '%s' is busy. Try #%u. Retrying in %ld microseconds."_en,
                                "База данных '%s' занята. Попытка №%u. Повторим попытку через %ld микросекунд."_ru),
                          _d->_db->path().string().c_str(),
@@ -70,7 +70,7 @@ bool tim::sqlite_query::prepare()
 
 failure:
 
-    return TIM_TRACE(Error,
+    return TIM_TRACE(error,
                     TIM_TR("Failed to prepare SQL query '%s' to database '%s': %s %s"_en,
                           "Ошибка при подготовке SQL-запроса '%s' к базе данных '%s': %s %s"_ru),
                     _d->_sql.c_str(),
@@ -90,7 +90,7 @@ bool tim::sqlite_query::bind(int index, int value)
 
     const int res = sqlite3_bind_int(_d->_stmt, index, value);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to bind an int value at index %d for SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при привязке целочисленного значения к позиции %d для SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         index,
@@ -106,7 +106,7 @@ bool tim::sqlite_query::bind(int index, std::int64_t value)
 
     const int res = sqlite3_bind_int64(_d->_stmt, index, value);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to bind a 64-bit integer value at index %d for SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при привязке 64-битного целочисленного значения к позиции %d для SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         index,
@@ -123,7 +123,7 @@ bool tim::sqlite_query::bind(int index, const double value)
 
     const int res = sqlite3_bind_double(_d->_stmt, index, value);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to bind a double value at index %d for SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при привязке числового значения с плавающей запятой двойной точности к позиции %d для SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         index,
@@ -146,7 +146,7 @@ bool tim::sqlite_query::bind(int index, const char *value)
 
     const int res = sqlite3_bind_text(_d->_stmt, index, value, (int)std::strlen(value), SQLITE_TRANSIENT);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to bind a string value at index %d for SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при привязке строкового значения к позиции %d для SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         index,
@@ -163,7 +163,7 @@ bool tim::sqlite_query::bind(int index, const std::string &value)
 
     const int res = sqlite3_bind_text(_d->_stmt, index, value.c_str(), (int)value.size(), SQLITE_TRANSIENT);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to bind a string value at index %d for SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при привязке строкового значения к позиции %d для SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         index,
@@ -259,7 +259,7 @@ bool tim::sqlite_query::clear_bindings()
 
     const int res = sqlite3_clear_bindings(_d->_stmt);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to clear bindings for query '%s' to database '%s': %s"_en,
                               "Ошибка при очистке привязок значений к позициям в запросе '%s' к базе данных '%s': %s"_ru),
                         _d->_sql.c_str(),
@@ -293,7 +293,7 @@ bool tim::sqlite_query::next(bool *done)
                 return true;
 
             case SQLITE_MISUSE:
-                return TIM_TRACE(Error,
+                return TIM_TRACE(error,
                                 TIM_TR("Misuse of SQL query '%s' to database '%s': %s"_en,
                                       "Неверное использование SQL-запроса '%s' к базе данных '%s': %s"_ru),
                                 sqlite3_expanded_sql(_d->_stmt),
@@ -301,7 +301,7 @@ bool tim::sqlite_query::next(bool *done)
                                 sqlite3_errstr(res));
 
             case SQLITE_BUSY:
-                TIM_TRACE(Debug,
+                TIM_TRACE(debug,
                          TIM_TR("Database '%s' is busy. Try #%u. Retrying in %ld microseconds."_en,
                                "База данных '%s' занята. Попытка №%u. Повторяем попытку через %ld микросекунд."_ru),
                          _d->_db->path().string().c_str(),
@@ -316,7 +316,7 @@ bool tim::sqlite_query::next(bool *done)
 
 failure:
 
-    return TIM_TRACE(Error,
+    return TIM_TRACE(error,
                     TIM_TR("Failed to perform SQL query '%s' to database '%s': %s"_en,
                           "Ошибка при выполнении SQL-запроса '%s' к базе данных '%s': %s"_ru),
                     sqlite3_expanded_sql(_d->_stmt),
@@ -394,7 +394,7 @@ bool tim::sqlite_query::reset()
 
     const int res = sqlite3_reset(_d->_stmt);
     if (res != SQLITE_OK)
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                         TIM_TR("Failed to reset SQL query '%s' to database '%s': %s"_en,
                               "Ошибка при сбросе SQL-запроса '%s' к базе данных '%s': %s"_ru),
                         _d->_sql.c_str(),

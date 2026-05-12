@@ -29,13 +29,14 @@
 
 // Public
 
-tim::application::application(int argc, char **argv)
+/**
+ * Конструктор приложения: загружает настройки, поднимает подсистемы
+ * (MQTT, БД, SSH-inetd, серверные сервисы) и регистрирует обработчики
+ * SIGINT/SIGTERM. Все шаги выстроены по жёсткому порядку — см. внутри.
+ */
+tim::application::application(const std::string &config_path)
     : _d(new tim::p::application())
 {
-    // FIXME!
-    (void) argc;
-    (void) argv;
-
     assert(!tim::p::application::instance() && "tim::application instantiated already.");
 
     tim::p::application::instance() = this;
@@ -61,7 +62,7 @@ tim::application::application(int argc, char **argv)
 
     // Конфиг читается первым: язык TIM_TR должен быть выставлен до того,
     // как сообщения об ошибках инициализации подсистем уйдут в лог.
-    const tim::settings settings = tim::settings::load_or_create();
+    const tim::settings settings = tim::settings::load_or_create(config_path);
     tim::translator::set_language(settings.language);
     tim::p::application::data_dir() = settings.data_dir;
 
@@ -72,19 +73,45 @@ tim::application::application(int argc, char **argv)
 
     _d->_mqtt.reset(new tim::mqtt_client(&_d->_mg));
     if (!_d->_mqtt->start(settings.mqtt_url))
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("MQTT client failed to start; messaging will be unavailable."_en,
                          "Не удалось запустить MQTT-клиент; обмен сообщениями недоступен."_ru));
 
     _d->_db.reset(new tim::sqlite_db());
     if (!_d->_db->open(settings.data_dir / tim::DB_FILE_NAME))
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to open database file '%s'; persistence will be unavailable."_en,
                          "Не удалось открыть файл базы данных '%s'; хранение данных недоступно."_ru),
                   _d->_db->path().string().c_str());
+    else
+    {
+        // Проверяем PRAGMA user_version: при несовпадении со схемой,
+        // ожидаемой бинарником, лучше явно закрыть БД и работать без
+        // сохранения данных, чем втихую писать/читать несуществующие
+        // колонки. Оператору сообщаем, как пересобрать БД.
+        std::uint32_t db_version = 0;
+        if (_d->_db->get_version(db_version)
+                && db_version != tim::EXPECTED_DB_SCHEMA_VERSION)
+        {
+            TIM_TRACE(error,
+                      TIM_TR("Database schema version %u does not match expected %u; "
+                             "rerun db/create-db.sh to regenerate '%s'. "
+                             "Persistence is disabled for this run."_en,
+                             "Версия схемы БД %u не совпадает с ожидаемой %u; "
+                             "перезапустите db/create-db.sh для пересоздания '%s'. "
+                             "Хранение данных в этом запуске отключено."_ru),
+                      db_version, tim::EXPECTED_DB_SCHEMA_VERSION,
+                      _d->_db->path().string().c_str());
+            _d->_db->close();
+        }
+    }
 
     const std::filesystem::path host_key_path =
         settings.data_dir / tim::SSH_DATA_SUBDIR / tim::SSH_HOST_KEY_FNAME;
+    // Фабрика прикладных сервисов: при каждом новом аутентифицированном
+    // SSH-соединении создаётся prompt_service, получающий MQTT, БД
+    // и обработчик dispatch() для прокручивания event-loop-а во время
+    // Tcl-скриптов.
     _d->_ssh_inetd = tim::ssh_inetd::start(
         settings.ssh_port,
         host_key_path,
@@ -96,7 +123,7 @@ tim::application::application(int argc, char **argv)
                 [this]{ dispatch(); });
         });
     if (!_d->_ssh_inetd)
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("SSH inetd failed to start on port %u; clients cannot connect."_en,
                          "Не удалось запустить SSH-inetd на порту %u; клиенты не смогут подключиться."_ru),
                   settings.ssh_port);
@@ -106,6 +133,10 @@ tim::application::application(int argc, char **argv)
     _d->_reaction_service.reset(new tim::reaction_service(*_d->_mqtt, *_d->_db));
 }
 
+/**
+ * Деструктор. Сворачивает подсистемы в порядке, обратном
+ * конструированию, и возвращает прежние обработчики SIGINT/SIGTERM.
+ */
 tim::application::~application()
 {
     // Сворачиваем подсистемы, пока mg_mgr/event-loop ещё жив:
@@ -125,31 +156,40 @@ tim::application::~application()
 #endif
 }
 
+/** \return Имя приложения. */
 const std::string &tim::application::name()
 {
     return tim::p::application::name();
 }
 
+/** Запоминает имя приложения. \param name Новое имя. */
 void tim::application::set_name(const std::string &name)
 {
     tim::p::application::name() = name;
 }
 
+/** \return Имя организации. */
 const std::string &tim::application::org_name()
 {
     return tim::p::application::org_name();
 }
 
+/** Запоминает имя организации. \param name Новое имя. */
 void tim::application::set_org_name(const std::string &name)
 {
     tim::p::application::org_name() = name;
 }
 
+/** \return Рабочий каталог приложения. */
 const std::filesystem::path &tim::application::data_dir()
 {
     return tim::p::application::data_dir();
 }
 
+/**
+ * Один тик event-loop без блокировки. Прокручивает mongoose и
+ * libssh; если выставлен флаг _quit, прерывает все живые сессии.
+ */
 void tim::application::dispatch()
 {
     mg_mgr_poll(&_d->_mg, 0);
@@ -165,6 +205,10 @@ void tim::application::dispatch()
     }
 }
 
+/**
+ * Основной цикл приложения. Чередует mg_mgr_poll и ssh_inetd::dispatch
+ * с квантом 50 мс до выставления _quit.
+ */
 void tim::application::exec()
 {
     // Чередуем опрос mongoose (MQTT) и libssh (входящие SSH-соединения).
@@ -178,6 +222,7 @@ void tim::application::exec()
     }
 }
 
+/** Запрашивает выход; срабатывает на следующем тике exec(). */
 void tim::application::quit()
 {
     _d->_quit = true;
@@ -188,6 +233,12 @@ void tim::application::quit()
 
 #ifdef TIM_OS_LINUX
 
+/**
+ * Обработчик SIGINT/SIGTERM. Async-signal-safe: только запрашивает
+ * выход у живого application через instance().
+ *
+ * \param sig_num Номер сигнала.
+ */
 void tim::p::application::signal_handler(int sig_num)
 {
     switch (sig_num)
@@ -196,7 +247,7 @@ void tim::p::application::signal_handler(int sig_num)
         case SIGINT:
             if (tim::p::application::instance())
             {
-                TIM_TRACE(Debug, "Exiting on signal %d ...", sig_num);
+                TIM_TRACE(debug, "Exiting on signal %d ...", sig_num);
                 tim::p::application::instance()->quit();
             }
             break;

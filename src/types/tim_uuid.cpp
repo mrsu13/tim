@@ -290,15 +290,15 @@ std::string tim::uuid::to_string(const format format) const
     char *data = buffer;
     switch (format)
     {
-        case format::Canonical:
+        case format::canonical:
             tim_uuid_to_hex(data, data1, data2, data3, data4, true);
             break;
 
-        case format::NoBrackets:
+        case format::no_brackets:
             tim_uuid_to_hex(data, data1, data2, data3, data4, false);
             break;
 
-        case format::Compact:
+        case format::compact:
             tim_uuid_to_compact_hex(data, data1, data2, data3, data4);
             break;
     }
@@ -383,22 +383,22 @@ bool tim::uuid::operator==(const tim::uuid &orig) const
 tim::uuid::variant tim::uuid::uuid_variant() const
 {
     if (is_null())
-        return variant::Unknown;
+        return variant::unknown;
     // Check the 3 MSB of data4[0].
     if ((data4[0] & 0x80) == 0x00)
-        return variant::Ncs;
+        return variant::ncs;
     else if ((data4[0] & 0xC0) == 0x80)
-        return variant::Dce;
+        return variant::dce;
     else if ((data4[0] & 0xE0) == 0xC0)
-        return variant::Microsoft;
+        return variant::microsoft;
     else if ((data4[0] & 0xE0) == 0xE0)
-        return variant::Reserved;
-    return variant::Unknown;
+        return variant::reserved;
+    return variant::unknown;
 }
 
 /** Returns the version field of the UUID, if the
-    UUID's variant field is tim::uuid::variant::Dce. Otherwise
-    it returns tim::uuid::version::Unknown.
+    UUID's variant field is tim::uuid::variant::dce. Otherwise
+    it returns tim::uuid::version::unknown.
 
     \sa variant()
 */
@@ -407,10 +407,10 @@ tim::uuid::version tim::uuid::uuid_version() const
     // Check the 4 MSB of data3
     version ver = (version)(data3 >> 12);
     if (is_null()
-            || (uuid_variant() != variant::Dce)
-            || ver < version::Time
-            || ver > version::Random)
-        return version::Unknown;
+            || (uuid_variant() != variant::dce)
+            || ver < version::time
+            || ver > version::random)
+        return version::unknown;
     return ver;
 }
 

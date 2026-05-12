@@ -2,6 +2,7 @@
 
 #include "tim_mqtt_subscription.h"
 #include "tim_mqtt_topic.h"
+#include "tim_profile_cache.h"
 #include "tim_signal_connection.h"
 #include "tim_user.h"
 
@@ -9,7 +10,6 @@
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 
 
@@ -27,71 +27,131 @@ class vt;
 namespace p
 {
 
+/**
+ * Внутреннее состояние tim::prompt_service (PIMPL).
+ *
+ * Владеет цепочкой "ssh-протокол → vt-терминал → tcl + prompt_shell",
+ * кэшем профилей и набором MQTT-подписок текущей сессии.
+ */
 struct prompt_service
 {
-    prompt_service(tim::prompt_service *q, tim::mqtt_client &mqtt, tim::sqlite_db &db)
+    /**
+     * \param q Указатель на внешний prompt_service.
+     * \param mqtt MQTT-клиент приложения.
+     * \param db Подключение к БД.
+     * \param self_id UUID пользователя этой сессии (для profile_cache).
+     */
+    prompt_service(tim::prompt_service *q,
+                   tim::mqtt_client &mqtt,
+                   tim::sqlite_db &db,
+                   const tim::uuid &self_id)
         : _q(q)
         , _mqtt(mqtt)
         , _db(db)
+        , _profiles(mqtt, db, self_id)
     {
         assert(_q);
     }
 
-    // Загружает пользователя по UUID из БД (nick, icon). Если строки нет,
-    // возвращает user с одним лишь id; nick/icon остаются пустыми.
-    tim::user load_user(const tim::uuid &id);
-    // Возвращает пользователя из локального кэша; при первом обращении
-    // подтягивает запись из БД. Для собственного UUID возвращает _user.
-    tim::user user_for(const tim::uuid &id);
-    // Подтягивает текущие подписки пользователя из БД в локальный кэш.
+    /** Подтягивает текущие подписки пользователя из БД в локальный кэш. */
     void load_subscriptions();
-    // Печатает в терминал последние N сообщений из БД, чтобы при входе
-    // в чат пользователь сразу видел контекст разговора.
+
+    /**
+     * Печатает в терминал последние N сообщений из БД, чтобы при входе
+     * в чат пользователь сразу видел контекст разговора.
+     */
     void load_post_history();
 
+    /**
+     * Выдаёт MQTT-подписки сессии (POST, REACT_EVENT, user/subscribe|
+     * unsubscribe/<self>, session/notice/<self>) и зовёт _profiles.subscribe().
+     * Вызывается на каждом connect/reconnect.
+     */
     void subscribe();
+
+    /**
+     * Обработчик байтов, пришедших из SSH-протокола. Передаёт их шеллу;
+     * закрывает соединение при ошибке записи.
+     *
+     * \param data Сырые байты.
+     * \param size Размер.
+     */
     void on_data_ready(const char *data, std::size_t size);
+
+    /**
+     * Обработчик входящего post/<author>/<post-id>. Парсит UUID-ы,
+     * сохраняет как "последний увиденный" и отрисовывает плашку сообщения.
+     *
+     * \param topic Полный топик публикации.
+     * \param data Текст сообщения.
+     * \param size Размер.
+     */
     void on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+
+    /**
+     * Обработчик react_event/<post>/<reactor>. Выводит уведомление
+     * "X отреагировал(а) на ваш пост" в чат.
+     *
+     * \param topic Топик события реакции.
+     * \param data Payload (целочисленный вес).
+     * \param size Размер.
+     */
     void on_react_event(const tim::mqtt_topic &topic, const char *data, std::size_t size);
-    // Рендер одного сообщения: общая часть on_post и load_post_history.
+
+    /**
+     * Рисует одного сообщения: общая часть on_post() и load_post_history().
+     *
+     * \param publisher_id UUID автора.
+     * \param text Текст сообщения.
+     */
     void render_post(const tim::uuid &publisher_id, std::string_view text);
 
+    /** Внешний prompt_service (владелец). */
     tim::prompt_service *const _q;
+    /** MQTT-клиент сессии. */
     tim::mqtt_client &_mqtt;
+    /** Подключение к БД. */
     tim::sqlite_db &_db;
+    /** Кэш профилей (свой + чужие) + подписки на user/setnick|seticon|setmotto. */
+    tim::profile_cache                          _profiles;
 
+    /** SSH-терминальный протокол (источник байт). */
     std::unique_ptr<tim::ssh_terminal_protocol> _proto;
+    /** VT-эмулятор. */
     std::unique_ptr<tim::vt>                    _terminal;
+    /** Tcl-интерпретатор. */
     std::unique_ptr<tim::tcl>                   _tcl;
+    /** Чат-шелл (prompt_shell : vt_shell). */
     std::unique_ptr<tim::prompt_shell>          _shell;
-    tim::user                                   _user;
+    /** UUID последнего увиденного сообщения (цель /react). */
     tim::uuid                                   _last_seen_post;
+    /** UUID автора последнего увиденного сообщения. */
     tim::uuid                                   _last_seen_post_author;
 
+    /** Сигнал-токен: data_ready от ssh-протокола. */
     tim::signal_connection                      _on_data_ready;
+    /** Сигнал-токен: posted от prompt_shell. */
     tim::signal_connection                      _on_posted;
+    /** Сигнал-токен: mqtt.connected для повторной выдачи подписок. */
     tim::signal_connection                      _on_connected;
+    /** Подписка на POST_FILTER. */
     tim::mqtt_subscription                      _sub_post;
-    // Подписки на изменения профилей всех пользователей (не только своего):
-    // при /setnick или /seticon кто угодно — обновляем локальный кэш, чтобы
-    // в сообщениях имя автора всегда было актуальным.
-    tim::mqtt_subscription                      _sub_setnick;
-    tim::mqtt_subscription                      _sub_seticon;
-    tim::mqtt_subscription                      _sub_setmotto;
+    /** Подписка на REACT_EVENT_FILTER. */
     tim::mqtt_subscription                      _sub_react_event;
-    // Свои события subscribe/unsubscribe — чтобы поддерживать актуальным
-    // локальный кэш подписок без дополнительного запроса в БД.
+    /**
+     * Свои события subscribe — чтобы поддерживать актуальным локальный
+     * кэш подписок без дополнительного запроса в БД.
+     */
     tim::mqtt_subscription                      _sub_self_subscribe;
+    /** Свои события unsubscribe — см. _sub_self_subscribe. */
     tim::mqtt_subscription                      _sub_self_unsubscribe;
-    // Личные уведомления от сервера (например, "ник занят").
+    /** Личные уведомления от сервера (например, "ник занят"). */
     tim::mqtt_subscription                      _sub_notice;
 
-    // Кэш профилей других пользователей. Заполняется лениво из БД и
-    // обновляется по событиям user/setnick/+ и user/seticon/+.
-    std::unordered_map<tim::uuid, tim::user>    _known_users;
-
-    // UUID пользователей, на которых подписан текущий пользователь.
-    // Используется в on_post для пометки сообщений (звёздочка перед ником).
+    /**
+     * UUID пользователей, на которых подписан текущий пользователь.
+     * Используется в on_post для пометки сообщений (звёздочка перед ником).
+     */
     std::unordered_set<tim::uuid>               _subscriptions;
 };
 

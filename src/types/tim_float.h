@@ -4,8 +4,9 @@ namespace tim
 {
 
 /**
- * Floating point type the library uses.
- * All floating point variables, constants, etc. must be declared with this type.
+ * Тип чисел с плавающей точкой, используемый всеми тригонометрическими
+ * и геометрическими утилитами TIM. Все локальные float-переменные,
+ * константы и параметры функций объявляются через этот alias.
  */
 using float_t = float;
 

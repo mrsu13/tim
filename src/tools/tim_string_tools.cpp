@@ -112,7 +112,7 @@ bool tim::starts_with(const std::string &str,
 {
     if (prefix.length() > str.length())
         return false;
-    if (cs == tim::cs::Sensitive)
+    if (cs == tim::cs::sensitive)
         return std::strncmp(str.c_str(), prefix.c_str(), std::min(str.length(), prefix.length())) == 0;
 
     return std::equal(prefix.cbegin(), prefix.cend(),
@@ -264,7 +264,7 @@ int tim::vsprintf(std::string &s, const char *format, va_list args)
         {
             s.clear();
 
-            TIM_TRACE(Error,
+            TIM_TRACE(error,
                       "%s",
                       TIM_TR("Memory size limit exceeded in tim::vsprintf()."_en,
                              "Превышен предел размера строки в tim::vsprintf()."_ru));
@@ -369,7 +369,7 @@ tim::byte_vector tim::from_string(const std::string &s, bool *ok)
 
     if (s.length() % 2)
     {
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Invalid hex string '%s'."_en,
                          "Некорректная шестнадцатеричная строка '%s'."_ru),
                   s.c_str());
@@ -402,7 +402,7 @@ bool tim::from_string(const std::string &json, nlohmann::json &j)
                               true); // Ignore comments.
 
     if (j.is_discarded())
-        return TIM_TRACE(Error,
+        return TIM_TRACE(error,
                          TIM_TR("Failed to parse JSON at position %s-%s."_en,
                                 "Ошибка при разборе JSON в позиции %s-%s."_ru),
                          j.start_pos() == std::string::npos
@@ -599,17 +599,17 @@ std::string tim::elided(const std::string &str, std::size_t width, tim::elide el
 
     switch (el)
     {
-        case tim::elide::Left:
+        case tim::elide::left:
             wstr.erase(0, str.size() - width - DOTS_LEN);
             wstr.insert(0, DOTS, DOTS_LEN);
             break;
 
-        case tim::elide::Right:
+        case tim::elide::right:
             wstr.erase(width - DOTS_LEN);
             wstr.append(DOTS, DOTS_LEN);
             break;
 
-        case tim::elide::Middle:
+        case tim::elide::middle:
         {
             const std::size_t d = (width - DOTS_LEN) / 2;
             wstr = wstr.substr(0, d)
@@ -639,7 +639,7 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
     std::wstring aligned_text;
     std::wstring space;
 
-    pars = tim::split<tim::wstring_vector>(text, L"\n", tim::split_mode::SkipEmptyParts);
+    pars = tim::split<tim::wstring_vector>(text, L"\n", tim::split_mode::skip_empty_parts);
     tim::wstring_vector::const_iterator pb = pars.cbegin();
     tim::wstring_vector::const_iterator pi = pb;
     tim::wstring_vector::const_iterator pe = pars.cend();
@@ -648,7 +648,7 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
         if (pi != pb)
             aligned_text += '\n';
 
-        words = tim::split<tim::wstring_vector>(*pi, L" \t", tim::split_mode::SkipEmptyParts);
+        words = tim::split<tim::wstring_vector>(*pi, L" \t", tim::split_mode::skip_empty_parts);
         std::size_t begin = 0;
         std::size_t end = 0;
         std::size_t line_width = 0;
@@ -663,17 +663,17 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
             else
             {
                 delta = end - begin;
-                space_num = delta != 0 ? (al == tim::text_align::Justify ? (width - line_width) / delta : 1) : 0;
-                space_rem = delta != 0 ? (al == tim::text_align::Justify ? (width - line_width) % delta : 0) : 0;
+                space_num = delta != 0 ? (al == tim::text_align::justify ? (width - line_width) / delta : 1) : 0;
+                space_rem = delta != 0 ? (al == tim::text_align::justify ? (width - line_width) % delta : 0) : 0;
 
                 if (begin != 0)
                     aligned_text += '\n';
-                if (al == tim::text_align::Right)
+                if (al == tim::text_align::right)
                 {
                     space.assign(width - line_width - delta, ' ');
                     aligned_text.append(space);
                 }
-                else if (al == tim::text_align::Center)
+                else if (al == tim::text_align::center)
                 {
                     space.assign((width - line_width - delta) >> 1, ' ');
                     aligned_text.append(space);
@@ -707,7 +707,7 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
         {
             if (begin != 0)
                 aligned_text += '\n';
-            if (al == tim::text_align::Center)
+            if (al == tim::text_align::center)
             {
                 space.assign((width - line_width - (end - begin)) >> 1, ' ');
                 aligned_text.append(space);

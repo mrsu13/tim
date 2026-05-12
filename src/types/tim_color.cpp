@@ -63,7 +63,7 @@ tim::color::color(const char *html_color)
             break;
     }
 
-    TIM_TRACE(Error,
+    TIM_TRACE(error,
               TIM_TR("Invalid HTML color '%s'."_en,
                      "Недопустимый цвет HTML '%s'."_ru),
               html_color);

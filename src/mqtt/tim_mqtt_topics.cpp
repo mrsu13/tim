@@ -6,9 +6,17 @@
 namespace
 {
 
+/**
+ * Возвращает строковое представление UUID в формате no_brackets —
+ * без фигурных скобок. Чтобы '/' внутри топика не вступал в конфликт
+ * с разделителем уровней MQTT.
+ *
+ * \param uid UUID.
+ * \return Строка вида "943b573e-7a1d-4419-81b1-3308455be5f7".
+ */
 inline std::string nb(const tim::uuid &uid)
 {
-    return uid.to_string(tim::uuid::format::NoBrackets);
+    return uid.to_string(tim::uuid::format::no_brackets);
 }
 
 }

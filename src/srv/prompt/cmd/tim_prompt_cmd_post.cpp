@@ -18,9 +18,16 @@
 
 // Static
 
-// /react [weight]
-// Реакция на последнее увиденное в чате сообщение. weight по умолчанию 1;
-// weight = 0 снимает ранее выставленную реакцию.
+/**
+ * Команда `/react [weight]`: реакция на последнее увиденное в чате
+ * сообщение. weight по умолчанию 1; weight = 0 снимает ранее
+ * выставленную реакцию. Публикует react/<post>/<user> через MQTT.
+ *
+ * \param lil LIL-сессия.
+ * \param argc 0 или 1.
+ * \param argv Аргументы.
+ * \return nullptr.
+ */
 static lil_value_t tim_tcl_cmd_react(lil_t lil,
                                      std::size_t argc,
                                      lil_value_t *argv)
@@ -76,6 +83,10 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
 
 // Public
 
+/**
+ * Регистрирует команды, связанные с публикациями (`react`),
+ * в указанной LIL-сессии.
+ */
 void tim::prompt::register_post_cmds(lil_t lil)
 {
     assert(lil);

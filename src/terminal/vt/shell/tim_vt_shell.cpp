@@ -27,12 +27,12 @@ tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
 
     _d->_history_path
         = tim::complete_path(tim::application::data_dir() / tim::HISTORY_FNAME,
-                             tim::create_path::Base);
+                             tim::create_path::base);
 
     _d->_engine = engine;
     _d->_ledit.reset(new tim::line_edit(term));
     _d->_ledit->set_prompt(tim::vt::colorized(_d->_engine->prompt(),
-                                              term->theme().colors.at(tim::terminal_color_index::Prompt)));
+                                              term->theme().colors.at(tim::terminal_color_index::prompt)));
     _d->_ledit->history_load(_d->_history_path);
 
     term->protocol()->write_str(tim::p::vt_shell::welcome_banner());
@@ -86,7 +86,7 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
 
     switch (_d->_ledit->get_line(data, size))
     {
-        case tim::line_edit::status::Finished:
+        case tim::line_edit::status::finished:
         {
             if (!_d->_ledit->empty())
             {
@@ -108,7 +108,7 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
                         const std::size_t pos = _d->_engine->error_pos();
 
                         _d->_ledit->terminal()->set_color(
-                            _d->_ledit->terminal()->theme().colors.at(tim::terminal_color_index::Error));
+                            _d->_ledit->terminal()->theme().colors.at(tim::terminal_color_index::error));
                         _d->_ledit->terminal()
                             ->printf(TIM_TR("Error: %s\n%s\n"_en,
                                             "Ошибка. %s\n%s\n"_ru),
@@ -132,18 +132,18 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
             break;
         }
 
-        case tim::line_edit::status::Continue:
+        case tim::line_edit::status::in_progress:
             break;
 
-        case tim::line_edit::status::Exit:
+        case tim::line_edit::status::exit:
             _d->_ledit->terminal()->protocol()->write_str(tim::p::vt_shell::bye_banner());
             return false;
 
-        case tim::line_edit::status::Break:
+        case tim::line_edit::status::interrupted:
             _d->_ledit->new_line();
             break;
 
-        case tim::line_edit::status::Error:
+        case tim::line_edit::status::error:
             _d->_ledit->new_line();
             break;
     }

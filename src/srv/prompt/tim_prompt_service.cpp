@@ -23,18 +23,24 @@
 
 // Открытые
 
+/**
+ * Конструирует чат-сессию: поднимает SSH-протокол, VT-терминал,
+ * Tcl-интерпретатор и prompt_shell; регистрирует команды (/setnick,
+ * /react и т.п.); печатает историю постов; подписывает обработчики
+ * данных и сигнал connected.
+ */
 tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
                                     tim::mqtt_client &mqtt,
                                     tim::sqlite_db &db,
                                     std::function<void()> dispatch_handler)
     : tim::a_ssh_inetd_service("prompt", info)
-    , _d(new tim::p::prompt_service(this, mqtt, db))
+    , _d(new tim::p::prompt_service(this, mqtt, db, info.user_id))
 {
-    _d->_user = _d->load_user(info.user_id);
     _d->load_subscriptions();
     _d->_proto.reset(new tim::ssh_terminal_protocol(this));
     _d->_terminal.reset(new tim::vt(_d->_proto.get()));
     _d->_tcl.reset(new tim::tcl(_d->_terminal.get()));
+    // /quit закрывает только эту сессию, не процесс.
     _d->_tcl->set_quit_handler([this]{ close(); });
     _d->_tcl->set_dispatch_handler(std::move(dispatch_handler));
     // Tcl-команды (например /react) достают prompt_service через
@@ -50,10 +56,13 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
     // чтобы новый клиент видел контекст разговора.
     _d->load_post_history();
 
+    // Байты из SSH-протокола → on_data_ready → шелл.
     _d->_on_data_ready = _d->_proto->data_ready.connect(
         [d = _d.get()](const char *data, std::size_t size)
         { d->on_data_ready(data, size); });
 
+    // Введённый текст-не-команду шелл испускает posted; мы публикуем его
+    // в MQTT под свежим UUID-ом сообщения.
     _d->_on_posted = _d->_shell->posted.connect(
         [d = _d.get()](const std::string &text)
         {
@@ -64,9 +73,10 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
             // post/<publisher-uuid>/<post-uuid>; такой топик однозначно
             // адресует сообщение и используется реакциями.
             const tim::uuid post_uuid = tim::uuid::create();
-            d->_mqtt.publish(tim::topics::post(d->_user.id, post_uuid), text);
+            d->_mqtt.publish(tim::topics::post(d->_profiles.self().id, post_uuid), text);
         });
 
+    // Повторная выдача подписок на каждом (ре)подключении к брокеру.
     _d->_on_connected = mqtt.connected.connect(
         [d = _d.get()]{ d->subscribe(); });
 
@@ -76,6 +86,10 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
 
 tim::prompt_service::~prompt_service() = default;
 
+/**
+ * Прерывает активный Tcl-скрипт. Вызов lil_break_run в неактивном
+ * состоянии "съел" бы следующий eval — отсюда проверка evaluating().
+ */
 void tim::prompt_service::interrupt() noexcept
 {
     // Прерываем активный Tcl-скрипт, если он сейчас выполняется.
@@ -85,16 +99,19 @@ void tim::prompt_service::interrupt() noexcept
         _d->_tcl->break_eval();
 }
 
+/** \return UUID последнего увиденного в этой сессии сообщения. */
 const tim::uuid &tim::prompt_service::last_seen_post() const noexcept
 {
     return _d->_last_seen_post;
 }
 
+/** \return MQTT-клиент сессии. */
 tim::mqtt_client &tim::prompt_service::mqtt() noexcept
 {
     return _d->_mqtt;
 }
 
+/** \return Подключение к БД сессии. */
 tim::sqlite_db &tim::prompt_service::db() noexcept
 {
     return _d->_db;
@@ -103,59 +120,24 @@ tim::sqlite_db &tim::prompt_service::db() noexcept
 
 // Закрытые
 
-tim::user tim::p::prompt_service::load_user(const tim::uuid &id)
-{
-    tim::user u;
-    u.id = id;
-
-    tim::sqlite_query q(&_db, "SELECT nick, icon, motto FROM user WHERE id = ?");
-    if (!q.prepare())
-    {
-        TIM_TRACE(Warning,
-                  TIM_TR("Failed to prepare query for loading user '%s'."_en,
-                         "Не удалось подготовить запрос на загрузку пользователя '%s'."_ru),
-                  id.to_string().c_str());
-        return u;
-    }
-    q.bind(1, id.to_string());
-
-    bool done = false;
-    if (!q.next(&done) || done)
-        return u; // Пользователя ещё нет в БД — отдаём только id.
-
-    u.nick = q.to_string(0);
-    u.icon = q.to_string(1);
-    u.motto = q.to_string(2);
-    return u;
-}
-
-tim::user tim::p::prompt_service::user_for(const tim::uuid &id)
-{
-    if (id == _user.id)
-        return _user;
-
-    const std::unordered_map<tim::uuid, tim::user>::iterator it = _known_users.find(id);
-    if (it != _known_users.end())
-        return it->second;
-
-    tim::user u = load_user(id);
-    _known_users.emplace(id, u);
-    return u;
-}
-
+/**
+ * Подтягивает текущие подписки пользователя из таблицы subscription
+ * в кэш _subscriptions (UUID-ы тех, на кого подписан текущий
+ * пользователь — для пометки сообщений звёздочкой при отрисовке).
+ */
 void tim::p::prompt_service::load_subscriptions()
 {
     tim::sqlite_query q(&_db,
                         "SELECT publisher_id FROM subscription WHERE subscriber_id = ?");
     if (!q.prepare())
     {
-        TIM_TRACE(Warning,
+        TIM_TRACE(warning,
                   TIM_TR("Failed to prepare query for loading subscriptions of '%s'."_en,
                          "Не удалось подготовить запрос на загрузку подписок '%s'."_ru),
-                  _user.id.to_string().c_str());
+                  _profiles.self().id.to_string().c_str());
         return;
     }
-    q.bind(1, _user.id.to_string());
+    q.bind(1, _profiles.self().id.to_string());
 
     bool done = false;
     while (q.next(&done) && !done)
@@ -166,6 +148,12 @@ void tim::p::prompt_service::load_subscriptions()
     }
 }
 
+/**
+ * Загружает последние HISTORY_LIMIT сообщений из БД (с суммарным
+ * весом и числом реакций) и печатает их в терминал в хронологическом
+ * порядке — чтобы пользователь, только зашедший в чат, сразу видел
+ * контекст разговора.
+ */
 void tim::p::prompt_service::load_post_history()
 {
     static const int HISTORY_LIMIT = 20;
@@ -184,20 +172,21 @@ void tim::p::prompt_service::load_post_history()
                         " ORDER BY p.timestamp DESC LIMIT ?");
     if (!q.prepare())
     {
-        TIM_TRACE(Warning, "%s",
+        TIM_TRACE(warning, "%s",
                   TIM_TR("Failed to prepare query for loading post history."_en,
                          "Не удалось подготовить запрос на загрузку истории сообщений."_ru));
         return;
     }
     q.bind(1, HISTORY_LIMIT);
 
+    /** Одна запись истории: post + агрегаты реакций. */
     struct entry
     {
-        tim::uuid     id;
-        tim::uuid     author;
-        std::string   text;
-        int           rxn_sum = 0;
-        std::size_t   rxn_count = 0;
+        tim::uuid     id;            ///< UUID сообщения.
+        tim::uuid     author;        ///< UUID автора.
+        std::string   text;          ///< Текст сообщения.
+        int           rxn_sum = 0;   ///< Сумма весов реакций (0 — нет реакций).
+        std::size_t   rxn_count = 0; ///< Число реакций (0 — нет реакций).
     };
     std::vector<entry> history;
 
@@ -217,7 +206,7 @@ void tim::p::prompt_service::load_post_history()
     if (history.empty())
         return;
 
-    const tim::color info_color = _terminal->theme().colors.at(tim::terminal_color_index::Info);
+    const tim::color info_color = _terminal->theme().colors.at(tim::terminal_color_index::info);
     const tim::color transparent = tim::color::transparent();
 
     _shell->hide_input();
@@ -236,83 +225,40 @@ void tim::p::prompt_service::load_post_history()
     _shell->show_input();
 }
 
+/**
+ * Повторно выдаёт все MQTT-подписки сессии и обнуляет/перезагружает
+ * локальные кэши (profile_cache и _subscriptions). Вызывается на
+ * каждом подключении к брокеру.
+ */
 void tim::p::prompt_service::subscribe()
 {
     // Этот метод вызывается на каждом подключении и повторном подключении
-    // к брокеру. После повторного подключения локальный кэш _subscriptions
-    // мог разойтись с БД: события user/subscribe и user/unsubscribe,
-    // пришедшие в окно отказа брокера, мы пропустили (даже при QoS=1 —
-    // сессия клиента не была персистентной). Перезагружаем кэш из БД,
-    // чтобы метка подписки (звёздочка перед автором) снова отражала
-    // фактическое состояние.
+    // к брокеру. После повторного подключения локальные кэши могли
+    // разойтись с реальным состоянием: события setnick/seticon/setmotto
+    // и user/subscribe|unsubscribe, пришедшие в окно отказа брокера,
+    // потеряны (даже при QoS=1 — сессия клиента не персистентна).
+    // Сбрасываем оба кэша; profile_cache сам повторно выдаст свои подписки
+    // на wildcard-топики.
+    _profiles.invalidate();
+    _profiles.subscribe();
+
     _subscriptions.clear();
     load_subscriptions();
 
-    _mqtt.publish(tim::topics::USER_CONNECT, _user.id.to_string());
+    const tim::uuid &self_id = _profiles.self().id;
+    _mqtt.publish(tim::topics::USER_CONNECT, self_id.to_string());
 
     // Открытый ключ клиента — для аудита и привязки личности к ключу.
     const std::string &key = _q->pub_key();
     if (!key.empty())
-        _mqtt.publish(tim::topics::user_setpubkey(_user.id), key);
+        _mqtt.publish(tim::topics::user_setpubkey(self_id), key);
 
+    // Подписка на все посты: отрисовываем плашку каждого входящего.
     _sub_post = _mqtt.subscribe(tim::topics::POST_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 
-    // Слушаем изменения ника/иконки ВСЕХ пользователей — благодаря этому
-    // и собственный _user, и кэш других участников остаются актуальными
-    // без переподключения и без отдельных запросов в БД.
-    _sub_setnick = _mqtt.subscribe(tim::topics::USER_SETNICK_FILTER,
-        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
-        {
-            const tim::uuid uid = std::string(topic.last_level());
-            if (!uid.valid())
-                return;
-            const std::string nick(data, size);
-            if (uid == _user.id)
-                _user.nick = nick;
-            else
-            {
-                tim::user &u = _known_users[uid];
-                u.id = uid;
-                u.nick = nick;
-            }
-        });
-
-    _sub_seticon = _mqtt.subscribe(tim::topics::USER_SETICON_FILTER,
-        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
-        {
-            const tim::uuid uid = std::string(topic.last_level());
-            if (!uid.valid())
-                return;
-            const std::string icon(data, size);
-            if (uid == _user.id)
-                _user.icon = icon;
-            else
-            {
-                tim::user &u = _known_users[uid];
-                u.id = uid;
-                u.icon = icon;
-            }
-        });
-
-    _sub_setmotto = _mqtt.subscribe(tim::topics::USER_SETMOTTO_FILTER,
-        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
-        {
-            const tim::uuid uid = std::string(topic.last_level());
-            if (!uid.valid())
-                return;
-            const std::string motto(data, size);
-            if (uid == _user.id)
-                _user.motto = motto;
-            else
-            {
-                tim::user &u = _known_users[uid];
-                u.id = uid;
-                u.motto = motto;
-            }
-        });
-
+    // Подтверждённые реакции: показываем "X отреагировал(а) на ваш пост".
     _sub_react_event = _mqtt.subscribe(tim::topics::REACT_EVENT_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_react_event(topic, data, size); });
@@ -320,30 +266,34 @@ void tim::p::prompt_service::subscribe()
     // Свои подписки/отписки — синхронизируем локальный кэш _subscriptions
     // в реальном времени без перезагрузки из БД. Wildcard на всех
     // пользователей здесь не нужен (нас интересует только свой список).
-    _sub_self_subscribe = _mqtt.subscribe(tim::topics::user_subscribe(_user.id),
+    _sub_self_subscribe = _mqtt.subscribe(tim::topics::user_subscribe(self_id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
+            // Payload — UUID издателя, на которого подписался текущий
+            // пользователь; добавляем в кэш помеченных подпиской.
             const tim::uuid pub = std::string(data, size);
             if (pub.valid())
                 _subscriptions.insert(pub);
         });
 
-    _sub_self_unsubscribe = _mqtt.subscribe(tim::topics::user_unsubscribe(_user.id),
+    _sub_self_unsubscribe = _mqtt.subscribe(tim::topics::user_unsubscribe(self_id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
+            // Payload — UUID издателя, от которого отписался текущий
+            // пользователь; удаляем из кэша.
             const tim::uuid pub = std::string(data, size);
             if (pub.valid())
                 _subscriptions.erase(pub);
         });
 
     // Личные уведомления (ошибки сервера для своих действий — "ник занят" и т.п.).
-    _sub_notice = _mqtt.subscribe(tim::topics::session_notice(_user.id),
+    _sub_notice = _mqtt.subscribe(tim::topics::session_notice(self_id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
             // Прячем строку ввода на время вывода: иначе уведомление
             // ломает то, что пользователь набирает в этот момент.
             _shell->hide_input();
-            const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::Warning);
+            const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::warning);
             _terminal->cprintf(warning, tim::color::transparent(),
                                "! %.*s\n", (int)size, data);
             _shell->new_line();
@@ -351,6 +301,10 @@ void tim::p::prompt_service::subscribe()
         });
 }
 
+/**
+ * Передаёт сырые байты ввода в шелл. При ошибке записи (Ctrl+D
+ * или I/O-сбой) закрывает соединение.
+ */
 void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
 {
     assert(data);
@@ -360,6 +314,11 @@ void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
         _q->close();
 }
 
+/**
+ * Обработчик POST_FILTER: парсит UUID-ы из топика, сохраняет как
+ * "последний увиденный" (для /react) и отрисовывает плашку сообщения
+ * через render_post().
+ */
 void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size)
 {
     // topic = post/<publisher-uuid>/<post-uuid>
@@ -381,6 +340,15 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     _shell->show_input();
 }
 
+/**
+ * Рисует "плашку" одного сообщения. Для своих сообщений — без фона,
+ * заголовок Me/Я. Для чужих — цвет фона стабильно выводится из UUID
+ * автора (одинаковый автор → одинаковая полоска), а если автор есть
+ * в _subscriptions, в плашке появляется жёлтая звёздочка.
+ *
+ * \param publisher_id UUID автора.
+ * \param text Текст сообщения.
+ */
 void tim::p::prompt_service::render_post(const tim::uuid &publisher_id, std::string_view text)
 {
     // Свои сообщения — без цвета фона (transparent), заголовок "Me"/"Я".
@@ -389,17 +357,17 @@ void tim::p::prompt_service::render_post(const tim::uuid &publisher_id, std::str
     std::string title;
     tim::color bg_color;
     tim::color marker_color; // пустой по умолчанию — звёздочки не будет
-    if (publisher_id == _user.id)
+    if (publisher_id == _profiles.self().id)
     {
         title = TIM_TR("Me"_en, "Я"_ru);
         bg_color = tim::color::transparent();
     }
     else
     {
-        const tim::user sender = user_for(publisher_id);
+        const tim::user sender = _profiles.user_for(publisher_id);
         title = sender.title();
 
-        const std::string publisher_id_str = publisher_id.to_string(tim::uuid::format::NoBrackets);
+        const std::string publisher_id_str = publisher_id.to_string(tim::uuid::format::no_brackets);
         const std::size_t color_count = _shell->terminal()->color_count();
         const std::size_t color_idx = color_count > 1
                 ? std::hash<std::string>{}(publisher_id_str) % (color_count - 1) + 1
@@ -414,6 +382,12 @@ void tim::p::prompt_service::render_post(const tim::uuid &publisher_id, std::str
     _shell->cloud(title, '\n' + std::string(text), bg_color, marker_color);
 }
 
+/**
+ * Обработчик REACT_EVENT_FILTER: парсит UUID-ы реактора и поста, узнаёт
+ * автора поста из БД, и выводит локализованное "X отреагировал(а)/убрал(а)
+ * реакцию на ваш пост / на пост Y" — с учётом того, что собственные
+ * реакции мы не показываем.
+ */
 void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
                                             const char *data, std::size_t size)
 {
@@ -425,7 +399,7 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
 
     // Не уведомляем о собственной реакции — пользователь и так знает,
     // что нажал /react в этой или другой своей сессии.
-    if (reactor_id == _user.id)
+    if (reactor_id == _profiles.self().id)
         return;
 
     bool ok = false;
@@ -449,10 +423,10 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
     if (!author_id.valid())
         return;
 
-    const tim::user reactor = user_for(reactor_id);
-    const bool is_own_post = (author_id == _user.id);
+    const tim::user reactor = _profiles.user_for(reactor_id);
+    const bool is_own_post = (author_id == _profiles.self().id);
 
-    const tim::color info = _terminal->theme().colors.at(tim::terminal_color_index::Info);
+    const tim::color info = _terminal->theme().colors.at(tim::terminal_color_index::info);
     const tim::color bg = tim::color::transparent();
 
     _shell->hide_input();
@@ -465,7 +439,7 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
                 reactor.title().c_str());
         else
         {
-            const tim::user author = user_for(author_id);
+            const tim::user author = _profiles.user_for(author_id);
             _terminal->cprintf(info, bg,
                 TIM_TR("%s removed reaction from %s's post.\n"_en,
                        "%s убрал(а) реакцию с поста пользователя %s.\n"_ru),
@@ -481,7 +455,7 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
                 reactor.title().c_str(), weight);
         else
         {
-            const tim::user author = user_for(author_id);
+            const tim::user author = _profiles.user_for(author_id);
             _terminal->cprintf(info, bg,
                 TIM_TR("%s reacted (%+d) to %s's post.\n"_en,
                        "%s отреагировал(а) (%+d) на пост пользователя %s.\n"_ru),

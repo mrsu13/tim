@@ -6,14 +6,20 @@
 namespace tim
 {
 
+/**
+ * Атрибуты начертания шрифта. Битовая маска: можно сочетать через |.
+ */
 enum class font_style
 {
-    Regular = 0,
-    Bold    = 1 << 0,
-    Italic  = 1 << 1,
-    Mono    = 1 << 2
+    regular = 0,         ///< Обычное начертание.
+    bold    = 1 << 0,    ///< Полужирное.
+    italic  = 1 << 1,    ///< Курсив.
+    mono    = 1 << 2     ///< Моноширинный шрифт.
 };
 
+/**
+ * Битовая маска font_style — позволяет комбинировать атрибуты.
+ */
 using font_styles = tim::flags<tim::font_style>;
 
 }

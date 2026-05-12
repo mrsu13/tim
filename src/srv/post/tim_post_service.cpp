@@ -16,10 +16,15 @@
 
 // Public
 
+/**
+ * Создаёт сервис и подписывает слот connected. Слот повторно выдаёт
+ * MQTT-подписку при первом и каждом последующем подключении.
+ */
 tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("post")
     , _d(new tim::p::post_service(mqtt, db))
 {
+    // Повторно выдаём подписки на каждое (ре)подключение к брокеру.
     _d->_on_connected = mqtt.connected.connect(
         [d = _d.get()]{ d->subscribe(); });
 
@@ -32,13 +37,24 @@ tim::post_service::~post_service() = default;
 
 // Private
 
+/**
+ * Подписывается на post/+/+ и делегирует каждое сообщение в on_post().
+ */
 void tim::p::post_service::subscribe()
 {
+    // Передаём содержимое в on_post — единственная "точка истины" для
+    // парсинга topic-а и записи в БД.
     _sub_post = _mqtt.subscribe(tim::topics::POST_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
 }
 
+/**
+ * Парсит topic "post/<publisher-uuid>/<post-uuid>", гарантирует
+ * существование автора в user (ensure_user) и пишет запись в post
+ * единой транзакцией. INSERT OR IGNORE — при коллизии UUID нового
+ * сообщения логируется warning, прежнее не затирается.
+ */
 void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size)
 {
     // topic = post/<publisher-uuid>/<post-uuid>
@@ -49,7 +65,7 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
     const tim::uuid publisher_id(publisher_id_str);
     if (!post_id.valid() || !publisher_id.valid())
     {
-        TIM_TRACE(Warning, "%s",
+        TIM_TRACE(warning, "%s",
                   TIM_TR("Ignoring post with invalid UUID(s)."_en,
                          "Игнорируем сообщение с некорректным UUID."_ru));
         return;
@@ -62,7 +78,7 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
     tim::sqlite_tx tx(_db);
     if (!tx.active())
     {
-        TIM_TRACE(Error, "%s",
+        TIM_TRACE(error, "%s",
                   TIM_TR("Failed to begin transaction for storing post."_en,
                          "Не удалось начать транзакцию для сохранения сообщения."_ru));
         return;
@@ -79,30 +95,27 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
         tim::sqlite_query q(&_db,
                             "INSERT OR IGNORE INTO post (id, user_id, text) VALUES (?, ?, ?)");
         if (!q.prepare())
-            TIM_TRACE(Fatal,
-                      TIM_TR("Failed to prepare database query '%s'."_en,
-                             "Не могу подготовить запрос '%s' к базе данных."_ru),
-                      q.sql().c_str());
+            return;
         q.bind(1, post_id_canon);
         q.bind(2, publisher_id_canon);
         q.bind(3, std::string(data, size));
         if (!q.exec())
         {
-            TIM_TRACE(Error,
+            TIM_TRACE(error,
                       TIM_TR("Failed to save post '%s' to the database."_en,
                              "Ошибка при сохранении поста '%s' в базе данных."_ru),
                       post_id_canon.c_str());
             return;
         }
         if (_db.change_count() == 0)
-            TIM_TRACE(Warning,
+            TIM_TRACE(warning,
                       TIM_TR("Post UUID collision: '%s' already exists, dropping new post by '%s'."_en,
                              "Коллизия UUID сообщения: '%s' уже существует, новое сообщение от '%s' отброшено."_ru),
                       post_id_canon.c_str(), publisher_id_canon.c_str());
     }
 
     if (!tx.commit())
-        TIM_TRACE(Error,
+        TIM_TRACE(error,
                   TIM_TR("Failed to commit transaction for post '%s'."_en,
                          "Не удалось зафиксировать транзакцию для сообщения '%s'."_ru),
                   post_id_canon.c_str());

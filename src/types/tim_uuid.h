@@ -10,90 +10,191 @@
 namespace tim
 {
 
+/**
+ * 128-битный UUID (RFC 4122) с парсингом, сериализацией и сравнениями.
+ *
+ * Поддерживает форматы canonical (с фигурными скобками), no_brackets
+ * (классические 36 символов с дефисами) и compact (32 hex без дефисов).
+ * Сравнение лексикографическое; хеш через std::hash<std::string>.
+ */
 class uuid
 {
 
 public:
 
-    /** This enum defines the values used in the variant field of the UUID.
-        The value in the variant field determines the layout of the 128-bit value.
-
-    */
+    /**
+     * Значения поля \c variant UUID. Определяют схему укладки 128 бит.
+     */
     enum class variant
     {
-        Unknown = -1, ///< Variant is unknown.
-        Ncs        =  0, ///< (0 - -) Reserved for Ncs (Network Computing System) backward compatibility.
-        Dce        =  2, ///< (1 0 -) Distributed Computing Environment, the scheme used by tim::uuid.
-        Microsoft  =  6, ///< (1 1 0) Reserved for Microsoft backward compatibility (GUID).
-        Reserved   =  7  ///< (1 1 1) Reserved for future definition.
+        unknown    = -1, ///< Вариант не определён.
+        ncs        =  0, ///< (0 - -) Зарезервировано под NCS (Network Computing System).
+        dce        =  2, ///< (1 0 -) Distributed Computing Environment — схема, используемая TIM.
+        microsoft  =  6, ///< (1 1 0) Зарезервировано под Microsoft GUID.
+        reserved   =  7  ///< (1 1 1) Зарезервировано на будущее.
     };
 
-    /** This enum defines the values used in the version field of the UUID.
-        The version field is meaningful only if the value in the variant field
-        is tim::uuid::Dce.
-    */
+    /**
+     * Значения поля \c version UUID (имеет смысл только при variant == dce).
+     */
     enum class version
     {
-        Unknown       = -1, ///< Version is unknown.
-        Time          =  1, ///< (0 0 0 1) Time-based, by using timestamp, clock sequence, and
-                            ///< MAC network card address (if available) for the node sections.
-        EmbeddedPosix =  2, //< (0 0 1 0) Dce Security version, with embedded POSIX UUIDs.
-        Name          =  3, //< (0 0 1 1) Name-based, by using values from a name for all sections.
-        Random        =  4  //< (0 1 0 0) Random Random-based, by using random numbers for all sections.
+        unknown        = -1, ///< Версия не определена.
+        time           =  1, ///< (0 0 0 1) Time-based: timestamp + clock seq + MAC.
+        embedded_posix =  2, ///< (0 0 1 0) DCE Security с встроенным POSIX UID/GID.
+        name           =  3, ///< (0 0 1 1) Name-based: значения из имени для всех секций.
+        random         =  4  ///< (0 1 0 0) Random: случайные числа для всех секций.
     };
 
+    /** Конструирует nil-UUID (все нули, valid=false). */
     uuid();
+
+    /**
+     * Копирует другой UUID.
+     *
+     * \param other Источник копирования.
+     */
     uuid(const tim::uuid &other);
+
+    /**
+     * Конструирует UUID из 11 целочисленных частей.
+     *
+     * \param l 32-битный data1.
+     * \param w1 16-битный data2.
+     * \param w2 16-битный data3.
+     * \param b1 Первый байт data4.
+     * \param b2 Второй байт data4.
+     * \param b3 Третий байт data4.
+     * \param b4 Четвёртый байт data4.
+     * \param b5 Пятый байт data4.
+     * \param b6 Шестой байт data4.
+     * \param b7 Седьмой байт data4.
+     * \param b8 Восьмой байт data4.
+     */
     uuid(unsigned int l, unsigned short w1, unsigned short w2,
          unsigned char b1, unsigned char b2, unsigned char b3, unsigned char b4,
          unsigned char b5, unsigned char b6, unsigned char b7, unsigned char b8);
+
+    /**
+     * Парсит UUID из std::string.
+     *
+     * \param text Строковое представление в любом из поддерживаемых
+     *             форматов (canonical / no_brackets / compact).
+     */
     uuid(const std::string &text);
+
+    /**
+     * Парсит UUID из C-строки.
+     *
+     * \param text Нуль-терминированная строка.
+     */
     uuid(const char *text);
 
+    /**
+     * Формат строкового представления UUID.
+     */
     enum class format
     {
-        Canonical  = 1, // Like {943b573e-7a1d-4419-81b1-3308455be5f7}
-        NoBrackets = 2, // Like 943b573e-7a1d-4419-81b1-3308455be5f7
-        Compact    = 3  // Like 943b573e7a1d441981b13308455be5f7
+        canonical   = 1, ///< {943b573e-7a1d-4419-81b1-3308455be5f7}
+        no_brackets = 2, ///< 943b573e-7a1d-4419-81b1-3308455be5f7
+        compact     = 3  ///< 943b573e7a1d441981b13308455be5f7
     };
 
+    /** \return UUID в формате canonical (с фигурными скобками). */
     inline std::string to_string() const;
+
+    /**
+     * Возвращает UUID в выбранном формате.
+     *
+     * \param format Желаемый формат.
+     * \return Строковое представление.
+     */
     std::string to_string(const format format) const;
+
+    /**
+     * Парсит UUID из строки, заменяя текущее значение.
+     *
+     * \param text Строковое представление.
+     * \return true при успешном разборе.
+     */
     bool from_string(const std::string &text);
+
+    /** Неявное приведение к строке (через to_string() canonical). */
     inline operator std::string() const;
 
+    /** \return true, если все 128 бит нулевые (nil-UUID). */
     bool is_null() const;
+
+    /** \return Результат предыдущего from_string() (true, если разбор прошёл). */
     inline bool valid() const;
+
+    /** \return true, если UUID валиден И не nil. */
     inline operator bool() const;
+
+    /** Сбрасывает все поля в ноль и помечает UUID как invalid. */
     void clear();
 
+    /**
+     * Копи-присваивание.
+     *
+     * \param other Источник.
+     * \return *this.
+     */
     tim::uuid &operator=(const tim::uuid &other);
+
+    /**
+     * Присваивание из строки (через from_string).
+     *
+     * \param text Строковое представление.
+     * \return *this.
+     */
     inline tim::uuid &operator=(const std::string &text);
 
+    /** Покомпонентное сравнение UUID. */
     bool operator==(const tim::uuid &orig) const;
 
+    /** Покомпонентное сравнение UUID (отрицание operator==). */
     inline bool operator!=(const tim::uuid &orig) const;
 
+    /** Лексикографическое сравнение (для упорядоченных контейнеров). */
     bool operator<(const tim::uuid &other) const;
+    /** Лексикографическое сравнение (для упорядоченных контейнеров). */
     bool operator>(const tim::uuid &other) const;
 
+    /**
+     * Генерирует новый случайный UUID v4 (DCE, random).
+     *
+     * \return Свежий UUID.
+     */
     static tim::uuid create();
+
+    /** \return Вариант (см. enum variant). */
     variant uuid_variant() const;
+    /** \return Версия (см. enum version). */
     version uuid_version() const;
 
 private:
 
+    /** Флаг успешного разбора/инициализации. */
     bool _valid;
 
+    /** Поле data1 (4 байта). */
     unsigned int   data1;
+    /** Поле data2 (2 байта). */
     unsigned short data2;
+    /** Поле data3 (2 байта). */
     unsigned short data3;
+    /** Поле data4 (8 байт). */
     unsigned char  data4[8];
 };
 
+/** Псевдоним для вектора UUID. */
 using uuid_vector = std::vector<tim::uuid>;
+/** Псевдоним для списка UUID. */
 using uuid_list = std::list<tim::uuid>;
+/** Псевдоним для отображения UUID → UUID. */
 using uuid_map = std::unordered_map<tim::uuid, tim::uuid>;
+/** Псевдоним для множества UUID. */
 using uuid_set = std::unordered_set<tim::uuid>;
 
 }
@@ -102,12 +203,22 @@ using uuid_set = std::unordered_set<tim::uuid>;
 namespace std
 {
 
+/**
+ * Специализация std::hash для tim::uuid через hash от его строкового
+ * представления. Подходит для unordered-контейнеров.
+ */
 template<>
 struct hash<tim::uuid>
 {
 
 public:
 
+    /**
+     * Вычисляет хеш UUID.
+     *
+     * \param uuid Хешируемый UUID.
+     * \return Целочисленный хеш.
+     */
     inline std::size_t operator()(const tim::uuid &uuid) const
     {
         return std::hash<std::string>()(uuid.to_string());
@@ -120,6 +231,12 @@ public:
 namespace tim
 {
 
+/**
+ * Свободная функция-хеш для UUID (для совместимости с boost-стилем).
+ *
+ * \param uuid Хешируемый UUID.
+ * \return Тот же результат, что и std::hash<tim::uuid>().
+ */
 inline std::size_t hash_value(const tim::uuid &uuid)
 {
     return std::hash<tim::uuid>()(uuid);
@@ -132,39 +249,54 @@ inline std::size_t hash_value(const tim::uuid &uuid)
 
 // Public
 
+/**
+ * Эквивалентно to_string(format::canonical).
+ */
 std::string tim::uuid::to_string() const
 {
-    return to_string(format::Canonical);
+    return to_string(format::canonical);
 }
 
-/** \return The string representation of the UUID.
-
-    \sa to_string()
-*/
+/**
+ * Неявное приведение к строке: возвращает to_string() canonical.
+ *
+ * \return Строковое представление UUID.
+ *
+ * \sa to_string()
+ */
 tim::uuid::operator std::string() const
 {
     return to_string();
 }
 
+/**
+ * \return Сохранённое значение флага valid.
+ */
 bool tim::uuid::valid() const
 {
     return _valid;
 }
 
+/**
+ * \return true только если valid() и UUID не nil.
+ */
 tim::uuid::operator bool() const
 {
     return valid() && !is_null();
 }
 
+/**
+ * Присваивание из строки: вызывает from_string().
+ */
 tim::uuid &tim::uuid::operator=(const std::string &text)
 {
     from_string(text);
     return *this;
 }
 
-/** \return true if this tim::uuid and the \a other tim::uuid are different;
-    otherwise returns false.
-*/
+/**
+ * \return true если *this и \a orig разные UUID; иначе false.
+ */
 bool tim::uuid::operator!=(const tim::uuid &orig) const
 {
     return !(*this == orig);

@@ -14,18 +14,27 @@
 namespace
 {
 
+/**
+ * Возвращает каталог $HOME/.tim, где живут все файлы TIM.
+ *
+ * На случай отсутствия $HOME (крайне маловероятно на Linux) приземляемся
+ * в текущий каталог — это лучше, чем писать в "/".
+ *
+ * \return Абсолютный путь к каталогу TIM-пользователя.
+ */
 std::filesystem::path tim_home_dir()
 {
     const char *home = std::getenv("HOME");
     if (home && *home)
         return std::filesystem::path(home) / ".tim";
-    // $HOME пуст — крайне маловероятно на Linux, но если случилось,
-    // приземляемся в текущий каталог, чтобы не писать в "/".
     return std::filesystem::current_path() / ".tim";
 }
 
-// Шаблон с комментариями, который пишется в config.json при первом запуске.
-// %s заполняется абсолютным путём data_dir (по умолчанию $HOME/.tim).
+/**
+ * Шаблон с комментариями, который пишется в config.json при первом запуске.
+ * Единственный %s заполняется абсолютным путём data_dir (по умолчанию
+ * $HOME/.tim).
+ */
 const char *const CONFIG_TEMPLATE =
 R"({
     // SSH-порт сервера TIM.
@@ -45,26 +54,38 @@ R"({
 }
 
 
-std::filesystem::path tim::settings::config_path()
+std::filesystem::path tim::settings::default_config_path()
 {
     return tim_home_dir() / "config.json";
 }
 
-tim::settings tim::settings::load_or_create()
+tim::settings tim::settings::load_or_create(const std::string &explicit_path)
 {
     tim::settings s;
     s.data_dir = tim_home_dir();
 
-    const std::filesystem::path path = config_path();
+    const bool using_default = explicit_path.empty();
+    const std::filesystem::path path = using_default
+        ? default_config_path()
+        : std::filesystem::path(explicit_path);
     std::error_code ec;
 
     if (!std::filesystem::exists(path, ec))
     {
-        // Первый запуск: создаём каталог и кладём туда шаблон.
+        if (!using_default)
+        {
+            // Оператор задал свой путь через --config, а файла там нет —
+            // ничего не создаём, шаблон пишем только по умолчанию.
+            TIM_TRACE(warning,
+                      "Config file '%s' not found. Using defaults.",
+                      path.string().c_str());
+            return s;
+        }
+        // Первый запуск с дефолтным путём: создаём ~/.tim/ и кладём шаблон.
         std::filesystem::create_directories(path.parent_path(), ec);
         if (ec)
         {
-            TIM_TRACE(Warning,
+            TIM_TRACE(warning,
                       "Failed to create config directory '%s': %s. Using defaults.",
                       path.parent_path().string().c_str(),
                       ec.message().c_str());
@@ -72,11 +93,11 @@ tim::settings tim::settings::load_or_create()
         }
         const std::string body = tim::sprintf(CONFIG_TEMPLATE, s.data_dir.string().c_str());
         if (!tim::write_to_file(path, body))
-            TIM_TRACE(Warning,
+            TIM_TRACE(warning,
                       "Failed to write default config to '%s'. Using defaults.",
                       path.string().c_str());
         else
-            TIM_TRACE(Info,
+            TIM_TRACE(info,
                       "Wrote default config to '%s'.",
                       path.string().c_str());
         return s;
@@ -86,7 +107,7 @@ tim::settings tim::settings::load_or_create()
     std::ifstream in(path);
     if (!in.is_open())
     {
-        TIM_TRACE(Warning,
+        TIM_TRACE(warning,
                   "Failed to open config '%s'. Using defaults.",
                   path.string().c_str());
         return s;
@@ -98,7 +119,7 @@ tim::settings tim::settings::load_or_create()
                                              /*ignore_comments=*/true);
     if (j.is_discarded())
     {
-        TIM_TRACE(Warning,
+        TIM_TRACE(warning,
                   "Failed to parse config '%s'. Using defaults.",
                   path.string().c_str());
         return s;

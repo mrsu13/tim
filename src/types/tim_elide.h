@@ -3,11 +3,14 @@
 namespace tim
 {
 
+/**
+ * Выбор положения эллипсиса при усечении строки.
+ */
 enum class elide
 {
-    Left   = 0, ///< \c 0 --- The ellipsis should appear at the beginning of the text.
-    Right  = 1, ///< \c 1 --- The ellipsis should appear at the end of the text.
-    Middle = 2  ///< \c 2 --- The ellipsis should appear in the middle of the text.
+    left   = 0, ///< Эллипсис в начале текста.
+    right  = 1, ///< Эллипсис в конце текста.
+    middle = 2  ///< Эллипсис посередине текста.
 };
 
 }

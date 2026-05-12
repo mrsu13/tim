@@ -20,9 +20,15 @@
 
 // Static
 
-// Достаём контекст сессии (prompt_service) из tcl->user_data().
-// Если контекст не выставлен — команда не имеет смысла, возвращаем
-// сообщение об ошибке.
+/**
+ * Достаёт контекст сессии (prompt_service) из tcl->user_data() и
+ * указатель на сам tim::tcl. Если контекст не выставлен — команда
+ * не имеет смысла, шлёт сообщение об ошибке и возвращает nullptr.
+ *
+ * \param lil LIL-сессия (для lil_get_data / lil_set_error).
+ * \param tcl_out Сюда записывается указатель на tim::tcl.
+ * \return prompt_service или nullptr.
+ */
 static tim::prompt_service *session_or_error(lil_t lil, tim::tcl *&tcl_out)
 {
     tcl_out = (tim::tcl *)lil_get_data(lil);
@@ -39,6 +45,10 @@ static tim::prompt_service *session_or_error(lil_t lil, tim::tcl *&tcl_out)
 }
 
 
+/**
+ * Команда `/setnick <nick>`: публикует user/setnick/<self> с новым ником.
+ * Принимает ровно один аргумент.
+ */
 static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
                                        std::size_t argc,
                                        lil_value_t *argv)
@@ -65,6 +75,10 @@ static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
     return nullptr;
 }
 
+/**
+ * Команда `/seticon <icon>`: публикует user/seticon/<self> с новой
+ * иконкой (обычно 1–3 emoji-кодпойнта).
+ */
 static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
                                        std::size_t argc,
                                        lil_value_t *argv)
@@ -91,6 +105,10 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     return nullptr;
 }
 
+/**
+ * Команда `/setmotto <motto>`: публикует user/setmotto/<self>
+ * с новым девизом пользователя.
+ */
 static lil_value_t tim_tcl_cmd_setmotto(lil_t lil,
                                         std::size_t argc,
                                         lil_value_t *argv)
@@ -117,6 +135,10 @@ static lil_value_t tim_tcl_cmd_setmotto(lil_t lil,
     return nullptr;
 }
 
+/**
+ * Команда `/subscribe <publisher-uuid>`: публикует user/subscribe/<self>
+ * с UUID издателя, на которого подписывается текущий пользователь.
+ */
 static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
                                          std::size_t argc,
                                          lil_value_t *argv)
@@ -145,11 +167,15 @@ static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
         return nullptr;
 
     prompt->mqtt().publish(tim::topics::user_subscribe(prompt->user_id()),
-                           publisher.to_string(tim::uuid::format::NoBrackets));
+                           publisher.to_string(tim::uuid::format::no_brackets));
 
     return nullptr;
 }
 
+/**
+ * Команда `/unsubscribe <publisher-uuid>`: публикует
+ * user/unsubscribe/<self>, отписывает текущего пользователя от издателя.
+ */
 static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
                                            std::size_t argc,
                                            lil_value_t *argv)
@@ -178,14 +204,16 @@ static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
         return nullptr;
 
     prompt->mqtt().publish(tim::topics::user_unsubscribe(prompt->user_id()),
-                           publisher.to_string(tim::uuid::format::NoBrackets));
+                           publisher.to_string(tim::uuid::format::no_brackets));
 
     return nullptr;
 }
 
 
-// /subscriptions
-// Список пользователей, на которых подписан ВЫ.
+/**
+ * Команда `/subscriptions`: печатает список пользователей,
+ * на которых подписан ВЫ. SELECT JOIN из таблиц subscription и user.
+ */
 static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
                                              std::size_t argc,
                                              lil_value_t *argv)
@@ -247,8 +275,10 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
     return nullptr;
 }
 
-// /subscribers
-// Список пользователей, подписанных на ВАС.
+/**
+ * Команда `/subscribers`: печатает список пользователей,
+ * подписанных на ВАС. SELECT JOIN из таблиц subscription и user.
+ */
 static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
                                            std::size_t argc,
                                            lil_value_t *argv)
@@ -313,6 +343,11 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
 
 // Public
 
+/**
+ * Регистрирует пользовательские Tcl-команды чата (`setnick`, `seticon`,
+ * `setmotto`, `subscribe`, `unsubscribe`, `subscriptions`, `subscribers`)
+ * в указанной LIL-сессии.
+ */
 void tim::prompt::register_user_cmds(lil_t lil)
 {
     assert(lil);

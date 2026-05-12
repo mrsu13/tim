@@ -27,9 +27,9 @@ TIM_TEST_CASE(uuid_default_stringifies_to_nil_canonical)
 {
     tim::uuid u;
     TIM_CHECK(u.to_string() == NIL_CANONICAL);
-    TIM_CHECK(u.to_string(tim::uuid::format::NoBrackets)
+    TIM_CHECK(u.to_string(tim::uuid::format::no_brackets)
               == "00000000-0000-0000-0000-000000000000");
-    TIM_CHECK(u.to_string(tim::uuid::format::Compact)
+    TIM_CHECK(u.to_string(tim::uuid::format::compact)
               == "00000000000000000000000000000000");
 }
 
@@ -50,7 +50,7 @@ TIM_TEST_CASE(uuid_parse_no_brackets)
     TIM_CHECK(u.valid());
     TIM_CHECK(!u.is_null());
     TIM_CHECK(u.to_string() == CANONICAL);
-    TIM_CHECK(u.to_string(tim::uuid::format::NoBrackets) == NO_BRACKETS);
+    TIM_CHECK(u.to_string(tim::uuid::format::no_brackets) == NO_BRACKETS);
 }
 
 TIM_TEST_CASE(uuid_parse_canonical_and_nobrackets_equal)
@@ -99,7 +99,7 @@ TIM_TEST_CASE(uuid_parse_round_trip)
     // Парсим, выводим, парсим — должно совпадать.
     tim::uuid a(std::string{ CANONICAL });
     tim::uuid b(a.to_string());
-    tim::uuid c(a.to_string(tim::uuid::format::NoBrackets));
+    tim::uuid c(a.to_string(tim::uuid::format::no_brackets));
     TIM_CHECK(a == b);
     TIM_CHECK(a == c);
 }
@@ -157,7 +157,7 @@ TIM_TEST_CASE(uuid_inequality_different_value)
 TIM_TEST_CASE(uuid_to_string_canonical_format)
 {
     tim::uuid u(std::string{ CANONICAL });
-    const std::string s = u.to_string(tim::uuid::format::Canonical);
+    const std::string s = u.to_string(tim::uuid::format::canonical);
     TIM_CHECK(s.size() == 38);
     TIM_CHECK(s.front() == '{');
     TIM_CHECK(s.back() == '}');
@@ -166,7 +166,7 @@ TIM_TEST_CASE(uuid_to_string_canonical_format)
 TIM_TEST_CASE(uuid_to_string_no_brackets_format)
 {
     tim::uuid u(std::string{ CANONICAL });
-    const std::string s = u.to_string(tim::uuid::format::NoBrackets);
+    const std::string s = u.to_string(tim::uuid::format::no_brackets);
     TIM_CHECK(s.size() == 36);
     TIM_CHECK(s.front() != '{');
     TIM_CHECK(s.back() != '}');
@@ -175,7 +175,7 @@ TIM_TEST_CASE(uuid_to_string_no_brackets_format)
 TIM_TEST_CASE(uuid_to_string_compact_format)
 {
     tim::uuid u(std::string{ CANONICAL });
-    const std::string s = u.to_string(tim::uuid::format::Compact);
+    const std::string s = u.to_string(tim::uuid::format::compact);
     TIM_CHECK(s.size() == 32);
     TIM_CHECK(s.find('-') == std::string::npos);
     TIM_CHECK(s.find('{') == std::string::npos);
@@ -195,8 +195,8 @@ TIM_TEST_CASE(uuid_create_is_valid_and_non_null)
 TIM_TEST_CASE(uuid_create_has_dce_variant_random_version)
 {
     tim::uuid u = tim::uuid::create();
-    TIM_CHECK(u.uuid_variant() == tim::uuid::variant::Dce);
-    TIM_CHECK(u.uuid_version() == tim::uuid::version::Random);
+    TIM_CHECK(u.uuid_variant() == tim::uuid::variant::dce);
+    TIM_CHECK(u.uuid_version() == tim::uuid::version::random);
 }
 
 TIM_TEST_CASE(uuid_create_produces_unique_values)

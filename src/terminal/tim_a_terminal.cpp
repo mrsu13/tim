@@ -11,23 +11,34 @@
 
 // Public
 
+/** Деструктор по умолчанию. */
 tim::a_terminal::~a_terminal() = default;
 
+/** \return Указатель на нижележащий протокол. */
 tim::a_protocol *tim::a_terminal::protocol() const
 {
     return _d->_proto;
 }
 
+/** \return Текущая тема терминала. */
 const tim::terminal_theme &tim::a_terminal::theme() const
 {
     return _d->_theme;
 }
 
+/**
+ * Заменяет тему. Уже выведенный текст не перерисовывается —
+ * новая тема применяется к последующим вызовам printf/cprintf.
+ */
 void tim::a_terminal::set_theme(const tim::terminal_theme &theme)
 {
     _d->_theme = theme;
 }
 
+/**
+ * va_list-вариант printf. Форматирует через tim::vsprintf и шлёт
+ * результат в протокол.
+ */
 int tim::a_terminal::vprintf(const char *format, va_list args)
 {
     assert(format && *format);
@@ -45,6 +56,9 @@ int tim::a_terminal::vprintf(const char *format, va_list args)
     return n;
 }
 
+/**
+ * Variadic-обёртка над vprintf().
+ */
 int tim::a_terminal::printf(const char *format, ... )
 {
     assert(format && *format);
@@ -57,6 +71,11 @@ int tim::a_terminal::printf(const char *format, ... )
     return n;
 }
 
+/**
+ * Печатает форматированный текст указанными цветами текста и фона;
+ * после печати сбрасывает атрибуты, если хотя бы один из цветов
+ * не был пустым (transparent).
+ */
 int tim::a_terminal::cprintf(const tim::color &text_color,
                              const tim::color &bg_color,
                              const char *format, ... )
@@ -81,6 +100,9 @@ int tim::a_terminal::cprintf(const tim::color &text_color,
 
 // Protected
 
+/**
+ * Конструктор для наследников: запоминает указатель на протокол.
+ */
 tim::a_terminal::a_terminal(tim::a_protocol *proto)
     : _d(new tim::p::a_terminal())
 {

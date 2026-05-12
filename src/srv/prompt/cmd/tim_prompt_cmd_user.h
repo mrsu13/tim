@@ -5,9 +5,15 @@ typedef struct _lil_t *lil_t;
 namespace tim::prompt
 {
 
-// Регистрирует "пользовательские" команды чата в указанной LIL-сессии:
-// /setnick, /seticon, /subscribe, /unsubscribe, /subscriptions,
-// /subscribers. Команды достают prompt_service через tcl->user_data().
+/**
+ * Регистрирует "пользовательские" команды чата в указанной LIL-сессии:
+ * /setnick, /seticon, /setmotto, /subscribe, /unsubscribe, /subscriptions,
+ * /subscribers.
+ *
+ * Команды достают prompt_service через tcl->user_data().
+ *
+ * \param lil LIL-сессия, в которой регистрируются команды.
+ */
 void register_user_cmds(lil_t lil);
 
 }

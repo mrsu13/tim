@@ -7,22 +7,31 @@
 
 namespace tim
 {
-    
+
+/**
+ * Семантические индексы цветов в палитре терминальной темы.
+ *
+ * Используются вместо "сырых" RGB-значений в коде сервиса, чтобы тема
+ * могла переопределить конкретный оттенок без правки call-сайтов.
+ */
 enum class terminal_color_index
 {
-    Text, ///< Regular text.
-    EmText, ///< Emphasized text.
-    Background, ///< Regular background.
+    text,        ///< Обычный текст.
+    em_text,     ///< Акцентированный/полужирный текст.
+    background,  ///< Цвет фона по умолчанию.
 
-    Error, ///< Error message.
-    Warning, ///< Warning message.
-    Info, ///< Informational message.
+    error,       ///< Цвет сообщения об ошибке.
+    warning,     ///< Цвет сообщения-предупреждения.
+    info,        ///< Цвет информационного сообщения.
 
-    Prompt, ///< Prompt color.
+    prompt,      ///< Цвет приглашения шелла.
 
-    Count ///< Number of colors.
+    count        ///< Количество значений в перечислении (для размера контейнеров).
 };
 
+/**
+ * Палитра темы: соответствие "семантический индекс → цвет".
+ */
 using terminal_color_theme = std::unordered_map<tim::terminal_color_index, tim::color>;
 
 }
