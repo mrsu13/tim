@@ -168,10 +168,16 @@ void tim::p::prompt_service::load_post_history()
 
     // Берём последние HISTORY_LIMIT сообщений в обратном порядке, затем
     // выводим их в хронологическом — чтобы новые оказались внизу, ближе
-    // к приглашению.
+    // к приглашению. LEFT JOIN на reaction со сворачиванием по post.id
+    // даёт сумму весов и число реакций; для постов без реакций оба
+    // значения нулевые.
     tim::sqlite_query q(&_db,
-                        "SELECT id, user_id, text FROM post"
-                        " ORDER BY timestamp DESC LIMIT ?");
+                        "SELECT p.id, p.user_id, p.text,"
+                        "       COALESCE(SUM(r.weight), 0) AS rxn_sum,"
+                        "       COUNT(r.id) AS rxn_count"
+                        " FROM post p LEFT JOIN reaction r ON r.post_id = p.id"
+                        " GROUP BY p.id"
+                        " ORDER BY p.timestamp DESC LIMIT ?");
     if (!q.prepare())
     {
         TIM_TRACE(Warning, "%s",
@@ -186,6 +192,8 @@ void tim::p::prompt_service::load_post_history()
         tim::uuid     id;
         tim::uuid     author;
         std::string   text;
+        int           rxn_sum = 0;
+        std::size_t   rxn_count = 0;
     };
     std::vector<entry> history;
 
@@ -196,6 +204,8 @@ void tim::p::prompt_service::load_post_history()
         e.id = q.to_string(0);
         e.author = q.to_string(1);
         e.text = q.to_string(2);
+        e.rxn_sum = q.to_int(3);
+        e.rxn_count = static_cast<std::size_t>(q.to_int(4));
         if (e.id.valid() && e.author.valid())
             history.push_back(std::move(e));
     }
@@ -203,11 +213,18 @@ void tim::p::prompt_service::load_post_history()
     if (history.empty())
         return;
 
+    const tim::color info_color = _terminal->theme().colors.at(tim::terminal_color_index::Info);
+    const tim::color transparent = tim::color::transparent();
+
     _shell->hide_input();
     for (std::vector<entry>::reverse_iterator it = history.rbegin();
          it != history.rend(); ++it)
     {
         render_post(it->author, it->text);
+        if (it->rxn_count > 0)
+            _terminal->cprintf(info_color, transparent,
+                               "  %+d (%zu)\n",
+                               it->rxn_sum, it->rxn_count);
         _last_seen_post = it->id;
         _last_seen_post_author = it->author;
     }
