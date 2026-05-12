@@ -8,6 +8,7 @@
 #include "tim_mqtt_topic.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
+#include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
@@ -121,6 +122,13 @@ void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
                       TIM_TR("Nick '%s' is already taken; skipping setnick for user '%s'."_en,
                              "Ник '%s' уже занят; пропускаем setnick для пользователя '%s'."_ru),
                       nick.c_str(), user_id_canon.c_str());
+            // Сообщаем пользователю через шину уведомлений сессии — иначе
+            // setnick молча "не сработает" и человек не поймёт, почему.
+            const std::string notice = tim::sprintf(
+                TIM_TR("Nick '%s' is already taken."_en,
+                       "Ник '%s' уже занят."_ru),
+                nick.c_str());
+            _mqtt.publish(tim::topics::session_notice(user_id), notice);
             return;
         }
     }

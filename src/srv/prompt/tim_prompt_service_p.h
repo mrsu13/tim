@@ -82,6 +82,8 @@ struct prompt_service
     // локальный кэш подписок без дополнительного запроса в БД.
     tim::mqtt_subscription                      _sub_self_subscribe;
     tim::mqtt_subscription                      _sub_self_unsubscribe;
+    // Личные уведомления от сервера (например, "ник занят").
+    tim::mqtt_subscription                      _sub_notice;
 
     // Кэш профилей других пользователей. Заполняется лениво из БД и
     // обновляется по событиям user/setnick/+ и user/seticon/+.

@@ -1,4 +1,4 @@
-#include "tim_tcl_cmd_post.h"
+#include "tim_prompt_cmd_post.h"
 
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topic.h"
@@ -76,7 +76,7 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
 
 // Public
 
-void tim::tcl_add_post(lil_t lil)
+void tim::prompt::register_post_cmds(lil_t lil)
 {
     assert(lil);
 

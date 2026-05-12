@@ -1,4 +1,4 @@
-#include "tim_tcl_cmd_user.h"
+#include "tim_prompt_cmd_user.h"
 
 #include "tim_a_terminal.h"
 #include "tim_mqtt_client.h"
@@ -7,9 +7,9 @@
 #include "tim_prompt_service.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
+#include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
 #include "tim_translator.h"
-#include "tim_tcl.h"
 #include "tim_user.h"
 #include "tim_uuid.h"
 
@@ -277,7 +277,7 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
 
 // Public
 
-void tim::tcl_add_user(lil_t lil)
+void tim::prompt::register_user_cmds(lil_t lil)
 {
     assert(lil);
 

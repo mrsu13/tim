@@ -4,6 +4,8 @@
 
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topics.h"
+#include "tim_prompt_cmd_post.h"
+#include "tim_prompt_cmd_user.h"
 #include "tim_prompt_shell.h"
 #include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
@@ -38,6 +40,10 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
     // Tcl-команды (например /react) достают prompt_service через
     // tcl->user_data() и приводят его обратно к нужному типу.
     _d->_tcl->set_user_data(this);
+    // Регистрируем команды чата на стороне владельца — модуль скрипта
+    // ничего о messenger-е не знает.
+    tim::prompt::register_user_cmds(_d->_tcl->lil());
+    tim::prompt::register_post_cmds(_d->_tcl->lil());
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
     // Печатаем последние сообщения из БД сразу после приглашения,
@@ -300,6 +306,16 @@ void tim::p::prompt_service::subscribe()
             const tim::uuid pub = std::string(data, size);
             if (pub.valid())
                 _subscriptions.erase(pub);
+        });
+
+    // Личные уведомления (ошибки сервера для своих действий — "ник занят" и т.п.).
+    _sub_notice = _mqtt.subscribe(tim::topics::session_notice(_user.id),
+        [this](const tim::mqtt_topic &, const char *data, std::size_t size)
+        {
+            const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::Warning);
+            _terminal->cprintf(warning, tim::color::transparent(),
+                               "! %.*s\n", (int)size, data);
+            _shell->new_line();
         });
 }
 

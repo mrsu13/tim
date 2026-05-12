@@ -70,4 +70,9 @@ tim::mqtt_topic react(const tim::uuid &post_id, const tim::uuid &reactor);
 // реакции. Payload: вес.
 tim::mqtt_topic react_event(const tim::uuid &post_id, const tim::uuid &reactor);
 
+// session/notice/<uuid> — сообщение, адресованное конкретному
+// пользователю (например, "ник занят"). Payload: текст уведомления;
+// клиент рендерит его в чате цветом Warning.
+tim::mqtt_topic session_notice(const tim::uuid &uid);
+
 }

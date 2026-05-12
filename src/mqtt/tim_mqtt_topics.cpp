@@ -53,3 +53,8 @@ tim::mqtt_topic tim::topics::react_event(const tim::uuid &post_id, const tim::uu
 {
     return tim::mqtt_topic("react_event") / nb(post_id) / nb(reactor);
 }
+
+tim::mqtt_topic tim::topics::session_notice(const tim::uuid &uid)
+{
+    return tim::mqtt_topic("session/notice") / nb(uid);
+}

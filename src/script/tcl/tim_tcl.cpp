@@ -7,11 +7,11 @@
 #include "tim_string_tools.h"
 #include "tim_translator.h"
 
-// Commands
+// Commands (универсальные — относящиеся к самому скрипт-движку или
+// терминалу). Команды, специфичные для чата, регистрирует владелец
+// (например, prompt_service) после конструирования tim::tcl.
 #include "tim_tcl_cmd_general.h"
-#include "tim_tcl_cmd_post.h"
 #include "tim_tcl_cmd_term.h"
-#include "tim_tcl_cmd_user.h"
 
 #include "lil.hpp"
 #include "utf8/utf8.h"
@@ -32,13 +32,16 @@ tim::tcl::tcl(tim::a_terminal *term)
 
     tim::tcl_add_general(_d->_lil);
     tim::tcl_add_term(_d->_lil);
-    tim::tcl_add_user(_d->_lil);
-    tim::tcl_add_post(_d->_lil);
 }
 
 tim::tcl::~tcl()
 {
     lil_free(_d->_lil);
+}
+
+lil_t tim::tcl::lil() const
+{
+    return _d->_lil;
 }
 
 void tim::tcl::set_user_data(void *data)
