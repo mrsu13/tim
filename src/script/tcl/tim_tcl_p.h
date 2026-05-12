@@ -12,6 +12,7 @@ namespace tim
 {
 
 class mqtt_client;
+class sqlite_db;
 class tcl;
 
 namespace p
@@ -19,9 +20,10 @@ namespace p
 
 struct tcl
 {
-    tcl(tim::tcl *q, tim::mqtt_client &mqtt)
+    tcl(tim::tcl *q, tim::mqtt_client &mqtt, tim::sqlite_db &db)
         : _q(q)
         , _mqtt(mqtt)
+        , _db(db)
     {
         assert(_q);
     }
@@ -31,6 +33,7 @@ struct tcl
 
     tim::tcl *const _q;
     tim::mqtt_client &_mqtt;
+    tim::sqlite_db &_db;
 
     lil_t _lil = nullptr;
     tim::uuid _user_id;

@@ -22,9 +22,10 @@
 
 // Public
 
-tim::tcl::tcl(tim::a_terminal *term, const tim::uuid &user_id, tim::mqtt_client &mqtt)
+tim::tcl::tcl(tim::a_terminal *term, const tim::uuid &user_id,
+              tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::a_script_engine("Tcl", term)
-    , _d(new tim::p::tcl(this, mqtt))
+    , _d(new tim::p::tcl(this, mqtt, db))
 {
     _d->_lil = lil_new();
     _d->_user_id = user_id;
@@ -51,6 +52,11 @@ const tim::uuid &tim::tcl::user_id() const
 tim::mqtt_client &tim::tcl::mqtt() const
 {
     return _d->_mqtt;
+}
+
+tim::sqlite_db &tim::tcl::db() const
+{
+    return _d->_db;
 }
 
 void tim::tcl::set_last_post_id(const tim::uuid &post_id)

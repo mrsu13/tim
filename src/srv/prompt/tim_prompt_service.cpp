@@ -27,7 +27,7 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info, tim::mqtt
     _d->_user = _d->load_user(info.user_id);
     _d->_proto.reset(new tim::ssh_terminal_protocol(this));
     _d->_terminal.reset(new tim::vt(_d->_proto.get()));
-    _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt));
+    _d->_tcl.reset(new tim::tcl(_d->_terminal.get(), _d->_user.id, mqtt, db));
     _d->_shell.reset(new tim::prompt_shell(_d->_terminal.get(), _d->_tcl.get()));
 
     _d->_on_data_ready = _d->_proto->data_ready.connect(

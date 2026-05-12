@@ -20,17 +20,20 @@ struct tcl;
 
 class a_terminal;
 class mqtt_client;
+class sqlite_db;
 
 class tcl : public tim::a_script_engine
 {
 
 public:
 
-    tcl(tim::a_terminal *term, const tim::uuid &user_id, tim::mqtt_client &mqtt);
+    tcl(tim::a_terminal *term, const tim::uuid &user_id,
+        tim::mqtt_client &mqtt, tim::sqlite_db &db);
     virtual ~tcl();
 
     const tim::uuid &user_id() const;
     tim::mqtt_client &mqtt() const;
+    tim::sqlite_db &db() const;
 
     // UUID последнего сообщения, увиденного в чате этой сессии. Команды
     // (например /react) используют его как неявный аргумент. Пустой uuid
