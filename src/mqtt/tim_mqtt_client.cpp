@@ -120,6 +120,11 @@ void tim::mqtt_client::stop()
     }
     if (_d->_client)
     {
+        // Отвязываем колбэки от соединения: mg_mgr_free дёрнет MG_EV_CLOSE
+        // на всех живых соединениях, и без этого обработчик попытается
+        // прочитать уже освобождённый _d (UAF, видный по мусору в логе
+        // вида "broker '<garbage>' closed").
+        _d->_client->fn_data = nullptr;
         _d->_client->is_draining = 1;
         _d->_client = nullptr;
     }
@@ -203,7 +208,8 @@ void tim::mqtt_client::unsubscribe(std::size_t id)
 void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
 {
     tim::p::mqtt_client *self = (tim::p::mqtt_client *)c->fn_data;
-    assert(self);
+    if (!self)
+        return; // mqtt_client::stop() уже отвязал нас от этого соединения.
 
     switch (ev)
     {
