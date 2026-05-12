@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 
 namespace tim
@@ -35,10 +36,17 @@ struct prompt_service
         assert(_q);
     }
 
-    void load_user_from_db();
+    // Загружает пользователя по UUID из БД (nick, icon). Если строки нет,
+    // возвращает user с одним лишь id; nick/icon остаются пустыми.
+    tim::user load_user(const tim::uuid &id);
+    // Возвращает пользователя из локального кэша; при первом обращении
+    // подтягивает запись из БД. Для собственного UUID возвращает _user.
+    tim::user user_for(const tim::uuid &id);
+
     void subscribe();
     void on_data_ready(const char *data, std::size_t size);
     void on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+    void on_react_event(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     tim::prompt_service *const _q;
     tim::mqtt_client &_mqtt;
@@ -56,8 +64,16 @@ struct prompt_service
     tim::signal_connection                      _on_posted;
     tim::signal_connection                      _on_connected;
     tim::mqtt_subscription                      _sub_post;
-    tim::mqtt_subscription                      _sub_self_setnick;
-    tim::mqtt_subscription                      _sub_self_seticon;
+    // Подписки на изменения профилей всех пользователей (не только своего):
+    // при /setnick или /seticon кто угодно — обновляем локальный кэш, чтобы
+    // в сообщениях имя автора всегда было актуальным.
+    tim::mqtt_subscription                      _sub_setnick;
+    tim::mqtt_subscription                      _sub_seticon;
+    tim::mqtt_subscription                      _sub_react_event;
+
+    // Кэш профилей других пользователей. Заполняется лениво из БД и
+    // обновляется по событиям user/setnick/+ и user/seticon/+.
+    std::unordered_map<tim::uuid, tim::user>    _known_users;
 };
 
 }

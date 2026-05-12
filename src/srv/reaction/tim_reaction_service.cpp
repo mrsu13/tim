@@ -66,6 +66,8 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
 
     const std::string post_id_canon = post_id.to_string();
     const std::string user_id_canon = user_id.to_string();
+    const std::string post_id_nb = post_id.to_string(tim::uuid::format::NoBrackets);
+    const std::string user_id_nb = user_id.to_string(tim::uuid::format::NoBrackets);
 
     // weight = 0 трактуется как снятие реакции.
     if (weight == 0)
@@ -80,10 +82,16 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
         q.bind(1, post_id_canon);
         q.bind(2, user_id_canon);
         if (!q.exec())
+        {
             TIM_TRACE(Error,
                       TIM_TR("Failed to remove reaction by '%s' on post '%s'."_en,
                              "Не удалось удалить реакцию пользователя '%s' на сообщение '%s'."_ru),
                       user_id_canon.c_str(), post_id_canon.c_str());
+            return;
+        }
+
+        // Уведомляем подписчиков: реакция снята (weight=0).
+        _mqtt.publish(tim::mqtt_topic("react_event") / post_id_nb / user_id_nb, "0");
         return;
     }
 
@@ -101,8 +109,17 @@ void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
     q.bind(3, user_id_canon);
     q.bind(4, weight);
     if (!q.exec())
+    {
         TIM_TRACE(Error,
                   TIM_TR("Failed to record reaction by '%s' on post '%s' (weight=%d)."_en,
                          "Не удалось сохранить реакцию пользователя '%s' на сообщение '%s' (вес=%d)."_ru),
                   user_id_canon.c_str(), post_id_canon.c_str(), weight);
+        return;
+    }
+
+    // Уведомление в шину: react_event/<post>/<reactor> = <weight>.
+    // Отдельный топик от исходного react/+/+ — чтобы клиенты видели только
+    // подтверждённые (успешно записанные) реакции.
+    _mqtt.publish(tim::mqtt_topic("react_event") / post_id_nb / user_id_nb,
+                  std::to_string(weight));
 }
