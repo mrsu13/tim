@@ -69,6 +69,17 @@ const tim::uuid &tim::tcl::last_post_id() const
     return _d->_last_post_id;
 }
 
+void tim::tcl::set_quit_handler(std::function<void()> handler)
+{
+    _d->_quit_handler = std::move(handler);
+}
+
+void tim::tcl::request_quit()
+{
+    if (_d->_quit_handler)
+        _d->_quit_handler();
+}
+
 bool tim::tcl::evaluating() const
 {
     return _d->_evaluating;

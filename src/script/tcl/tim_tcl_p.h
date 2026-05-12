@@ -3,6 +3,7 @@
 #include "tim_uuid.h"
 
 #include <cassert>
+#include <functional>
 #include <string>
 
 
@@ -38,6 +39,7 @@ struct tcl
     lil_t _lil = nullptr;
     tim::uuid _user_id;
     tim::uuid _last_post_id;
+    std::function<void()> _quit_handler;
     bool _evaluating = false;
     std::string _prompt = "► ";
     std::string _error_msg;

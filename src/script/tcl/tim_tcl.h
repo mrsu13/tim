@@ -4,6 +4,7 @@
 #include "tim_uuid.h"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -40,6 +41,12 @@ public:
     // означает, что ещё ни одно чужое сообщение не получено.
     void set_last_post_id(const tim::uuid &post_id);
     const tim::uuid &last_post_id() const;
+
+    // Обработчик запроса /quit. Владелец (prompt_service) регистрирует
+    // здесь действие, которое закрывает СВОЁ соединение, не трогая
+    // остальной сервер.
+    void set_quit_handler(std::function<void()> handler);
+    void request_quit();
 
     bool evaluating() const override;
     bool eval(const std::string &program, std::string *res = nullptr) override;

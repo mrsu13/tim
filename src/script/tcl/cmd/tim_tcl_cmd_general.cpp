@@ -1,6 +1,6 @@
 #include "tim_tcl_cmd_general.h"
 
-#include "tim_application.h"
+#include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
 #include "tim_translator.h"
 
@@ -11,8 +11,10 @@
 
 // Static
 
-#ifdef TIM_DEBUG
-
+// /quit
+// Закрывает ТЕКУЩУЮ сессию, не трогая остальной сервер. Конкретное
+// действие выполняет prompt_service, регистрирующий обработчик через
+// tcl->set_quit_handler.
 static lil_value_t tim_tcl_cmd_quit(lil_t lil, size_t argc, lil_value_t *argv)
 {
     (void) argv;
@@ -25,12 +27,13 @@ static lil_value_t tim_tcl_cmd_quit(lil_t lil, size_t argc, lil_value_t *argv)
         return nullptr;
     }
 
-    tim::app()->quit();
+    tim::tcl *tcl = (tim::tcl *)lil_get_data(lil);
+    assert(tcl);
+
+    tcl->request_quit();
 
     return nullptr;
 }
-
-#endif
 
 
 // Public
@@ -39,7 +42,5 @@ void tim::tcl_add_general(lil_t lil)
 {
     assert(lil);
 
-#ifdef TIM_DEBUG
     TIM_TCL_REGISTER(lil, quit);
-#endif
 }
