@@ -77,6 +77,7 @@ struct prompt_service
     // в сообщениях имя автора всегда было актуальным.
     tim::mqtt_subscription                      _sub_setnick;
     tim::mqtt_subscription                      _sub_seticon;
+    tim::mqtt_subscription                      _sub_setmotto;
     tim::mqtt_subscription                      _sub_react_event;
     // Свои события subscribe/unsubscribe — чтобы поддерживать актуальным
     // локальный кэш подписок без дополнительного запроса в БД.

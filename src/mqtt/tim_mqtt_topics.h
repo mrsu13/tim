@@ -29,6 +29,7 @@ constexpr std::string_view USER_CONNECT = "user/connect";
 
 constexpr std::string_view USER_SETNICK_FILTER     = "user/setnick/+";
 constexpr std::string_view USER_SETICON_FILTER     = "user/seticon/+";
+constexpr std::string_view USER_SETMOTTO_FILTER    = "user/setmotto/+";
 constexpr std::string_view USER_SETPUBKEY_FILTER   = "user/setpubkey/+";
 constexpr std::string_view USER_SUBSCRIBE_FILTER   = "user/subscribe/+";
 constexpr std::string_view USER_UNSUBSCRIBE_FILTER = "user/unsubscribe/+";
@@ -47,6 +48,9 @@ tim::mqtt_topic user_setnick(const tim::uuid &uid);
 
 // user/seticon/<uuid> — payload: новая иконка пользователя <uuid>.
 tim::mqtt_topic user_seticon(const tim::uuid &uid);
+
+// user/setmotto/<uuid> — payload: новый девиз пользователя <uuid>.
+tim::mqtt_topic user_setmotto(const tim::uuid &uid);
 
 // user/setpubkey/<uuid> — payload: OpenSSH-форма открытого ключа <uuid>.
 tim::mqtt_topic user_setpubkey(const tim::uuid &uid);

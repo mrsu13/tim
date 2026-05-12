@@ -48,8 +48,8 @@ static lil_value_t tim_tcl_cmd_setnick(lil_t lil,
     if (argc != 1)
     {
         lil_set_error(lil,
-                      TIM_TR("Expected nick"_en,
-                             "Ожидаем параметр nick"_ru));
+                      TIM_TR("Expected nick."_en,
+                             "Ожидаем параметр nick."_ru));
         return nullptr;
     }
 
@@ -74,8 +74,8 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     if (argc != 1)
     {
         lil_set_error(lil,
-                      TIM_TR("Expected icon"_en,
-                             "Ожидаем параметр icon"_ru));
+                      TIM_TR("Expected icon."_en,
+                             "Ожидаем параметр icon."_ru));
         return nullptr;
     }
 
@@ -91,6 +91,32 @@ static lil_value_t tim_tcl_cmd_seticon(lil_t lil,
     return nullptr;
 }
 
+static lil_value_t tim_tcl_cmd_setmotto(lil_t lil,
+                                        std::size_t argc,
+                                        lil_value_t *argv)
+{
+    (void) argv;
+
+    if (argc != 1)
+    {
+        lil_set_error(lil,
+                      TIM_TR("Expected motto."_en,
+                             "Ожидаем параметр motto."_ru));
+        return nullptr;
+    }
+
+    const std::string motto = lil_to_string(argv[0]);
+    tim::tcl *tcl = nullptr;
+    tim::prompt_service *prompt = session_or_error(lil, tcl);
+    if (!prompt)
+        return nullptr;
+
+    prompt->mqtt().publish(tim::topics::user_setmotto(prompt->user_id()),
+                           motto.c_str(), motto.size());
+
+    return nullptr;
+}
+
 static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
                                          std::size_t argc,
                                          lil_value_t *argv)
@@ -98,8 +124,8 @@ static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
     if (argc != 1)
     {
         lil_set_error(lil,
-                      TIM_TR("Expected publisher UUID"_en,
-                             "Ожидаем UUID издателя"_ru));
+                      TIM_TR("Expected publisher UUID."_en,
+                             "Ожидаем UUID издателя."_ru));
         return nullptr;
     }
 
@@ -108,8 +134,8 @@ static lil_value_t tim_tcl_cmd_subscribe(lil_t lil,
     if (!publisher.valid())
     {
         lil_set_error(lil,
-                      TIM_TR("Invalid UUID"_en,
-                             "Некорректный UUID"_ru));
+                      TIM_TR("Invalid UUID."_en,
+                             "Некорректный UUID."_ru));
         return nullptr;
     }
 
@@ -131,8 +157,8 @@ static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
     if (argc != 1)
     {
         lil_set_error(lil,
-                      TIM_TR("Expected publisher UUID"_en,
-                             "Ожидаем UUID издателя"_ru));
+                      TIM_TR("Expected publisher UUID."_en,
+                             "Ожидаем UUID издателя."_ru));
         return nullptr;
     }
 
@@ -141,8 +167,8 @@ static lil_value_t tim_tcl_cmd_unsubscribe(lil_t lil,
     if (!publisher.valid())
     {
         lil_set_error(lil,
-                      TIM_TR("Invalid UUID"_en,
-                             "Некорректный UUID"_ru));
+                      TIM_TR("Invalid UUID."_en,
+                             "Некорректный UUID."_ru));
         return nullptr;
     }
 
@@ -169,8 +195,8 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
     if (argc != 0)
     {
         lil_set_error(lil,
-                      TIM_TR("No arguments expected"_en,
-                             "Команда не принимает аргументов"_ru));
+                      TIM_TR("No arguments expected."_en,
+                             "Команда не принимает аргументов."_ru));
         return nullptr;
     }
 
@@ -180,15 +206,15 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
         return nullptr;
 
     tim::sqlite_query q(&prompt->db(),
-                        "SELECT u.id, u.nick, u.icon"
+                        "SELECT u.id, u.nick, u.icon, u.motto"
                         " FROM subscription s JOIN user u ON s.publisher_id = u.id"
                         " WHERE s.subscriber_id = ?"
                         " ORDER BY u.nick, u.id");
     if (!q.prepare())
     {
         lil_set_error(lil,
-                      TIM_TR("Failed to query subscriptions"_en,
-                             "Не удалось получить список подписок"_ru));
+                      TIM_TR("Failed to query subscriptions."_en,
+                             "Не удалось получить список подписок."_ru));
         return nullptr;
     }
     q.bind(1, prompt->user_id().to_string());
@@ -201,7 +227,12 @@ static lil_value_t tim_tcl_cmd_subscriptions(lil_t lil,
         u.id = q.to_string(0);
         u.nick = q.to_string(1);
         u.icon = q.to_string(2);
-        tcl->terminal()->printf("  %s\n", u.title().c_str());
+        u.motto = q.to_string(3);
+        if (u.motto.empty())
+            tcl->terminal()->printf("  %s\n", u.title().c_str());
+        else
+            tcl->terminal()->printf("  %s — %s\n",
+                                    u.title().c_str(), u.motto.c_str());
         ++count;
     }
 
@@ -227,8 +258,8 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
     if (argc != 0)
     {
         lil_set_error(lil,
-                      TIM_TR("No arguments expected"_en,
-                             "Команда не принимает аргументов"_ru));
+                      TIM_TR("No arguments expected."_en,
+                             "Команда не принимает аргументов."_ru));
         return nullptr;
     }
 
@@ -238,15 +269,15 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
         return nullptr;
 
     tim::sqlite_query q(&prompt->db(),
-                        "SELECT u.id, u.nick, u.icon"
+                        "SELECT u.id, u.nick, u.icon, u.motto"
                         " FROM subscription s JOIN user u ON s.subscriber_id = u.id"
                         " WHERE s.publisher_id = ?"
                         " ORDER BY u.nick, u.id");
     if (!q.prepare())
     {
         lil_set_error(lil,
-                      TIM_TR("Failed to query subscribers"_en,
-                             "Не удалось получить список подписчиков"_ru));
+                      TIM_TR("Failed to query subscribers."_en,
+                             "Не удалось получить список подписчиков."_ru));
         return nullptr;
     }
     q.bind(1, prompt->user_id().to_string());
@@ -259,7 +290,12 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
         u.id = q.to_string(0);
         u.nick = q.to_string(1);
         u.icon = q.to_string(2);
-        tcl->terminal()->printf("  %s\n", u.title().c_str());
+        u.motto = q.to_string(3);
+        if (u.motto.empty())
+            tcl->terminal()->printf("  %s\n", u.title().c_str());
+        else
+            tcl->terminal()->printf("  %s — %s\n",
+                                    u.title().c_str(), u.motto.c_str());
         ++count;
     }
 
@@ -283,6 +319,7 @@ void tim::prompt::register_user_cmds(lil_t lil)
 
     TIM_TCL_REGISTER(lil, setnick);
     TIM_TCL_REGISTER(lil, seticon);
+    TIM_TCL_REGISTER(lil, setmotto);
     TIM_TCL_REGISTER(lil, subscribe);
     TIM_TCL_REGISTER(lil, unsubscribe);
     TIM_TCL_REGISTER(lil, subscriptions);

@@ -47,6 +47,10 @@ void tim::p::user_service::subscribe()
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { seticon(topic, data, size); });
 
+    _sub_setmotto = _mqtt.subscribe(tim::topics::USER_SETMOTTO_FILTER,
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
+        { setmotto(topic, data, size); });
+
     _sub_setpubkey = _mqtt.subscribe(tim::topics::USER_SETPUBKEY_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setpubkey(topic, data, size); });
@@ -167,6 +171,33 @@ void tim::p::user_service::seticon(const tim::mqtt_topic &topic,
                          "Ошибка при обновлении иконки у пользователя '%s'."_ru),
                   user_id.to_string().c_str());
 
+}
+
+void tim::p::user_service::setmotto(const tim::mqtt_topic &topic,
+                                    const char *data, std::size_t size)
+{
+    const tim::uuid user_id = std::string(topic.last_level());
+
+    TIM_TRACE(Debug, "Setting motto for '%s' ...",
+              user_id.to_string().c_str());
+
+    tim::sqlite_query q(&_db,
+                        "UPDATE user SET motto = ? WHERE id = ?");
+    if (!q.prepare())
+            TIM_TRACE(Fatal,
+                TIM_TR("Failed to prepare query '%s'."_en,
+                       "Не могу подготовить запрос '%s' к базе данных."_ru),
+                q.sql().c_str());
+
+    const std::string motto(data, size);
+    q.bind(1, motto);
+    q.bind(2, user_id.to_string());
+
+    if (!q.exec())
+        TIM_TRACE(Error,
+                  TIM_TR("Failed to update motto for user '%s'."_en,
+                         "Ошибка при обновлении девиза у пользователя '%s'."_ru),
+                  user_id.to_string().c_str());
 }
 
 void tim::p::user_service::setpubkey(const tim::mqtt_topic &topic,

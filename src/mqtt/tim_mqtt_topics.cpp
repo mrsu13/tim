@@ -24,6 +24,11 @@ tim::mqtt_topic tim::topics::user_seticon(const tim::uuid &uid)
     return tim::mqtt_topic("user/seticon") / nb(uid);
 }
 
+tim::mqtt_topic tim::topics::user_setmotto(const tim::uuid &uid)
+{
+    return tim::mqtt_topic("user/setmotto") / nb(uid);
+}
+
 tim::mqtt_topic tim::topics::user_setpubkey(const tim::uuid &uid)
 {
     return tim::mqtt_topic("user/setpubkey") / nb(uid);

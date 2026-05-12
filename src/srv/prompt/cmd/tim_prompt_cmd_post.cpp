@@ -29,8 +29,8 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
     if (argc > 1)
     {
         lil_set_error(lil,
-                      TIM_TR("Expected optional weight"_en,
-                             "Ожидаем необязательный параметр weight"_ru));
+                      TIM_TR("Expected optional weight."_en,
+                             "Ожидаем необязательный параметр weight."_ru));
         return nullptr;
     }
     if (argc == 1)
@@ -40,8 +40,8 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
         if (!ok)
         {
             lil_set_error(lil,
-                          TIM_TR("Weight must be an integer"_en,
-                                 "weight должен быть целым числом"_ru));
+                          TIM_TR("Weight must be an integer."_en,
+                                 "weight должен быть целым числом."_ru));
             return nullptr;
         }
     }
@@ -62,8 +62,8 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
     if (!prompt->last_seen_post().valid())
     {
         lil_set_error(lil,
-                      TIM_TR("No post to react to yet"_en,
-                             "Нет сообщений, на которые можно отреагировать"_ru));
+                      TIM_TR("No post to react to yet."_en,
+                             "Нет сообщений, на которые можно отреагировать."_ru));
         return nullptr;
     }
 

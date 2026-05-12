@@ -173,21 +173,6 @@ void tim::application::quit()
     _d->_quit = true;
 }
 
-mg_mgr *tim::application::mongoose() const
-{
-    return &_d->_mg;
-}
-
-tim::mqtt_client *tim::application::mqtt() const
-{
-    return _d->_mqtt.get();
-}
-
-tim::sqlite_db *tim::application::db() const
-{
-    return _d->_db.get();
-}
-
 
 // Private
 

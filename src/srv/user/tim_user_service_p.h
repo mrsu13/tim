@@ -27,6 +27,7 @@ struct user_service
     void connect(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void setnick(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void seticon(const tim::mqtt_topic &topic, const char *data, std::size_t size);
+    void setmotto(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void setpubkey(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void subscribe_to(const tim::mqtt_topic &topic, const char *data, std::size_t size);
     void unsubscribe_from(const tim::mqtt_topic &topic, const char *data, std::size_t size);
@@ -38,6 +39,7 @@ struct user_service
     tim::mqtt_subscription _sub_connect;
     tim::mqtt_subscription _sub_setnick;
     tim::mqtt_subscription _sub_seticon;
+    tim::mqtt_subscription _sub_setmotto;
     tim::mqtt_subscription _sub_setpubkey;
     tim::mqtt_subscription _sub_subscribe;
     tim::mqtt_subscription _sub_unsubscribe;

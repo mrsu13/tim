@@ -51,8 +51,8 @@ static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
             if (std::strcmp(lil_to_string(argv[0]), "-nonewline"))
             {
                 lil_set_error(lil,
-                              TIM_TR("When you give two arguments, the first argument must be -nonewline"_en,
-                                     "В случае двух аргументов первым аргументом может быть только -nonewline"_ru));
+                              TIM_TR("When you give two arguments, the first argument must be -nonewline."_en,
+                                     "В случае двух аргументов первым аргументом может быть только -nonewline."_ru));
                 return nullptr;
             }
 
@@ -65,8 +65,8 @@ static lil_value_t tim_tcl_cmd_puts(lil_t lil, size_t argc, lil_value_t *argv)
     }
 
     lil_set_error(lil,
-                  TIM_TR("Invalid number of arguments. Expecting ?-nonewline? string"_en,
-                         "Некорректные аргументы. Ожидается ?-nonewline? string"_ru));
+                  TIM_TR("Invalid number of arguments. Expecting ?-nonewline? string."_en,
+                         "Некорректные аргументы. Ожидается ?-nonewline? string."_ru));
     return nullptr;
 }
 

@@ -11,7 +11,10 @@
 #include <cstring>
 #include <system_error>
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
+#include <sys/socket.h>
 
 
 // Статические помощники
@@ -315,6 +318,25 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
                   err ? err : "");
         ssh_free(session);
         return 0;
+    }
+
+    // TCP keepalive на принятом сокете: без него умерший клиент (обрыв сети,
+    // отсутствие FIN) держит SSH-сессию открытой до системного таймаута TCP
+    // (на Linux это часы). С keepalive мёртвое соединение распознаётся за
+    // десятки секунд: ядро шлёт пробу через _IDLE секунд бездействия и
+    // повторяет _CNT раз с интервалом _INTVL; после чего сокет закрывается
+    // и libssh штатно срабатывает по close-обработчику.
+    const int sock_fd = ssh_get_fd(session);
+    if (sock_fd >= 0)
+    {
+        const int yes = 1;
+        const int idle = 60;
+        const int intvl = 15;
+        const int cnt = 4;
+        setsockopt(sock_fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
     }
 
     auto state = std::make_unique<ssh_session_state>(self);

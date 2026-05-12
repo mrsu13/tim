@@ -4,13 +4,8 @@
 #include <string>
 
 
-struct mg_mgr;
-
 namespace tim
 {
-
-class mqtt_client;
-class sqlite_db;
 
 namespace p
 {
@@ -36,10 +31,6 @@ public:
     void dispatch();
     void exec();
     void quit();
-
-    mg_mgr *mongoose() const;
-    tim::mqtt_client *mqtt() const;
-    tim::sqlite_db *db() const;
 
 private:
 

@@ -130,7 +130,11 @@ bool tim::tcl::eval(const std::string &program, std::string *res)
                      "expression syntax error",
                      TIM_TR("Expression syntax error"_en,
                             "Синтаксическая ошибка в выражении"_ru));
-        _d->_error_msg += '.';
+        // Конечная точка добавляется только если её ещё нет: сообщение от
+        // lil_set_error может уже её содержать (а сообщения от LIL — нет).
+        const char last = _d->_error_msg.back();
+        if (last != '.' && last != '!' && last != '?')
+            _d->_error_msg += '.';
     }
 
     if (ok

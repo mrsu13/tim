@@ -72,8 +72,12 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
         return;
 
     {
+        // INSERT OR IGNORE (а не REPLACE): post.id — UUIDv4, коллизия
+        // астрономически маловероятна, но если она всё-таки случится,
+        // безопаснее сохранить более ранее сообщение и явно сообщить
+        // о потере, чем тихо затереть его новым.
         tim::sqlite_query q(&_db,
-                            "INSERT OR REPLACE INTO post (id, user_id, text) VALUES (?, ?, ?)");
+                            "INSERT OR IGNORE INTO post (id, user_id, text) VALUES (?, ?, ?)");
         if (!q.prepare())
             TIM_TRACE(Fatal,
                       TIM_TR("Failed to prepare database query '%s'."_en,
@@ -90,6 +94,11 @@ void tim::p::post_service::on_post(const tim::mqtt_topic &topic, const char *dat
                       post_id_canon.c_str());
             return;
         }
+        if (_db.change_count() == 0)
+            TIM_TRACE(Warning,
+                      TIM_TR("Post UUID collision: '%s' already exists, dropping new post by '%s'."_en,
+                             "Коллизия UUID сообщения: '%s' уже существует, новое сообщение от '%s' отброшено."_ru),
+                      post_id_canon.c_str(), publisher_id_canon.c_str());
     }
 
     if (!tx.commit())

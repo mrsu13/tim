@@ -108,7 +108,7 @@ tim::user tim::p::prompt_service::load_user(const tim::uuid &id)
     tim::user u;
     u.id = id;
 
-    tim::sqlite_query q(&_db, "SELECT nick, icon FROM user WHERE id = ?");
+    tim::sqlite_query q(&_db, "SELECT nick, icon, motto FROM user WHERE id = ?");
     if (!q.prepare())
     {
         TIM_TRACE(Warning,
@@ -125,6 +125,7 @@ tim::user tim::p::prompt_service::load_user(const tim::uuid &id)
 
     u.nick = q.to_string(0);
     u.icon = q.to_string(1);
+    u.motto = q.to_string(2);
     return u;
 }
 
@@ -237,6 +238,16 @@ void tim::p::prompt_service::load_post_history()
 
 void tim::p::prompt_service::subscribe()
 {
+    // Этот метод вызывается на каждом подключении и повторном подключении
+    // к брокеру. После повторного подключения локальный кэш _subscriptions
+    // мог разойтись с БД: события user/subscribe и user/unsubscribe,
+    // пришедшие в окно отказа брокера, мы пропустили (даже при QoS=1 —
+    // сессия клиента не была персистентной). Перезагружаем кэш из БД,
+    // чтобы метка подписки (звёздочка перед автором) снова отражала
+    // фактическое состояние.
+    _subscriptions.clear();
+    load_subscriptions();
+
     _mqtt.publish(tim::topics::USER_CONNECT, _user.id.to_string());
 
     // Открытый ключ клиента — для аудита и привязки личности к ключу.
@@ -285,6 +296,23 @@ void tim::p::prompt_service::subscribe()
             }
         });
 
+    _sub_setmotto = _mqtt.subscribe(tim::topics::USER_SETMOTTO_FILTER,
+        [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
+        {
+            const tim::uuid uid = std::string(topic.last_level());
+            if (!uid.valid())
+                return;
+            const std::string motto(data, size);
+            if (uid == _user.id)
+                _user.motto = motto;
+            else
+            {
+                tim::user &u = _known_users[uid];
+                u.id = uid;
+                u.motto = motto;
+            }
+        });
+
     _sub_react_event = _mqtt.subscribe(tim::topics::REACT_EVENT_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_react_event(topic, data, size); });
@@ -312,10 +340,14 @@ void tim::p::prompt_service::subscribe()
     _sub_notice = _mqtt.subscribe(tim::topics::session_notice(_user.id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
         {
+            // Прячем строку ввода на время вывода: иначе уведомление
+            // ломает то, что пользователь набирает в этот момент.
+            _shell->hide_input();
             const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::Warning);
             _terminal->cprintf(warning, tim::color::transparent(),
                                "! %.*s\n", (int)size, data);
             _shell->new_line();
+            _shell->show_input();
         });
 }
 
@@ -343,8 +375,10 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
     _last_seen_post = post_id;
     _last_seen_post_author = publisher_id;
 
+    _shell->hide_input();
     render_post(publisher_id, std::string_view(data, size));
     _shell->new_line();
+    _shell->show_input();
 }
 
 void tim::p::prompt_service::render_post(const tim::uuid &publisher_id, std::string_view text)
@@ -421,6 +455,7 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
     const tim::color info = _terminal->theme().colors.at(tim::terminal_color_index::Info);
     const tim::color bg = tim::color::transparent();
 
+    _shell->hide_input();
     if (weight == 0)
     {
         if (is_own_post)
@@ -455,4 +490,5 @@ void tim::p::prompt_service::on_react_event(const tim::mqtt_topic &topic,
     }
 
     _shell->new_line();
+    _shell->show_input();
 }
