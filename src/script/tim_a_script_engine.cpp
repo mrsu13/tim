@@ -9,6 +9,12 @@
 
 /**
  * Конструктор. Сохраняет имя языка и указатель на терминал.
+ *
+ * Базовый класс абстрактный за счёт чисто виртуальных методов, поэтому
+ * конструктор реально вызывается только из наследников.
+ *
+ * \param language Имя языка (например, "Tcl") — для логов и UI.
+ * \param term Терминал, в который команды могут писать.
  */
 tim::a_script_engine::a_script_engine(const std::string &language,
                                       tim::a_terminal *term)
@@ -21,7 +27,7 @@ tim::a_script_engine::a_script_engine(const std::string &language,
     _d->_terminal = term;
 }
 
-/** Деструктор. PIMPL разрушает _d автоматически. */
+/** Виртуальный деструктор. PIMPL разрушает _d автоматически. */
 tim::a_script_engine::~a_script_engine() = default;
 
 /** \return Имя языка скрипт-движка. */
@@ -37,8 +43,12 @@ tim::a_terminal *tim::a_script_engine::terminal() const
 }
 
 /**
- * Реализация autocomplete по умолчанию — пустой список. Наследники
- * (tim::tcl) могут переопределить.
+ * Возвращает список автодополнений для префикса. Реализация по
+ * умолчанию — пустой список; наследники (tim::tcl) могут
+ * переопределить.
+ *
+ * \param prefix Префикс для поиска.
+ * \return Список имён, начинающихся с prefix; пустой по умолчанию.
  */
 std::vector<std::string> tim::a_script_engine::complete(const std::string &prefix) const
 {

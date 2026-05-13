@@ -84,8 +84,11 @@ static lil_value_t tim_tcl_cmd_react(lil_t lil,
 // Public
 
 /**
- * Регистрирует команды, связанные с публикациями (`react`),
- * в указанной LIL-сессии.
+ * Регистрирует команды, связанные с публикациями: /react.
+ *
+ * Команды достают prompt_service через tcl->user_data().
+ *
+ * \param lil LIL-сессия.
  */
 void tim::prompt::register_post_cmds(lil_t lil)
 {

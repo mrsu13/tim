@@ -7,11 +7,12 @@
 #include <cassert>
 
 
-// Public
+// Открытые
 
 /**
- * Конструктор. Подписывает on_ready_read() на сигнал ready_read
- * транспорта \a io.
+ * Конструктор. Подключается к ready_read у \a io.
+ *
+ * \param io Транспорт; должен жить дольше протокола.
  */
 tim::a_protocol::a_protocol(tim::a_io_device *io)
     : data_ready()
@@ -25,7 +26,7 @@ tim::a_protocol::a_protocol(tim::a_io_device *io)
         [d = _d.get()]{ d->on_ready_read(); });
 }
 
-/** Деструктор. PIMPL разрушает _d, _on_ready_read отписывается RAII-ем. */
+/** Виртуальный деструктор. */
 tim::a_protocol::~a_protocol() = default;
 
 /** \return Указатель на транспорт, на который подписан протокол. */
@@ -35,8 +36,10 @@ tim::a_io_device *tim::a_protocol::io() const
 }
 
 /**
- * Удобный перегруз write() для std::string. Пустые строки тихо
- * пропускаются (write на нулевой буфер не имеет смысла).
+ * Сахар write() для std::string.
+ *
+ * \param s Строка для записи.
+ * \return true при успехе.
  */
 bool tim::a_protocol::write_str(const std::string &s)
 {
@@ -46,7 +49,7 @@ bool tim::a_protocol::write_str(const std::string &s)
 }
 
 
-// Private
+// Закрытые
 
 /**
  * Читает накопленные транспортом байты и передаёт во внешний

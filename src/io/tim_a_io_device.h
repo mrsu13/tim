@@ -48,12 +48,6 @@ public:
      */
     virtual bool write(const char *data, std::size_t size) = 0;
 
-    /**
-     * Сахар: write() для std::string.
-     *
-     * \param s Строка для записи.
-     * \return true при успехе.
-     */
     bool write_str(const std::string &s);
 };
 

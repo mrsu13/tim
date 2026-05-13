@@ -2,8 +2,11 @@
 
 
 /**
- * Удобный перегруз write() для std::string. Пустые строки не пишутся —
+ * Сахар: write() для std::string. Пустые строки не пишутся —
  * write(nullptr, 0) на некоторых транспортах не определён.
+ *
+ * \param s Строка для записи.
+ * \return true при успехе.
  */
 bool tim::a_io_device::write_str(const std::string &s)
 {

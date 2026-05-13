@@ -182,7 +182,7 @@ constexpr tim::flags<Enum> tim::flags<Enum>::operator|(Enum f) const
 }
 
 /**
- * Set flags defined by mask \a mask.
+ * Установить флаги, заданные маской \a mask.
  *
  * \see set()
  */
@@ -194,7 +194,7 @@ tim::flags<Enum> &tim::flags<Enum>::operator=(value_type mask)
 }
 
 /**
- * Set flag \a f.
+ * Установить флаг \a f.
  *
  * \see set()
  */

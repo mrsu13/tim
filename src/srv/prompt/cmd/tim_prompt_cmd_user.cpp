@@ -344,9 +344,13 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
 // Public
 
 /**
- * Регистрирует пользовательские Tcl-команды чата (`setnick`, `seticon`,
- * `setmotto`, `subscribe`, `unsubscribe`, `subscriptions`, `subscribers`)
- * в указанной LIL-сессии.
+ * Регистрирует "пользовательские" команды чата в указанной LIL-сессии:
+ * /setnick, /seticon, /setmotto, /subscribe, /unsubscribe, /subscriptions,
+ * /subscribers.
+ *
+ * Команды достают prompt_service через tcl->user_data().
+ *
+ * \param lil LIL-сессия, в которой регистрируются команды.
  */
 void tim::prompt::register_user_cmds(lil_t lil)
 {

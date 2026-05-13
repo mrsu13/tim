@@ -16,11 +16,6 @@ class a_terminal_protocol : public tim::a_protocol
 
 public:
 
-    /**
-     * Конструктор.
-     *
-     * \param io Транспорт; должен жить дольше протокола.
-     */
     explicit a_terminal_protocol(tim::a_io_device *io);
 
     /** \return Тип терминала клиента ($TERM, например "xterm-256color"). */

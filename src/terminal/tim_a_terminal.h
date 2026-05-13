@@ -29,21 +29,12 @@ class a_terminal
 
 public:
 
-    /** Виртуальный деструктор. */
     virtual ~a_terminal();
 
-    /** \return Указатель на нижележащий протокол. */
     tim::a_protocol *protocol() const;
 
-    /** \return Текущая тема (цвета и атрибуты). */
     const tim::terminal_theme &theme() const;
 
-    /**
-     * Устанавливает тему. Существующий вывод не перерисовывается —
-     * новая тема применяется только к последующим printf/cprintf.
-     *
-     * \param theme Новая тема.
-     */
     void set_theme(const tim::terminal_theme &theme);
 
     /** \return Высота окна в строках. */
@@ -78,35 +69,11 @@ public:
     /** Сбрасывает все цвета и атрибуты (ANSI ESC [0m). */
     virtual void reset_colors() = 0;
 
-    /**
-     * Печатает форматированный текст. va_list-вариант.
-     *
-     * \param format printf-формат.
-     * \param args va_list аргументов.
-     * \return Количество записанных символов.
-     */
     int vprintf(const char *format, va_list args);
 
-    /**
-     * Печатает форматированный текст.
-     *
-     * \param format printf-формат.
-     * \param ... Аргументы формата.
-     * \return Количество записанных символов.
-     */
     int printf(const char *format, ... )
                __attribute__ ((format(printf, 2, 3)));
 
-    /**
-     * Печатает форматированный текст указанным цветом текста и фона;
-     * после печати возвращает цвета к прежним.
-     *
-     * \param text_color Цвет текста.
-     * \param bg_color Цвет фона (transparent — без фона).
-     * \param format printf-формат.
-     * \param ... Аргументы формата.
-     * \return Количество записанных символов.
-     */
     int cprintf(const tim::color &text_color,
                 const tim::color &bg_color,
                 const char *format, ... )
@@ -114,11 +81,6 @@ public:
 
 protected:
 
-    /**
-     * Конструктор только для наследников.
-     *
-     * \param proto Терминальный протокол (источник байт и приёмник вывода).
-     */
     explicit a_terminal(tim::a_protocol *proto);
 
 private:

@@ -12,8 +12,15 @@
 #include <thread>
 
 
-// Public
+// Открытые
 
+/**
+ * Конструирует запрос привязанный к БД, с заданным SQL.
+ * prepare() пока не вызывается.
+ *
+ * \param db Указатель на открытую БД. Должна жить дольше запроса.
+ * \param sql SQL-текст с '?' или ':name' плейсхолдерами.
+ */
 tim::sqlite_query::sqlite_query(const tim::sqlite_db *db, const std::string &sql)
     : _d(new tim::p::sqlite_query(db))
 {
@@ -22,21 +29,30 @@ tim::sqlite_query::sqlite_query(const tim::sqlite_db *db, const std::string &sql
     _d->_sql = sql;
 }
 
+/** Деструктор. Освобождает sqlite3_stmt. */
 tim::sqlite_query::~sqlite_query()
 {
     sqlite3_finalize(_d->_stmt);
 }
 
+/** \return Исходный SQL-текст. */
 const std::string &tim::sqlite_query::sql() const
 {
     return _d->_sql;
 }
 
+/** \return true, если sqlite3_stmt уже создан (prepare() был вызван). */
 bool tim::sqlite_query::prepared() const
 {
     return _d->_prepared;
 }
 
+/**
+ * Готовит SQL к выполнению (sqlite3_prepare_v2). Идемпотентно:
+ * повторный вызов на готовом запросе — no-op.
+ *
+ * \return true при успехе, false при ошибке (залогирована).
+ */
 bool tim::sqlite_query::prepare()
 {
     assert(!_d->_stmt && "The query is prepared already.");
@@ -79,11 +95,25 @@ failure:
                     err_msg);
 }
 
+/**
+ * Привязывает bool к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, bool value)
 {
     return bind(index, (int)value);
 }
 
+/**
+ * Привязывает int к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, int value)
 {
     assert(_d->_stmt);
@@ -100,6 +130,13 @@ bool tim::sqlite_query::bind(int index, int value)
     return true;
 }
 
+/**
+ * Привязывает int64 к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, std::int64_t value)
 {
     assert(_d->_stmt);
@@ -117,6 +154,13 @@ bool tim::sqlite_query::bind(int index, std::int64_t value)
     return true;
 }
 
+/**
+ * Привязывает double к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, const double value)
 {
     assert(_d->_stmt);
@@ -134,11 +178,25 @@ bool tim::sqlite_query::bind(int index, const double value)
     return true;
 }
 
+/**
+ * Привязывает float к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, float value)
 {
     return bind(index, (double)value);
 }
 
+/**
+ * Привязывает C-строку к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, const char *value)
 {
     assert(value);
@@ -157,6 +215,13 @@ bool tim::sqlite_query::bind(int index, const char *value)
     return true;
 }
 
+/**
+ * Привязывает std::string к ?-параметру по 1-based индексу.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, const std::string &value)
 {
     assert(_d->_stmt);
@@ -174,6 +239,15 @@ bool tim::sqlite_query::bind(int index, const std::string &value)
     return true;
 }
 
+/**
+ * Привязывает JSON-значение к ?-параметру по 1-based индексу.
+ * Числовые и булевы значения сохраняются как соответствующие
+ * примитивы; остальное — как сериализованная строка.
+ *
+ * \param index 1-based индекс параметра.
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(int index, const nlohmann::json &value)
 {
     switch (value.type())
@@ -199,6 +273,13 @@ bool tim::sqlite_query::bind(int index, const nlohmann::json &value)
     return false;
 }
 
+/**
+ * Привязывает bool к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, bool value)
 {
     assert(_d->_stmt);
@@ -206,6 +287,13 @@ bool tim::sqlite_query::bind(const std::string &key, bool value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает int к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, int value)
 {
     assert(_d->_stmt);
@@ -213,6 +301,13 @@ bool tim::sqlite_query::bind(const std::string &key, int value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает int64 к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, std::int64_t value)
 {
     assert(_d->_stmt);
@@ -220,6 +315,13 @@ bool tim::sqlite_query::bind(const std::string &key, std::int64_t value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает double к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, double value)
 {
     assert(_d->_stmt);
@@ -227,11 +329,25 @@ bool tim::sqlite_query::bind(const std::string &key, double value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает float к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, float value)
 {
     return bind(key, (double)value);
 }
 
+/**
+ * Привязывает C-строку к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, const char *value)
 {
     assert(_d->_stmt);
@@ -239,6 +355,13 @@ bool tim::sqlite_query::bind(const std::string &key, const char *value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает std::string к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, const std::string &value)
 {
     assert(_d->_stmt);
@@ -246,6 +369,13 @@ bool tim::sqlite_query::bind(const std::string &key, const std::string &value)
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Привязывает JSON-значение к :name-параметру.
+ *
+ * \param key Имя параметра (без ':' префикса).
+ * \param value Значение для привязки.
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::bind(const std::string &key, const nlohmann::json &value)
 {
     assert(_d->_stmt);
@@ -253,6 +383,12 @@ bool tim::sqlite_query::bind(const std::string &key, const nlohmann::json &value
     return bind(sqlite3_bind_parameter_index(_d->_stmt, key.c_str()), value);
 }
 
+/**
+ * Сбрасывает все привязки. Полезно перед повторным exec()
+ * с новыми параметрами.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::clear_bindings()
 {
     assert(_d->_stmt);
@@ -269,11 +405,24 @@ bool tim::sqlite_query::clear_bindings()
     return true;
 }
 
+/**
+ * Выполняет non-SELECT (INSERT/UPDATE/DELETE/DDL). Внутренне
+ * делает sqlite3_step и проверяет SQLITE_DONE.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::exec()
 {
     return next();
 }
 
+/**
+ * Шаг по результату SELECT.
+ *
+ * \param done Если не nullptr: выставляется true, когда строк
+ *             больше нет.
+ * \return true при успешном шаге.
+ */
 bool tim::sqlite_query::next(bool *done)
 {
     assert(_d->_stmt);
@@ -324,6 +473,7 @@ failure:
                     sqlite3_errstr(res));
 }
 
+/** \return Общее число столбцов в SELECT. */
 std::size_t tim::sqlite_query::column_count() const
 {
     assert(_d->_stmt);
@@ -331,6 +481,7 @@ std::size_t tim::sqlite_query::column_count() const
     return std::max(0, sqlite3_column_count(_d->_stmt));
 }
 
+/** \return Число столбцов, имеющих фактические данные (BLOB/TEXT). */
 std::size_t tim::sqlite_query::data_column_count() const
 {
     assert(_d->_stmt);
@@ -338,6 +489,12 @@ std::size_t tim::sqlite_query::data_column_count() const
     return std::max(0, sqlite3_data_count(_d->_stmt));
 }
 
+/**
+ * Тип значения в столбце (sqlite3_column_type).
+ *
+ * \param index 0-based индекс столбца.
+ * \return SQLITE_INTEGER / SQLITE_FLOAT / SQLITE_TEXT / SQLITE_BLOB / SQLITE_NULL.
+ */
 int tim::sqlite_query::type(std::size_t index) const
 {
     assert(_d->_stmt);
@@ -345,6 +502,7 @@ int tim::sqlite_query::type(std::size_t index) const
     return sqlite3_column_type(_d->_stmt, index);
 }
 
+/** \return Значение столбца как int. \param index 0-based индекс. */
 int tim::sqlite_query::to_int(int index) const
 {
     assert(_d->_stmt);
@@ -352,6 +510,7 @@ int tim::sqlite_query::to_int(int index) const
     return sqlite3_column_int(_d->_stmt, index);
 }
 
+/** \return Значение столбца как int64. \param index 0-based индекс. */
 int64_t tim::sqlite_query::to_int64(int index) const
 {
     assert(_d->_stmt);
@@ -359,6 +518,7 @@ int64_t tim::sqlite_query::to_int64(int index) const
     return sqlite3_column_int64(_d->_stmt, index);
 }
 
+/** \return Значение столбца как double. \param index 0-based индекс. */
 double tim::sqlite_query::to_double(int index) const
 {
     assert(_d->_stmt);
@@ -366,6 +526,7 @@ double tim::sqlite_query::to_double(int index) const
     return sqlite3_column_double(_d->_stmt, index);
 }
 
+/** \return Значение столбца как std::string. \param index 0-based индекс. */
 std::string tim::sqlite_query::to_string(int index) const
 {
     assert(_d->_stmt);
@@ -376,6 +537,12 @@ std::string tim::sqlite_query::to_string(int index) const
                 : std::string{};
 }
 
+/**
+ * Возвращает sqlite3_stmt в начальное состояние (sqlite3_reset),
+ * сохраняя привязки. Готов к повторному exec()/next().
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_query::reset()
 {
     assert(_d->_stmt);

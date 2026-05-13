@@ -32,17 +32,10 @@ public:
     /** Сигнал: накоплены пользовательские данные. \a data, \a size. */
     tim::signal<const char * /* data */, std::size_t /* size */> data_ready;
 
-    /**
-     * Конструктор. Подключается к ready_read у \a io.
-     *
-     * \param io Транспорт; должен жить дольше протокола.
-     */
     a_protocol(tim::a_io_device *io);
 
-    /** Виртуальный деструктор. */
     virtual ~a_protocol();
 
-    /** \return Указатель на транспорт, на который подписан протокол. */
     tim::a_io_device *io() const;
 
     /**
@@ -55,12 +48,6 @@ public:
      */
     virtual bool write(const char *data, std::size_t size) = 0;
 
-    /**
-     * Сахар write() для std::string.
-     *
-     * \param s Строка для записи.
-     * \return true при успехе.
-     */
     bool write_str(const std::string &s);
 
     /**

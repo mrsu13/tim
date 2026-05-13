@@ -54,11 +54,29 @@ R"({
 }
 
 
+/**
+ * Возвращает путь по умолчанию к файлу конфигурации (~/.tim/config.json).
+ *
+ * \return Абсолютный путь, построенный от $HOME.
+ */
 std::filesystem::path tim::settings::default_config_path()
 {
     return tim_home_dir() / "config.json";
 }
 
+/**
+ * Загружает настройки из JSON-файла.
+ *
+ * Если \a path пустой, читается default_config_path(); файла нет —
+ * создаётся ~/.tim/ и туда пишется шаблон с комментариями.
+ * Если \a path задан, но файла нет — логируется warning и возвращаются
+ * значения по умолчанию (шаблон не пишется: оператор сам выбрал путь).
+ * При ошибке парсинга также возвращаются значения по умолчанию,
+ * процесс не падает.
+ *
+ * \param path Путь к JSON-файлу или пустая строка для default.
+ * \return Заполненная структура tim::settings.
+ */
 tim::settings tim::settings::load_or_create(const std::string &explicit_path)
 {
     tim::settings s;

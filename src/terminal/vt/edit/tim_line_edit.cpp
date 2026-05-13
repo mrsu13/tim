@@ -20,15 +20,17 @@
 /**
  * \class tim::line_edit
  *
- * \brief Terminal line editor. Auto-completing is supported.
+ * \brief Терминальный редактор строки. Поддерживается автодополнение.
  *
- * This implementation is based on <https://github.com/antirez/linenoise.git>.
+ * Эта реализация основана на <https://github.com/antirez/linenoise.git>.
  */
 
 // Public
 
 /**
- * Constructor.
+ * Конструктор.
+ *
+ * \param term Терминал, на котором редактируется строка.
  */
 tim::line_edit::line_edit(tim::vt *term)
     : _d(new tim::p::line_edit())
@@ -39,20 +41,25 @@ tim::line_edit::line_edit(tim::vt *term)
     _d->_cols = _d->_terminal->cols();
 }
 
+/** Виртуальный деструктор. */
 tim::line_edit::~line_edit() = default;
 
+/** \return Терминал, к которому привязан редактор. */
 tim::vt *tim::line_edit::terminal() const
 {
     return _d->_terminal;
 }
 
+/** \return Текущий префикс приглашения (без ANSI-обвязки). */
 std::string tim::line_edit::prompt() const
 {
     return tim::from_wstring(_d->_prompt);
 }
 
 /**
- * Set prompt.
+ * Устанавливает приглашение.
+ *
+ * \param prompt Строка приглашения (может быть с ANSI-кодами).
  */
 void tim::line_edit::set_prompt(const std::string &prompt)
 {
@@ -60,15 +67,17 @@ void tim::line_edit::set_prompt(const std::string &prompt)
     _d->_plen = tim::vt::strlen(prompt);
 }
 
+/** \return true, если в буфере редактирования сейчас нет символов. */
 bool tim::line_edit::empty() const
 {
     return _d->_line.empty();
 }
 
 /**
- * Use this method when get_line() returns status::finished.
+ * Вызывается, когда get_line() вернул status::finished.
  *
- * \return Edited line.
+ * \return Текущее содержимое буфера редактирования (UTF-8) —
+ *         отредактированная строка.
  */
 std::string tim::line_edit::line() const
 {
@@ -76,24 +85,26 @@ std::string tim::line_edit::line() const
 }
 
 /**
- * Start line editing. It will:
+ * Печатает '\\n' и выводит новое приглашение. Используется после
+ * "выталкивания" сообщения сверху.
  *
- * 1. Show the prompt.
- * 2. Return control to the user, that will have to call get_line()
- *    each time there is some data coming from the input stream.
+ * Начинает редактирование строки:
  *
- * Here is how you call the function. You call tim_ledit_new_line(), then you
- * call get_line() until it returns \c status::finished,
- * \c status::exit or \c status::error.
+ * 1. Выводит приглашение.
+ * 2. Возвращает управление вызывающему, который должен вызывать
+ *    get_line() каждый раз, когда из входного потока приходят данные.
  *
- * Between get_line() calls you may call hide() and
- * show() if you want to show some input coming asynchronously,
- * without mixing it with the currently edited line.
+ * Порядок использования: сначала вызывается new_line(), затем
+ * get_line() — до тех пор, пока тот не вернёт \c status::finished,
+ * \c status::exit или \c status::error.
  *
- * \return \c true in the case of success, and \c false if the output
- * writing failed.
+ * Между вызовами get_line() можно вызывать hide() и show(), если
+ * необходимо вывести какой-то приходящий асинхронно ввод, не смешивая
+ * его с текущей редактируемой строкой.
  *
- * \sa tim_ledit_get_line()
+ * \return \c true при успехе и \c false, если запись в выход не удалась.
+ *
+ * \sa get_line()
  */
 bool tim::line_edit::new_line()
 {
@@ -105,8 +116,8 @@ bool tim::line_edit::new_line()
 
     _d->_line.clear();
 
-   /* The latest history entry is always our current buffer, that
-    * initially is just an empty string. */
+   /* Последняя запись истории — это всегда наш текущий буфер;
+    * изначально это просто пустая строка. */
     _d->_history.emplace_back(L"");
 
     const std::string p = prompt();
@@ -116,9 +127,14 @@ bool tim::line_edit::new_line()
 }
 
 /**
- * Call this function to process user input when there are data in the input stream.
+ * Передаёт байты ввода редактору; обновляет состояние и возвращает
+ * статус. Вызывается для обработки пользовательского ввода, когда во
+ * входном потоке появились данные.
  *
- * \return Editing status to check if the line editing is finished.
+ * \param data Сырые байты ввода.
+ * \param size Размер.
+ * \return Статус редактирования — проверять, завершено ли
+ *         редактирование строки.
  *
  * \sa new_line()
  */
@@ -160,8 +176,9 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                 _d->edit_move_end();
             if (_d->_hinter)
             {
-                /* Force a refresh without hints to leave the previous
-                 * line as the user typed it after a newline. */
+                /* Принудительная перерисовка без подсказок, чтобы
+                 * после перевода строки оставить предыдущую строку
+                 * в том виде, в котором её ввёл пользователь. */
                 hinter_fn hc = _d->_hinter;
                 _d->_hinter = nullptr;
                 _d->refresh_line();
@@ -180,8 +197,9 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             _d->edit_backspace();
             break;
 
-        case (char)tim::key::ctrl_d: /* Remove char at right of cursor, or if the
-                                       line is empty, act as end-of-file. */
+        case (char)tim::key::ctrl_d: /* Удалить символ справа от курсора;
+                                        если строка пуста — повести себя
+                                        как end-of-file. */
             if (!_d->_line.empty())
                 _d->edit_delete();
             else
@@ -192,7 +210,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             }
             break;
 
-        case (char)tim::key::ctrl_t: /* Swaps current character with previous. */
+        case (char)tim::key::ctrl_t: /* Меняет местами текущий и предыдущий символы. */
             if (_d->_pos > 0
                     && _d->_pos < _d->_line.size())
             {
@@ -221,23 +239,24 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
             _d->edit_history_next(tim::p::line_edit::history_dir::next);
             break;
 
-        case (char)tim::key::esc: /* Escape sequence */
-            /* Read the next two bytes representing the escape sequence.
-             * Use two calls to handle slow terminals returning the two
-             * chars at different times. */
+        case (char)tim::key::esc: /* ESC-последовательность. */
+            /* Читаем следующие два байта, представляющие
+             * ESC-последовательность. Используем два чтения, чтобы
+             * корректно работать с медленными терминалами, выдающими
+             * символы с задержкой. */
             if (size < 2)
                 break;
             seq[0] = *data++;
             seq[1] = *data++;
             size -= 2;
 
-            /* ESC [ sequences. */
+            /* Последовательности ESC [. */
             if (seq[0] == '[')
             {
                 if (seq[1] >= '0'
                         && seq[1] <= '9')
                 {
-                    /* Extended escape, read additional byte. */
+                    /* Расширенная ESC-последовательность, читаем ещё байт. */
                     if (!size)
                         break;
                     seq[2] = *data++;
@@ -246,7 +265,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                     {
                         switch (seq[1])
                         {
-                            case '3': /* Delete key. */
+                            case '3': /* Клавиша Delete. */
                                 _d->edit_delete();
                                 break;
                         }
@@ -256,68 +275,68 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
                 {
                     switch (seq[1])
                     {
-                        case 'A': /* Up */
+                        case 'A': /* Вверх. */
                             _d->edit_history_next(tim::p::line_edit::history_dir::prev);
                             break;
-                        case 'B': /* Down */
+                        case 'B': /* Вниз. */
                             _d->edit_history_next(tim::p::line_edit::history_dir::next);
                             break;
-                        case 'C': /* Right */
+                        case 'C': /* Вправо. */
                             _d->edit_move_right();
                             break;
-                        case 'D': /* Left */
+                        case 'D': /* Влево. */
                             _d->edit_move_left();
                             break;
-                        case 'H': /* Home */
+                        case 'H': /* Home. */
                             _d->edit_move_home();
                             break;
-                        case 'F': /* End*/
+                        case 'F': /* End. */
                             _d->edit_move_end();
                             break;
                     }
                 }
             }
 
-            /* ESC O sequences. */
+            /* Последовательности ESC O. */
             else if (seq[0] == 'O')
             {
                 switch (seq[1])
                 {
-                    case 'H': /* Home */
+                    case 'H': /* Home. */
                         _d->edit_move_home();
                         break;
-                    case 'F': /* End */
+                    case 'F': /* End. */
                         _d->edit_move_end();
                         break;
                 }
             }
             break;
 
-        case (char)tim::key::ctrl_u: /* Delete the whole line. */
+        case (char)tim::key::ctrl_u: /* Удалить всю строку. */
             _d->_line.clear();
             _d->_pos = 0;
             _d->refresh_line();
             break;
 
-        case (char)tim::key::ctrl_k: /* Delete from current to end of line. */
+        case (char)tim::key::ctrl_k: /* Удалить от текущей позиции до конца строки. */
             _d->_line.erase(_d->_line.cbegin() + _d->_pos, _d->_line.cend());
             _d->refresh_line();
             break;
 
-        case (char)tim::key::ctrl_a: /* Go to the start of the line. */
+        case (char)tim::key::ctrl_a: /* Перейти в начало строки. */
             _d->edit_move_home();
             break;
 
-        case (char)tim::key::ctrl_e: /* Go to the end of the line. */
+        case (char)tim::key::ctrl_e: /* Перейти в конец строки. */
             _d->edit_move_end();
             break;
 
-        case (char)tim::key::ctrl_l: /* Clear screen. */
+        case (char)tim::key::ctrl_l: /* Очистить экран. */
             _d->_terminal->clear();
             _d->refresh_line();
             break;
 
-        case (char)tim::key::ctrl_w: /* Delete previous word. */
+        case (char)tim::key::ctrl_w: /* Удалить предыдущее слово. */
             _d->edit_delete_prev_word();
             break;
 
@@ -329,6 +348,7 @@ tim::line_edit::status tim::line_edit::get_line(const char *data, std::size_t si
     return status::in_progress;
 }
 
+/** Очищает буфер редактирования (как Ctrl+U). */
 void tim::line_edit::clear()
 {
     _d->_line.clear();
@@ -337,7 +357,8 @@ void tim::line_edit::clear()
 }
 
 /**
- * Hide the line being edited to output outgoing data asynchronously.
+ * Прячет приглашение и текущий ввод (стирает с экрана), чтобы вывести
+ * приходящие асинхронно данные.
  *
  * \sa show() new_line()
  */
@@ -351,7 +372,7 @@ void tim::line_edit::hide()
 }
 
 /**
- * Show the line being edited after tim_ledit_hide().
+ * Возвращает приглашение и буфер на экран после hide().
  *
  * \sa hide() new_line()
  */
@@ -365,18 +386,23 @@ void tim::line_edit::show()
 }
 
 /**
- * Enable/disable multi-line editing mode (disabled by default).
-*/
+ * Включает/выключает многострочный режим редактирования (по умолчанию
+ * выключен).
+ *
+ * \param enable true — многострочный, false — однострочный.
+ */
 void tim::line_edit::set_multi_line(bool enable)
 {
     _d->_ml_mode = enable;
 }
 
 /**
- * Enable/disabled "mask mode". When it is enabled, instead of the input that
- * the user is typing, the terminal will just display a corresponding
- * number of asterisks, like "****". This is useful for passwords and other
- * secrets that should not be displayed.
+ * Включает/выключает "маску ввода". Когда она включена, вместо
+ * вводимых пользователем символов терминал отображает соответствующее
+ * количество звёздочек ("****"). Используется для паролей и прочих
+ * секретов, которые не следует показывать.
+ *
+ * \param enable true — маскировать.
  */
 void tim::line_edit::set_mask_mode(bool enable)
 {
@@ -384,9 +410,10 @@ void tim::line_edit::set_mask_mode(bool enable)
 }
 
 /**
- * Store the history to a file.
+ * Сохраняет историю на диск (по одной строке на запись).
  *
- * \return \c true if succeeded, and \c false otherwise.
+ * \param path Путь к файлу истории.
+ * \return \c true при успехе и \c false в противном случае.
  */
 bool tim::line_edit::history_save(const std::filesystem::path &path) const
 {
@@ -421,9 +448,11 @@ bool tim::line_edit::history_save(const std::filesystem::path &path) const
 }
 
 /**
- * Load the history from a file.
+ * Загружает историю с диска. Дубликаты и пустые строки
+ * отфильтровываются.
  *
- * \return \c true if succeeded, and \c false otherwise.
+ * \param path Путь к файлу истории.
+ * \return \c true при успехе и \c false в противном случае.
  */
 bool tim::line_edit::history_load(const std::filesystem::path &path)
 {
@@ -459,7 +488,9 @@ bool tim::line_edit::history_load(const std::filesystem::path &path)
 }
 
 /**
- * Set completing callback.
+ * Регистрирует функцию автодополнения. Вызывается при Tab.
+ *
+ * \param fn Обработчик-автодополнялка.
  */
 void tim::line_edit::set_completer(tim::line_edit::completer_fn fn)
 {
@@ -467,7 +498,10 @@ void tim::line_edit::set_completer(tim::line_edit::completer_fn fn)
 }
 
 /**
- * Set hinting callback.
+ * Регистрирует функцию подсказки. Если задана, её результат
+ * отображается справа от приглашения перед редактируемой строкой.
+ *
+ * \param fn Обработчик подсказки.
  */
 void tim::line_edit::set_hinter(tim::line_edit::hinter_fn fn)
 {
@@ -477,7 +511,7 @@ void tim::line_edit::set_hinter(tim::line_edit::hinter_fn fn)
 // Private
 
 /**
- * Add line to the history.
+ * Добавляет строку в историю.
  */
 void tim::p::line_edit::history_add(const std::wstring &line)
 {
@@ -485,31 +519,32 @@ void tim::p::line_edit::history_add(const std::wstring &line)
         _history.emplace_back(line);
 }
 
-/** Beep, used for completion when there is nothing to complete or when all
-  * the choices were already shown. This method does nothing.
+/** Звуковой сигнал; используется при автодополнении, когда нечего
+  * дополнять или когда все варианты уже показаны. Этот метод ничего
+  * не делает.
   */
 void tim::p::line_edit::beep()
 {
 }
 
-/* Called by complete_line() and show() to render the current
- * edited line with the proposed completion. If the current completion table
- * is already available, it is passed as second argument, otherwise the
- * function will use the callback to obtain it.
+/* Вызывается из complete_line() и show() для отрисовки текущей
+ * редактируемой строки с предлагаемым автодополнением. Если текущая
+ * таблица автодополнений уже доступна, она передаётся вторым
+ * аргументом; иначе функция получит её через обработчик.
  *
- * Flags are the same as refresh_line*(). */
+ * Флаги — те же, что и у refresh_line*(). */
 void tim::p::line_edit::refresh_line_with_completion(const tim::line_edit::completions *c, refresh_flags flags)
 {
     assert(_completer);
 
-    /* Obtain the completions if the caller didn't provide one. */
+    /* Получаем автодополнения, если вызывающий их не предоставил. */
     const tim::line_edit::completions *lc =
             !c
                     || c->empty()
                 ? new tim::line_edit::completions(_completer(tim::from_wstring(_line)))
                 : c;
 
-    /* Show the edited line with completion if possible, or just refresh. */
+    /* Показываем редактируемую строку с автодополнением, если есть, иначе просто перерисовываем. */
     if (_completion_idx < lc->size())
     {
         const std::size_t p = _pos;
@@ -527,17 +562,16 @@ void tim::p::line_edit::refresh_line_with_completion(const tim::line_edit::compl
         delete lc;
 }
 
-/* This is an helper function for edit(), and is called when the
- * user types the [Tab] key in order to complete the string currently in the
- * input.
+/* Вспомогательная функция для edit(), вызывается, когда пользователь
+ * нажимает клавишу [Tab] для дополнения текущего ввода.
  *
- * If the function returns non-zero, the caller should handle the
- * returned value as a byte read from the standard input, and process
- * it as usually: this basically means that the function may return a byte
- * read from the terminal but not processed. Otherwise, if zero is returned,
- * the input was consumed by the complete_line() function to navigate the
- * possible completions, and the caller should read for the next characters
- * from the input stream. */
+ * Если функция возвращает ненулевое значение, вызывающий должен
+ * обрабатывать возвращённое значение как байт, прочитанный со
+ * стандартного ввода, и обрабатывать его как обычно: то есть функция
+ * может вернуть байт, прочитанный с терминала, но не обработанный.
+ * Иначе, если возвращён ноль, ввод был поглощён complete_line() для
+ * навигации по возможным дополнениям, и вызывающий должен прочитать
+ * следующие символы из входного потока. */
 std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
 {
     assert(_completer);
@@ -549,7 +583,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
     {
         beep();
         _in_completion = false;
-        c = 0; // Never allow tabs.
+        c = 0; // Никогда не разрешать табы.
     }
     else
     {
@@ -571,7 +605,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
                 break;
 
             case (char)tim::key::esc:
-                /* Re-show original buffer. */
+                /* Снова показать исходный буфер. */
                 if (_completion_idx < lc.size())
                     refresh_line();
                 _in_completion = false;
@@ -579,7 +613,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
                 break;
 
             default:
-                /* Update buffer and return. */
+                /* Обновить буфер и вернуться. */
                 if (_completion_idx < lc.size())
                 {
                     _line = tim::to_wstring(lc.at(_completion_idx));
@@ -589,7 +623,7 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
                 break;
         }
 
-        /* Show completion or original buffer. */
+        /* Показать автодополнение или исходный буфер. */
         if (_in_completion
                 && _completion_idx < lc.size())
             refresh_line_with_completion(&lc, refresh_flag::all);
@@ -597,11 +631,11 @@ std::int32_t tim::p::line_edit::complete_line(std::int32_t key_pressed)
             refresh_line();
     }
 
-    return c; /* Return last read character */
+    return c; /* Вернуть последний прочитанный символ. */
 }
 
-/** Helper of refresh_single_line() and refresh_multi_line() to show hints
-  * to the right of the prompt.
+/** Помощник refresh_single_line() и refresh_multi_line() для
+  * отображения подсказок справа от приглашения.
   */
 void tim::p::line_edit::refresh_show_hints(std::wstring &s)
 {
@@ -630,12 +664,13 @@ void tim::p::line_edit::refresh_show_hints(std::wstring &s)
     }
 }
 
-/** Single line low level line refresh.
+/** Низкоуровневая перерисовка строки в однострочном режиме.
   *
-  * Rewrite the currently edited line accordingly to the buffer content,
-  * cursor position, and number of columns of the terminal.
+  * Перезаписывает текущую редактируемую строку в соответствии с
+  * содержимым буфера, позицией курсора и количеством колонок терминала.
   *
-  * The function can just remove the old prompt, just write it, or both.
+  * Функция может только удалить старое приглашение, только записать
+  * его, либо сделать и то и другое.
   */
 void tim::p::line_edit::refresh_single_line(refresh_flags flags)
 {
@@ -655,59 +690,60 @@ void tim::p::line_edit::refresh_single_line(refresh_flags flags)
     while (_plen + len > _cols)
         --len;
 
-    /* Cursor to the left edge. */
+    /* Курсор к левому краю. */
     std::wstring ws(L"\r");
 
     if (flags.test(refresh_flag::write))
     {
-        /* Write the prompt and the current buffer content. */
+        /* Записать приглашение и текущее содержимое буфера. */
         ws += _prompt;
         if (_mask_mode)
             ws += std::wstring(_line.size(), L'*');
         else
             ws += std::wstring_view(buf, len);
-        /* Show hits if any. */
+        /* Показать подсказки, если есть. */
         refresh_show_hints(ws);
     }
 
-    /* Erase to right. */
+    /* Стереть до правого края. */
     ws += L"\x1b[0K";
 
     if (flags.test(refresh_flag::write))
     {
-        /* Move cursor to the original position. */
+        /* Вернуть курсор в исходную позицию. */
         ws += tim::to_wstring(tim::sprintf("\r\x1b[%dC", (int)(pos + _plen)));
     }
 
     const std::string s = tim::from_wstring(ws);
     if (!_terminal->protocol()->write(s.c_str(), s.size()))
     {
-        /* Can't recover from write error. */
+        /* От ошибки записи восстановиться невозможно. */
     }
 }
 
-/* Multi line low level line refresh.
+/* Низкоуровневая перерисовка строки в многострочном режиме.
  *
- * Rewrite the currently edited line accordingly to the buffer content,
- * cursor position, and number of columns of the terminal.
+ * Перезаписывает текущую редактируемую строку в соответствии с
+ * содержимым буфера, позицией курсора и количеством колонок терминала.
  *
- * The function can just remove the old prompt, just write it, or both.
+ * Функция может только удалить старое приглашение, только записать его,
+ * либо сделать и то и другое.
  */
 void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
 {
     _cols = _terminal->cols();
 
-    int rows = static_cast<int>((_plen + _line.size() + _cols - 1) / _cols); /* Rows used by current buf. */
-    int rpos = static_cast<int>((_plen + _old_pos + _cols) / _cols); /* Cursor relative row. */
-    int rpos2; /* rpos after refresh. */
-    int col; /* Column position, zero-based. */
+    int rows = static_cast<int>((_plen + _line.size() + _cols - 1) / _cols); /* Количество строк, занятых текущим буфером. */
+    int rpos = static_cast<int>((_plen + _old_pos + _cols) / _cols); /* Относительная строка курсора. */
+    int rpos2; /* rpos после перерисовки. */
+    int col; /* Позиция колонки, нумерация с нуля. */
     int old_rows = static_cast<int>(_old_rows);
     int j;
 
     _old_rows = rows;
 
-    /* First step: clear all the lines used before. To do so start by
-     * going to the last row. */
+    /* Шаг 1: очистить все ранее использованные строки. Для этого
+     * сначала спускаемся на последнюю строку. */
 
     std::wstring ws;
 
@@ -716,31 +752,32 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
         if (old_rows - rpos > 0)
             ws += tim::to_wstring(tim::sprintf("\x1b[%dB", old_rows - rpos));
 
-        /* Now for every row clear it, go up. */
+        /* Теперь для каждой строки очищаем её и поднимаемся вверх. */
         for (j = 0; j < old_rows - 1; ++j)
             ws += L"\r\x1b[0K\x1b[1A";
     }
 
     if (flags.test(refresh_flag::all))
     {
-        /* Clean the top line. */
+        /* Очистить верхнюю строку. */
         ws += L"\r\x1b[0K";
     }
 
     if (flags.test(refresh_flag::write))
     {
-        /* Write the prompt and the current buffer content. */
+        /* Записать приглашение и текущее содержимое буфера. */
         ws += _prompt;
         if (_mask_mode)
             ws += std::wstring(_line.size(), L'*');
         else
             ws += _line;
 
-        /* Show hits if any. */
+        /* Показать подсказки, если есть. */
         refresh_show_hints(ws);
 
-        /* If we are at the very end of the screen with our prompt, we need to
-         * emit a newline and move the prompt to the first column. */
+        /* Если приглашение оказалось в самом конце экрана — нужно
+         * испустить перевод строки и переместить приглашение в первую
+         * колонку. */
         if (_pos
                 && _pos == _line.size()
                 && (_pos + _plen) % _cols == 0)
@@ -751,14 +788,14 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
                 _old_rows = rows;
         }
 
-        /* Move cursor to right position. */
-        rpos2 = static_cast<int>((_plen + _pos + _cols) / _cols); /* Current cursor relative row. */
+        /* Переместить курсор в нужную позицию. */
+        rpos2 = static_cast<int>((_plen + _pos + _cols) / _cols); /* Текущая относительная строка курсора. */
 
-        /* Go up till we reach the expected position. */
+        /* Подниматься вверх, пока не достигнем ожидаемой позиции. */
         if (rows - rpos2 > 0)
             ws += tim::to_wstring(tim::sprintf("\x1b[%dA", rows - rpos2));
 
-        /* Set column. */
+        /* Установить колонку. */
         col = (_plen + (int)_pos) % (int)_cols;
         if (col)
             ws += tim::to_wstring(tim::sprintf("\r\x1b[%dC", col));
@@ -771,12 +808,12 @@ void tim::p::line_edit::refresh_multi_line(refresh_flags flags)
     const std::string s = tim::from_wstring(ws);
     if (!_terminal->protocol()->write(s.c_str(), s.size()))
     {
-        /* Can't recover from write error. */
+        /* От ошибки записи восстановиться невозможно. */
     }
 }
 
-/** Calls the two low level functions refresh_single_line() or
-  * refresh_multi_line() according to the selected mode.
+/** Вызывает одну из двух низкоуровневых функций — refresh_single_line()
+  * или refresh_multi_line() — в зависимости от выбранного режима.
   */
 void tim::p::line_edit::refresh_line_with_flags(refresh_flags flags)
 {
@@ -786,16 +823,16 @@ void tim::p::line_edit::refresh_line_with_flags(refresh_flags flags)
         refresh_single_line(flags);
 }
 
-/** Utility function to avoid specifying refresh_flagg::All all the times.
+/** Утилитарная функция, чтобы не указывать refresh_flag::all каждый раз.
   */
 void tim::p::line_edit::refresh_line()
 {
     refresh_line_with_flags(refresh_flag::all);
 }
 
-/** Insert the character \a c at cursor current position.
+/** Вставка символа \a c в текущую позицию курсора.
  *
- * On error writing to the terminal \c false is returned, otherwise \c true.
+ * При ошибке записи в терминал возвращается \c false, иначе \c true.
  */
 bool tim::p::line_edit::edit_insert(std::int32_t c)
 {
@@ -808,7 +845,7 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
             && _plen + _line.size() < _cols
             && !_hinter)
     {
-        /* Avoid a full update of the line in the trivial case. */
+        /* Избегаем полной перерисовки строки в тривиальном случае. */
         const std::int32_t d = _mask_mode
                             ? '*'
                             : c;
@@ -822,7 +859,7 @@ bool tim::p::line_edit::edit_insert(std::int32_t c)
     return true;
 }
 
-/** Move cursor on the left.
+/** Сдвиг курсора влево.
  */
 void tim::p::line_edit::edit_move_left()
 {
@@ -833,7 +870,7 @@ void tim::p::line_edit::edit_move_left()
     }
 }
 
-/** Move cursor on the right.
+/** Сдвиг курсора вправо.
  */
 void tim::p::line_edit::edit_move_right()
 {
@@ -844,7 +881,7 @@ void tim::p::line_edit::edit_move_right()
     }
 }
 
-/** Move cursor to the start of the line.
+/** Перемещение курсора в начало строки.
  */
 void tim::p::line_edit::edit_move_home()
 {
@@ -855,7 +892,7 @@ void tim::p::line_edit::edit_move_home()
     }
 }
 
-/** Move cursor to the end of the line.
+/** Перемещение курсора в конец строки.
  */
 void tim::p::line_edit::edit_move_end()
 {
@@ -866,17 +903,17 @@ void tim::p::line_edit::edit_move_end()
     }
 }
 
-/** Substitute the currently edited line with the next or previous history
- * entry as specified by \a dir.
+/** Подставляет в текущую редактируемую строку следующую или предыдущую
+ * запись истории, в зависимости от \a dir.
  */
 void tim::p::line_edit::edit_history_next(history_dir dir)
 {
     if (_history.size() > 1)
     {
-        /* Update the current history entry before to
-         * overwrite it with the next one. */
+        /* Обновляем текущую запись истории, прежде чем перезаписать
+         * её следующей. */
         _history[_history.size() - 1 - _history_idx] = _line;
-        /* Show the new entry. */
+        /* Показываем новую запись. */
         _history_idx +=
             dir == history_dir::prev
                 ? 1
@@ -898,8 +935,8 @@ void tim::p::line_edit::edit_history_next(history_dir dir)
     }
 }
 
-/** Delete the character at the right of the cursor without altering the cursor
-  * position. Basically this is what happens with the [Delete] keyboard key.
+/** Удаление символа справа от курсора без изменения позиции курсора.
+  * Соответствует поведению клавиши [Delete] на клавиатуре.
   */
 void tim::p::line_edit::edit_delete()
 {
@@ -911,7 +948,7 @@ void tim::p::line_edit::edit_delete()
     }
 }
 
-/** Backspace implementation.
+/** Реализация Backspace.
  */
 void tim::p::line_edit::edit_backspace()
 {
@@ -924,8 +961,7 @@ void tim::p::line_edit::edit_backspace()
     }
 }
 
-/** Delete the previous word, maintaining the cursor at the start of the
-  * current word.
+/** Удаляет предыдущее слово, оставляя курсор в начале текущего слова.
   */
 void tim::p::line_edit::edit_delete_prev_word()
 {

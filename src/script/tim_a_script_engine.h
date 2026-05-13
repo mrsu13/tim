@@ -31,24 +31,13 @@ class a_script_engine
 
 public:
 
-    /**
-     * Конструктор только для наследников через protected-видимость
-     * (тут public — но базовый класс абстрактный за счёт виртуальных
-     * методов).
-     *
-     * \param language Имя языка (например, "Tcl") — для логов и UI.
-     * \param term Терминал, в который команды могут писать.
-     */
     explicit a_script_engine(const std::string &language,
                              tim::a_terminal *term);
 
-    /** Виртуальный деструктор. */
     virtual ~a_script_engine();
 
-    /** \return Имя языка скрипт-движка. */
     const std::string &language() const;
 
-    /** \return Терминал, к которому привязан движок. */
     tim::a_terminal *terminal() const;
 
     /** \return true, если сейчас выполняется eval(). */
@@ -77,12 +66,6 @@ public:
     /** \return Позиция ошибки в исходнике. */
     virtual std::size_t error_pos() const = 0;
 
-    /**
-     * Возвращает список автодополнений для префикса.
-     *
-     * \param prefix Префикс для поиска.
-     * \return Список имён, начинающихся с prefix; пустой по умолчанию.
-     */
     virtual std::vector<std::string> complete(const std::string &prefix) const;
 
     /** \return Множество зарезервированных ключевых слов языка. */

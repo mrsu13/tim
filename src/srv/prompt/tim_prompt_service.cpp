@@ -24,10 +24,15 @@
 // Открытые
 
 /**
- * Конструирует чат-сессию: поднимает SSH-протокол, VT-терминал,
- * Tcl-интерпретатор и prompt_shell; регистрирует команды (/setnick,
- * /react и т.п.); печатает историю постов; подписывает обработчики
- * данных и сигнал connected.
+ * Конструктор. Поднимает терминал, Tcl и подписки.
+ *
+ * \param info Параметры SSH-сессии (terminal, user_id, размеры).
+ * \param mqtt MQTT-клиент приложения; должен жить дольше сессии.
+ * \param db Подключение к БД; должно жить дольше сессии.
+ * \param dispatch_handler Обработчик, который Tcl-интерпретатор будет
+ *                         вызывать между операторами для кручения
+ *                         внешних event-loop-ов. Обычно
+ *                         application::dispatch().
  */
 tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
                                     tim::mqtt_client &mqtt,
@@ -84,11 +89,12 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
         _d->subscribe();
 }
 
+/** Деструктор. Останавливает Tcl, рвёт подписки. */
 tim::prompt_service::~prompt_service() = default;
 
 /**
- * Прерывает активный Tcl-скрипт. Вызов lil_break_run в неактивном
- * состоянии "съел" бы следующий eval — отсюда проверка evaluating().
+ * Прерывает активный Tcl-скрипт сессии. Вызывается ssh_inetd на
+ * завершении сервера, чтобы /while 1 {} не блокировал выход.
  */
 void tim::prompt_service::interrupt() noexcept
 {
@@ -99,19 +105,29 @@ void tim::prompt_service::interrupt() noexcept
         _d->_tcl->break_eval();
 }
 
-/** \return UUID последнего увиденного в этой сессии сообщения. */
+/**
+ * \return UUID последнего сообщения, увиденного в этой сессии
+ *         (от другого пользователя или из истории). Команда /react
+ *         использует его как неявную цель.
+ */
 const tim::uuid &tim::prompt_service::last_seen_post() const noexcept
 {
     return _d->_last_seen_post;
 }
 
-/** \return MQTT-клиент сессии. */
+/**
+ * \return MQTT-клиент сессии. Доступ для Tcl-команд через
+ *         tcl->user_data() → prompt_service.
+ */
 tim::mqtt_client &tim::prompt_service::mqtt() noexcept
 {
     return _d->_mqtt;
 }
 
-/** \return Подключение к БД сессии. */
+/**
+ * \return Подключение к БД сессии. Доступ для Tcl-команд через
+ *         tcl->user_data() → prompt_service.
+ */
 tim::sqlite_db &tim::prompt_service::db() noexcept
 {
     return _d->_db;

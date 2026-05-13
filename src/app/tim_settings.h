@@ -34,26 +34,8 @@ struct settings
     /** Язык, на котором TIM_TR выдаёт пользовательские сообщения. */
     tim::language         language  = tim::language::ru_ru;
 
-    /**
-     * Возвращает путь по умолчанию к файлу конфигурации (~/.tim/config.json).
-     *
-     * \return Абсолютный путь, построенный от $HOME.
-     */
     static std::filesystem::path default_config_path();
 
-    /**
-     * Загружает настройки из JSON-файла.
-     *
-     * Если \a path пустой, читается default_config_path(); файла нет —
-     * создаётся ~/.tim/ и туда пишется шаблон с комментариями.
-     * Если \a path задан, но файла нет — логируется warning и возвращаются
-     * значения по умолчанию (шаблон не пишется: оператор сам выбрал путь).
-     * При ошибке парсинга также возвращаются значения по умолчанию,
-     * процесс не падает.
-     *
-     * \param path Путь к JSON-файлу или пустая строка для default.
-     * \return Заполненная структура tim::settings.
-     */
     static tim::settings load_or_create(const std::string &path = {});
 };
 

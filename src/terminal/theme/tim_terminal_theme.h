@@ -16,7 +16,6 @@ struct terminal_theme
     tim::terminal_color_theme colors;
 };
 
-/** Готовая тёмная тема (определена в tim_terminal_theme.cpp). */
 extern const terminal_theme TERMINAL_THEME_DARK;
 
 }

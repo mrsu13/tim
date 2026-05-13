@@ -30,9 +30,11 @@
 // Public
 
 /**
- * Конструктор приложения: загружает настройки, поднимает подсистемы
- * (MQTT, БД, SSH-inetd, серверные сервисы) и регистрирует обработчики
- * SIGINT/SIGTERM. Все шаги выстроены по жёсткому порядку — см. внутри.
+ * Создаёт приложение и инициализирует все подсистемы.
+ *
+ * \param config_path Путь к JSON-файлу настроек. Пусто = путь
+ *                    по умолчанию (~/.tim/config.json). Используется
+ *                    для пробрасывания аргумента --config из main().
  */
 tim::application::application(const std::string &config_path)
     : _d(new tim::p::application())
@@ -134,8 +136,8 @@ tim::application::application(const std::string &config_path)
 }
 
 /**
- * Деструктор. Сворачивает подсистемы в порядке, обратном
- * конструированию, и возвращает прежние обработчики SIGINT/SIGTERM.
+ * Сворачивает подсистемы в обратном порядке и освобождает ресурсы
+ * libmongoose. Восстанавливает прежние signal-обработчики SIGINT/SIGTERM.
  */
 tim::application::~application()
 {
@@ -156,39 +158,55 @@ tim::application::~application()
 #endif
 }
 
-/** \return Имя приложения. */
+/** \return Имя приложения (например, "tim"). */
 const std::string &tim::application::name()
 {
     return tim::p::application::name();
 }
 
-/** Запоминает имя приложения. \param name Новое имя. */
+/**
+ * Выставляет имя приложения. Должно быть вызвано один раз до
+ * конструирования application — используется для размещения данных.
+ *
+ * \param name Новое имя приложения.
+ */
 void tim::application::set_name(const std::string &name)
 {
     tim::p::application::name() = name;
 }
 
-/** \return Имя организации. */
+/** \return Имя организации (например, "mrsu"). */
 const std::string &tim::application::org_name()
 {
     return tim::p::application::org_name();
 }
 
-/** Запоминает имя организации. \param name Новое имя. */
+/**
+ * Выставляет имя организации. Должно быть вызвано один раз до
+ * конструирования application.
+ *
+ * \param name Новое имя организации.
+ */
 void tim::application::set_org_name(const std::string &name)
 {
     tim::p::application::org_name() = name;
 }
 
-/** \return Рабочий каталог приложения. */
+/**
+ * \return Каталог, в котором живут БД, SSH host-key, история шелла
+ *         и TLS-сертификаты. Выставляется в конструкторе application
+ *         из tim::settings::load_or_create(); после этого доступен
+ *         как глобальная константа времени жизни приложения.
+ */
 const std::filesystem::path &tim::application::data_dir()
 {
     return tim::p::application::data_dir();
 }
 
 /**
- * Один тик event-loop без блокировки. Прокручивает mongoose и
- * libssh; если выставлен флаг _quit, прерывает все живые сессии.
+ * Один шаг event-loop без блокировки. Вызывается из DISPATCH-обработчика
+ * LIL между Tcl-операторами, чтобы внешние подсистемы продолжали тикать
+ * во время работы скрипта.
  */
 void tim::application::dispatch()
 {
@@ -207,7 +225,7 @@ void tim::application::dispatch()
 
 /**
  * Основной цикл приложения. Чередует mg_mgr_poll и ssh_inetd::dispatch
- * с квантом 50 мс до выставления _quit.
+ * с квантом 50 мс. Возвращается, когда quit() выставил флаг выхода.
  */
 void tim::application::exec()
 {
@@ -222,7 +240,10 @@ void tim::application::exec()
     }
 }
 
-/** Запрашивает выход; срабатывает на следующем тике exec(). */
+/**
+ * Запрашивает выход из exec(); срабатывает на следующем кванте цикла.
+ * Также используется обработчиком SIGINT/SIGTERM.
+ */
 void tim::application::quit()
 {
     _d->_quit = true;

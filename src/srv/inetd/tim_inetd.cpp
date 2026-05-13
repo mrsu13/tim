@@ -3,6 +3,11 @@
 
 // Защищённые
 
+/**
+ * Конструктор только для наследников.
+ *
+ * \param name Имя сервиса (используется в логах).
+ */
 tim::inetd::inetd(const std::string &name)
     : tim::service(name)
 {
@@ -11,4 +16,5 @@ tim::inetd::inetd(const std::string &name)
 
 // Открытые
 
+/** Виртуальный деструктор для полиморфного удаления. */
 tim::inetd::~inetd() = default;

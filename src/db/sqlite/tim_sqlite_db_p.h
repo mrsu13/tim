@@ -40,7 +40,7 @@ struct sqlite_db
     static bool close_db(sqlite3 *db);
 
     /**
-     * Callback для sqlite3_trace_v2: пишет SQL-стейтменты в лог.
+     * Обработчик для sqlite3_trace_v2: пишет SQL-стейтменты в лог.
      *
      * \param event Тип события sqlite (SQLITE_TRACE_*).
      * \param self Указатель на tim::sqlite_db; не используется.
@@ -51,7 +51,7 @@ struct sqlite_db
     static int trace(unsigned event, void *self, void *p, void *x);
 
     /**
-     * Callback для sqlite3_progress_handler — даёт возможность прерывать
+     * Обработчик для sqlite3_progress_handler — даёт возможность прерывать
      * долгие запросы.
      *
      * \param self Указатель на tim::sqlite_db; не используется.

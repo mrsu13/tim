@@ -19,8 +19,11 @@ static const int TIM_MQTT_QOS = 1;
 // Открытые
 
 /**
- * Конструктор. Запоминает mongoose-менеджер; реальное соединение
+ * Конструктор. Не делает сетевых операций; реальное соединение
  * с брокером открывается в start().
+ *
+ * \param mg Mongoose-менеджер, владелец таймеров и соединений.
+ *           Должен жить дольше mqtt_client.
  */
 tim::mqtt_client::mqtt_client(mg_mgr *mg)
     : connected{}
@@ -31,17 +34,23 @@ tim::mqtt_client::mqtt_client(mg_mgr *mg)
     _d->_mg = mg;
 }
 
-/**
- * Деструктор. Закрывает соединение и таймер через stop().
- */
+/** Деструктор; вызывает stop() при необходимости. */
 tim::mqtt_client::~mqtt_client()
 {
     stop();
 }
 
 /**
- * Запускает периодический таймер: при первом тике он попытается
- * подключиться к брокеру, при последующих — слать keep-alive PING.
+ * Запускает периодический таймер для подключения и keep-alive:
+ * при первом тике он попытается подключиться к брокеру, при
+ * последующих — слать keep-alive PING. Сетевые ошибки и
+ * недоступность брокера не считаются синхронными ошибками —
+ * таймер повторит попытку на следующем тике.
+ *
+ * \param url URL брокера: mqtts:// (TLS) или mqtt:// (без TLS).
+ * \param ping_interval Период keep-alive PING.
+ * \return false при синхронной ошибке (например, не удалось создать
+ *         таймер); true при успешной постановке таймера.
  */
 bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds ping_interval)
 {
@@ -71,8 +80,8 @@ bool tim::mqtt_client::start(std::string_view url, const std::chrono::seconds pi
 }
 
 /**
- * Останавливает таймер и инициирует закрытие живого соединения.
- * Идемпотентно: повторный вызов на остановленном клиенте — no-op.
+ * Останавливает таймер и закрывает текущее соединение. Идемпотентно:
+ * повторный вызов на остановленном клиенте — no-op.
  */
 void tim::mqtt_client::stop()
 {
@@ -95,15 +104,21 @@ void tim::mqtt_client::stop()
     _d->_url.clear();
 }
 
-/** \return Установлено ли сейчас соединение и завершён MQTT-handshake. */
+/** \return true, если MQTT-handshake завершился и соединение живо. */
 bool tim::mqtt_client::is_connected() const
 {
     return _d->_connected;
 }
 
 /**
- * Публикует сообщение в топик. Если соединение не установлено, sub
+ * Публикует сообщение в топик. Если соединение не установлено,
  * mg_mqtt_pub на nullptr-соединении тихо отбрасывает сообщение.
+ *
+ * \param topic MQTT-топик публикации.
+ * \param data Указатель на полезную нагрузку.
+ * \param size Размер полезной нагрузки в байтах.
+ * \param qos QoS уровень (0/1/2). По умолчанию 1.
+ * \param retain Retain-флаг (брокер запомнит последнее сообщение).
  */
 void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                const char *data, std::size_t size,
@@ -128,7 +143,13 @@ void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
 }
 
 /**
- * Перегруз publish() для string_view; делегирует на основной публишер.
+ * Удобный перегруз publish() для string_view нагрузки; делегирует
+ * на основной публишер.
+ *
+ * \param topic MQTT-топик публикации.
+ * \param payload Полезная нагрузка.
+ * \param qos QoS уровень. По умолчанию 1.
+ * \param retain Retain-флаг.
  */
 void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                std::string_view payload,
@@ -139,8 +160,15 @@ void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
 }
 
 /**
- * Регистрирует подписчика в списке и вызывает mg_mqtt_sub. Возвращает
- * RAII-токен, который отзовёт подписку при разрушении.
+ * Подписывается на топик/фильтр у брокера: регистрирует подписчика
+ * в списке и вызывает mg_mqtt_sub. Возвращает RAII-токен, который
+ * отзовёт подписку при разрушении.
+ *
+ * \param topic_filter Фильтр (поддерживаются + и #).
+ * \param mh Обработчик входящих сообщений, удовлетворяющих фильтру.
+ * \param qos QoS уровень подписки. По умолчанию 1.
+ * \return RAII-токен подписки; при разрушении автоматически
+ *         отписывается. [[nodiscard]] — нельзя терять токен молча.
  */
 tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_filter,
                                                    message_handler mh,
@@ -166,8 +194,11 @@ tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_
 }
 
 /**
- * Удаляет подписчика из списка по id. Вызывается деструктором
- * mqtt_subscription; на остановленном клиенте безопасен.
+ * Снимает подписку по идентификатору: удаляет подписчика из списка
+ * по id. Вызывается деструктором mqtt_subscription; на остановленном
+ * клиенте безопасен.
+ *
+ * \param id Идентификатор подписки.
  */
 void tim::mqtt_client::unsubscribe(std::size_t id)
 {
@@ -328,7 +359,7 @@ void tim::p::mqtt_client::ping(void *data)
         .message = mg_str("disconnected"),
         .qos = TIM_MQTT_QOS,
         .version = 5,
-        .keepalive = 0, // Do not disconnect.
+        .keepalive = 0, // Не разрывать соединение.
         .clean = true
     };
 

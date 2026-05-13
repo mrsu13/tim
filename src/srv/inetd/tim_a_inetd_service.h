@@ -31,11 +31,6 @@ public:
 
 protected:
 
-    /**
-     * Конструктор только для наследников.
-     *
-     * \param name Имя сервиса (используется в логах).
-     */
     explicit a_inetd_service(const std::string &name);
 };
 

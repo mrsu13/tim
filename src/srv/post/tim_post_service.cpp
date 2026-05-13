@@ -17,8 +17,11 @@
 // Public
 
 /**
- * Создаёт сервис и подписывает слот connected. Слот повторно выдаёт
- * MQTT-подписку при первом и каждом последующем подключении.
+ * Конструирует сервис; подписывается на MQTT при наличии соединения,
+ * иначе ждёт первого сигнала connected.
+ *
+ * \param mqtt MQTT-клиент; должен жить дольше сервиса.
+ * \param db Подключение к БД; должно жить дольше сервиса.
  */
 tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("post")
@@ -32,6 +35,7 @@ tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
         _d->subscribe();
 }
 
+/** Деструктор. Подписки и сигналы закрываются через RAII-токены. */
 tim::post_service::~post_service() = default;
 
 

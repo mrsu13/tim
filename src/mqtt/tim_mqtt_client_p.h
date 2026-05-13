@@ -70,7 +70,7 @@ struct mqtt_client
     {
         std::size_t id;                              ///< Идентификатор подписки.
         tim::mqtt_topic filter;                      ///< Фильтр подписки (с + и/или #).
-        tim::mqtt_client::message_handler handler;   ///< Колбэк-обработчик входящих сообщений.
+        tim::mqtt_client::message_handler handler;   ///< Обработчик входящих сообщений.
     };
     /** Тип списка подписчиков. */
     using subscribers = std::vector<subscriber_entry>;

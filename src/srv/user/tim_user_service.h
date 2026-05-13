@@ -29,15 +29,8 @@ class user_service : public tim::service
 
 public:
 
-    /**
-     * Конструирует сервис и подписывается на MQTT.
-     *
-     * \param mqtt MQTT-клиент; должен жить дольше сервиса.
-     * \param db Подключение к БД; должно жить дольше сервиса.
-     */
     user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db);
 
-    /** Деструктор. */
     ~user_service();
 
 private:

@@ -31,7 +31,7 @@ static const tim::color VT_PALETTE256[] =
     "#008080",
     "#C0C0C0",
 
-    // Equivalent "bright" versions of original 8 colors.
+    // Эквивалентные "яркие" версии исходных 8 цветов.
     "#808080",
     "#FF0000",
     "#00FF00",
@@ -41,7 +41,7 @@ static const tim::color VT_PALETTE256[] =
     "#00FFFF",
     "#FFFFFF",
 
-    // Strictly ascending.
+    // Строго по возрастанию.
     "#000000",
     "#00005F",
     "#000087",
@@ -259,7 +259,7 @@ static const tim::color VT_PALETTE256[] =
     "#FFFFD7",
     "#FFFFFF",
 
-    // Gray-scale range.
+    // Диапазон оттенков серого.
     "#080808",
     "#121212",
     "#1C1C1C",
@@ -293,6 +293,9 @@ static const tim::color VT_PALETTE256[] =
 
 /**
  * Конструктор. Запоминает указатель на терминальный протокол.
+ *
+ * \param proto Терминальный протокол (источник $TERM/rows/cols
+ *              и приёмник байт).
  */
 tim::vt::vt(tim::a_terminal_protocol *proto)
     : tim::a_terminal(proto)
@@ -301,24 +304,24 @@ tim::vt::vt(tim::a_terminal_protocol *proto)
     _d->_term_proto = proto;
 }
 
-/** Деструктор по умолчанию. */
+/** Деструктор. */
 tim::vt::~vt() = default;
 
-/** \return Высота окна клиента; не меньше 10 (защита от 0). */
+/** \return Высота окна в строках (берётся из proto); не меньше 10 (защита от 0). */
 std::size_t tim::vt::rows() const
 {
     return std::max(10UL, _d->_term_proto->rows());
 }
 
-/** \return Ширина окна клиента; не меньше 20 (защита от 0). */
+/** \return Ширина окна в колонках (берётся из proto); не меньше 20 (защита от 0). */
 std::size_t tim::vt::cols() const
 {
     return std::max(20UL, _d->_term_proto->cols());
 }
 
 /**
- * Шлёт в терминал ANSI-последовательность очистки экрана и перевода
- * курсора в (1, 1): ESC [H ESC [2J.
+ * Очищает экран и переводит курсор в (1, 1). Шлёт в терминал
+ * ANSI-последовательность: ESC [H ESC [2J.
  */
 void tim::vt::clear()
 {
@@ -326,15 +329,18 @@ void tim::vt::clear()
     protocol()->write(cmd, sizeof(cmd) - 1);
 }
 
-/** \return Размер палитры терминала (256). */
+/** \return Размер палитры терминала (256 для xterm-256color). */
 std::size_t tim::vt::color_count() const
 {
     return sizeof(tim::VT_PALETTE256) / sizeof(tim::VT_PALETTE256[0]);
 }
 
 /**
- * \return Цвет из палитры по индексу. Индекс берётся по модулю
- *         color_count(), чтобы не выйти за границу.
+ * Цвет из палитры терминала по индексу. Индекс берётся по модулю
+ * color_count(), чтобы не выйти за границу.
+ *
+ * \param index 0..color_count()-1.
+ * \return RGBA-цвет.
  */
 tim::color tim::vt::color(std::size_t index) const
 {
@@ -342,8 +348,10 @@ tim::color tim::vt::color(std::size_t index) const
 }
 
 /**
- * Устанавливает цвет текста через ANSI SGR ESC [38;2;R;G;Bm
+ * Устанавливает цвет текста (RGB) через ANSI SGR ESC [38;2;R;G;Bm
  * (true-color). Пустой цвет (transparent) не отправляет ничего.
+ *
+ * \param c Цвет.
  */
 void tim::vt::set_color(const tim::color &c)
 {
@@ -351,21 +359,23 @@ void tim::vt::set_color(const tim::color &c)
         tim::vt::printf("\x1b[38;2;%u;%u;%um", c.r, c.g, c.b);
 }
 
-/** Устанавливает цвет текста по индексу палитры. */
+/** Устанавливает цвет текста по индексу палитры. \param index Индекс. */
 void tim::vt::set_color(std::size_t index)
 {
     set_color(color(index));
 }
 
-/** Возвращает цвет текста к default (ANSI SGR ESC [39m). */
+/** Возвращает цвет текста к default-цвету темы (ANSI SGR ESC [39m). */
 void tim::vt::set_default_color()
 {
     protocol()->write("\x1b[39m", 5);
 }
 
 /**
- * Устанавливает цвет фона через ANSI SGR ESC [48;2;R;G;Bm
+ * Устанавливает цвет фона (RGB) через ANSI SGR ESC [48;2;R;G;Bm
  * (true-color). Пустой цвет (transparent) не отправляет ничего.
+ *
+ * \param c Цвет.
  */
 void tim::vt::set_bg_color(const tim::color &c)
 {
@@ -373,20 +383,20 @@ void tim::vt::set_bg_color(const tim::color &c)
         tim::vt::printf("\x1b[48;2;%u;%u;%um", c.r, c.g, c.b);
 }
 
-/** Устанавливает цвет фона по индексу палитры. */
+/** Устанавливает цвет фона по индексу палитры. \param index Индекс. */
 void tim::vt::set_bg_color(std::size_t index)
 {
     set_bg_color(color(index));
 }
 
-/** Включает reverse video (ANSI SGR ESC [7m). */
+/** Меняет местами текст и фон (включает reverse video, ANSI SGR ESC [7m). */
 void tim::vt::reverse_colors()
 {
     protocol()->write("\x1b[7m", 4);
 }
 
 /**
- * Сбрасывает все SGR-атрибуты (ANSI ESC [0m).
+ * Сбрасывает цвета и атрибуты (все SGR-атрибуты — ANSI ESC [0m).
  */
 void tim::vt::reset_colors()
 {
@@ -395,9 +405,16 @@ void tim::vt::reset_colors()
 }
 
 /**
- * Оборачивает строку в SGR-последовательности для заданных цветов
- * и завершает её ESC [0m. Удобно для построения буферов, которые
- * потом печатаются как одно целое.
+ * Возвращает строку с ANSI-обвязкой цветов (для отложенного вывода
+ * через printf и сохранения в буфер). Оборачивает строку в
+ * SGR-последовательности для заданных цветов и завершает её ESC [0m.
+ * Удобно для построения буферов, которые потом печатаются как одно
+ * целое.
+ *
+ * \param s Исходная строка.
+ * \param text_color Цвет текста.
+ * \param bg_color Цвет фона (пустой/transparent — без фона).
+ * \return Строка с ESC-кодами вокруг \a s.
  */
 std::string tim::vt::colorized(const std::string &s,
                                const tim::color &text_color,
@@ -421,8 +438,9 @@ std::string tim::vt::colorized(const std::string &s,
 }
 
 /**
- * Считает видимые символы строки, не учитывая ANSI ESC-обвязку.
- * Используется для центрирования/выравнивания colorized-строк.
+ * Длина строки без учёта ANSI ESC-кодов (visual-aware). Считает
+ * видимые символы строки, не учитывая ANSI ESC-обвязку. Используется
+ * для центрирования/выравнивания colorized-строк.
  *
  * \param s Строка, возможно содержащая SGR-последовательности
  *          вида "\x1b" "[" [0-9;]+ "m".
@@ -497,7 +515,7 @@ std::size_t tim::vt::strlen(const std::string &s)
                 else if (c != ';'
                             && ((c < '0') || (c > '9')))
                     st = state::search_esc;
-                /* 0-9, or semicolon */
+                /* 0-9 или точка с запятой. */
                 ++len;
                 break;
         }

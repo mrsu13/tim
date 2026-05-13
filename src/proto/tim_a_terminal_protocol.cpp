@@ -1,10 +1,12 @@
 #include "tim_a_terminal_protocol.h"
 
 
-// Public
+// Открытые
 
 /**
- * Конструктор. Делегирует подписку транспорта в базу a_protocol.
+ * Конструктор.
+ *
+ * \param io Транспорт; должен жить дольше протокола.
  */
 tim::a_terminal_protocol::a_terminal_protocol(tim::a_io_device *io)
     : tim::a_protocol(io)

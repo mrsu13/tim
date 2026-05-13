@@ -11,7 +11,7 @@
 
 // Public
 
-/** Деструктор по умолчанию. */
+/** Виртуальный деструктор. */
 tim::a_terminal::~a_terminal() = default;
 
 /** \return Указатель на нижележащий протокол. */
@@ -20,15 +20,17 @@ tim::a_protocol *tim::a_terminal::protocol() const
     return _d->_proto;
 }
 
-/** \return Текущая тема терминала. */
+/** \return Текущая тема (цвета и атрибуты). */
 const tim::terminal_theme &tim::a_terminal::theme() const
 {
     return _d->_theme;
 }
 
 /**
- * Заменяет тему. Уже выведенный текст не перерисовывается —
- * новая тема применяется к последующим вызовам printf/cprintf.
+ * Устанавливает тему. Существующий вывод не перерисовывается —
+ * новая тема применяется только к последующим printf/cprintf.
+ *
+ * \param theme Новая тема.
  */
 void tim::a_terminal::set_theme(const tim::terminal_theme &theme)
 {
@@ -36,8 +38,12 @@ void tim::a_terminal::set_theme(const tim::terminal_theme &theme)
 }
 
 /**
- * va_list-вариант printf. Форматирует через tim::vsprintf и шлёт
- * результат в протокол.
+ * Печатает форматированный текст (va_list-вариант). Форматирует через
+ * tim::vsprintf и шлёт результат в протокол.
+ *
+ * \param format printf-формат.
+ * \param args va_list аргументов.
+ * \return Количество записанных символов.
  */
 int tim::a_terminal::vprintf(const char *format, va_list args)
 {
@@ -57,7 +63,11 @@ int tim::a_terminal::vprintf(const char *format, va_list args)
 }
 
 /**
- * Variadic-обёртка над vprintf().
+ * Печатает форматированный текст. Variadic-обёртка над vprintf().
+ *
+ * \param format printf-формат.
+ * \param ... Аргументы формата.
+ * \return Количество записанных символов.
  */
 int tim::a_terminal::printf(const char *format, ... )
 {
@@ -72,9 +82,15 @@ int tim::a_terminal::printf(const char *format, ... )
 }
 
 /**
- * Печатает форматированный текст указанными цветами текста и фона;
- * после печати сбрасывает атрибуты, если хотя бы один из цветов
- * не был пустым (transparent).
+ * Печатает форматированный текст указанным цветом текста и фона;
+ * после печати сбрасывает атрибуты, если хотя бы один из цветов не
+ * был пустым (transparent).
+ *
+ * \param text_color Цвет текста.
+ * \param bg_color Цвет фона (transparent — без фона).
+ * \param format printf-формат.
+ * \param ... Аргументы формата.
+ * \return Количество записанных символов.
  */
 int tim::a_terminal::cprintf(const tim::color &text_color,
                              const tim::color &bg_color,
@@ -101,7 +117,9 @@ int tim::a_terminal::cprintf(const tim::color &text_color,
 // Protected
 
 /**
- * Конструктор для наследников: запоминает указатель на протокол.
+ * Конструктор только для наследников: запоминает указатель на протокол.
+ *
+ * \param proto Терминальный протокол (источник байт и приёмник вывода).
  */
 tim::a_terminal::a_terminal(tim::a_protocol *proto)
     : _d(new tim::p::a_terminal())

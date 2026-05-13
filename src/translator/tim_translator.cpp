@@ -10,15 +10,21 @@
 
 /**
  * \class tim::translator
- * \brief Support text strings translations the source code contains.
+ * \brief Поддержка переводов текстовых строк, содержащихся в исходном коде.
  *
- * You shoule never use this class directly. Instead use TIM_TR() macro.
+ * Никогда не используйте этот класс напрямую. Вместо этого используйте
+ * макрос TIM_TR().
  *
  * \sa tim::translation
  */
 
 // Public
 
+/**
+ * Возвращает живой singleton-переводчик.
+ *
+ * \return Ссылка на единственный экземпляр.
+ */
 const tim::translator &tim::translator::instance()
 {
     static tim::translator t{};
@@ -26,10 +32,11 @@ const tim::translator &tim::translator::instance()
 }
 
 /**
- * \param translations Translations.
- * \param file_path Path to the source code file where this method call is located.
- * \param line Line number where this method call is located.
- * \return Translation on the base of the current locale.
+ * Глобальный переключатель языка для TIM_TR. Вызывать на старте, до
+ * любых пользовательских TIM_TR-вызовов (например, после загрузки
+ * tim::settings и до создания подсистем).
+ *
+ * \param lang Новый язык.
  */
 void tim::translator::set_language(tim::language lang)
 {
@@ -39,11 +46,22 @@ void tim::translator::set_language(tim::language lang)
     const_cast<tim::translator &>(tim::translator::instance())._d->_language = lang;
 }
 
+/** \return Текущий выбранный язык переводчика. */
 tim::language tim::translator::language()
 {
     return tim::translator::instance()._d->_language;
 }
 
+/**
+ * Ищет перевод в карте по текущему выбранному языку. При отсутствии
+ * перевода для текущего языка возвращается первый из карты, а в
+ * debug-сборке логируется warning о пропущенной локализации.
+ *
+ * \param translations Карта lang_id → строка. Не должна быть пустой.
+ * \param file_path Путь к файлу с вызовом (для debug-сообщения).
+ * \param line Номер строки с вызовом.
+ * \return Указатель на C-строку перевода (литерал, не освобождать).
+ */
 const char *tim::translator::translate(const tim::translations &translations,
                                        const char *file_path, int line)
 {
@@ -70,9 +88,11 @@ const char *tim::translator::translate(const tim::translations &translations,
 
 // Private
 
+/** Закрытый конструктор: только через instance(). */
 tim::translator::translator()
     : _d(new tim::p::translator())
 {
 }
 
+/** Деструктор. */
 tim::translator::~translator() = default;

@@ -131,8 +131,10 @@ static lil_value_t tim_tcl_cmd_palette256(lil_t lil, size_t argc, lil_value_t *a
 // Public
 
 /**
- * Регистрирует терминал-связанные Tcl-команды (`clear`, `puts`,
- * `palette256`) в указанной LIL-сессии.
+ * Регистрирует Tcl-команды для управления терминалом (`clear`, `puts`,
+ * `palette256` и подобные) в указанной LIL-сессии.
+ *
+ * \param lil LIL-сессия.
  */
 void tim::tcl_add_term(lil_t lil)
 {

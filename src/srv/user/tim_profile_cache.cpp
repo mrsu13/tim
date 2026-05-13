@@ -13,6 +13,14 @@
 
 // Открытые
 
+/**
+ * Загружает профиль своего пользователя из БД и сохраняет ссылки
+ * на mqtt/db для последующих подписок и lookup-ов.
+ *
+ * \param mqtt MQTT-клиент для wildcard-подписок (см. subscribe()).
+ * \param db Подключение к БД для load_user().
+ * \param self_id UUID пользователя сессии.
+ */
 tim::profile_cache::profile_cache(tim::mqtt_client &mqtt,
                                   tim::sqlite_db &db,
                                   const tim::uuid &self_id)
@@ -21,13 +29,26 @@ tim::profile_cache::profile_cache(tim::mqtt_client &mqtt,
     _d->_self = _d->load_user(self_id);
 }
 
+/** Деструктор; mqtt_subscription-токены закрывают подписки автоматически. */
 tim::profile_cache::~profile_cache() = default;
 
+/**
+ * \return Ссылка на профиль своего пользователя. Поля обновляются
+ *         в реальном времени при приходе своих setnick/seticon/setmotto.
+ */
 const tim::user &tim::profile_cache::self() const noexcept
 {
     return _d->_self;
 }
 
+/**
+ * Возвращает профиль произвольного пользователя.
+ *
+ * \param id UUID пользователя. Для self_id возвращается self().
+ * \return Кэшированная запись либо подгрузка из БД при первом
+ *         обращении. Если строки в БД нет, возвращается user
+ *         с пустыми ник/иконка/девиз и только заполненным id.
+ */
 tim::user tim::profile_cache::user_for(const tim::uuid &id)
 {
     if (id == _d->_self.id)
@@ -42,11 +63,22 @@ tim::user tim::profile_cache::user_for(const tim::uuid &id)
     return u;
 }
 
+/**
+ * Сбросить кэш чужих профилей. self остаётся.
+ * Вызывать на реконнекте, когда события профилей могли быть
+ * пропущены.
+ */
 void tim::profile_cache::invalidate()
 {
     _d->_known.clear();
 }
 
+/**
+ * Выдаёт подписки на wildcard-топики setnick/seticon/setmotto.
+ * Вызывать при первом подключении и на каждом реконнекте.
+ * Прежние подписки (mqtt_subscription) сбрасываются перед
+ * повторной выдачей.
+ */
 void tim::profile_cache::subscribe()
 {
     // Сбрасываем старые токены перед повторной выдачей: при реконнекте

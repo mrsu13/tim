@@ -19,6 +19,13 @@
 
 // Public
 
+/**
+ * Конструктор. Создаёт line_edit, загружает историю с диска, рисует
+ * welcome-баннер.
+ *
+ * \param term Терминал, в который шелл отрисовывает.
+ * \param engine Скрипт-движок, исполняющий введённые команды.
+ */
 tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
     : _d(new tim::p::vt_shell())
 {
@@ -40,28 +47,48 @@ tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
     _d->_ledit->new_line();
 }
 
+/** Виртуальный деструктор: сохраняет историю на диск. */
 tim::vt_shell::~vt_shell() = default;
 
+/** \return Терминал, к которому привязан шелл. */
 tim::vt *tim::vt_shell::terminal() const
 {
     return _d->_ledit->terminal();
 }
 
+/**
+ * Печатает '\\n' и заново выводит приглашение. Используется для
+ * "вытолкнутых" сверху сообщений (плашки сообщений, уведомления).
+ */
 void tim::vt_shell::new_line()
 {
     _d->_ledit->new_line();
 }
 
+/**
+ * Скрывает приглашение и введённую строку (если есть), чтобы напечатать
+ * в терминал что-то "поверх". show_input() возвращает приглашение.
+ */
 void tim::vt_shell::hide_input()
 {
     _d->_ledit->hide();
 }
 
+/** Восстанавливает приглашение после hide_input(). */
 void tim::vt_shell::show_input()
 {
     _d->_ledit->show();
 }
 
+/**
+ * Передаёт сырые байты ввода в line_edit. Выполняет команду при
+ * нажатии Enter; иначе обновляет приглашение.
+ *
+ * \param data Сырые байты ввода.
+ * \param size Размер.
+ * \return true, если шелл хочет продолжать работу; false — Ctrl+D
+ *         или ошибка.
+ */
 bool tim::vt_shell::write(const char *data, std::size_t size)
 {
     assert(data);
@@ -154,6 +181,16 @@ bool tim::vt_shell::write(const char *data, std::size_t size)
 
 // Protected
 
+/**
+ * Решает, считать ли введённую строку командой для engine или чем-то
+ * ещё (наследник может перехватить и испустить свой сигнал).
+ *
+ * \param line Введённая строка (без \\n).
+ * \param command Сюда записывается текст команды для engine при
+ *                возврате true.
+ * \return true — выполнить как команду; false — наследник обработал
+ *         иначе (например, испустил "сообщение").
+ */
 bool tim::vt_shell::accept_command(const std::string &line, std::string &command)
 {
     command = line;

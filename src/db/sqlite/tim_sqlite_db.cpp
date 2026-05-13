@@ -36,18 +36,28 @@ PRAGMA case_sensitive_like = OFF;)";
 static const int SLEEP = 250;
 
 
-// Public
+// Открытые
 
+/** Конструирует объект без открытой БД. */
 tim::sqlite_db::sqlite_db()
     : _d(new tim::p::sqlite_db())
 {
 }
 
+/** Деструктор. Закрывает открытую БД через close(). */
 tim::sqlite_db::~sqlite_db()
 {
     close();
 }
 
+/**
+ * Открывает указанный файл БД.
+ *
+ * \param path Путь к файлу. ~ и относительные пути нормализуются
+ *             через tim::complete_path(); родительский каталог
+ *             создаётся при отсутствии.
+ * \return true при успехе, false при ошибке (залогирована).
+ */
 bool tim::sqlite_db::open(const std::filesystem::path &path)
 {
     assert(!_d->_db && "The database is already open.");
@@ -77,7 +87,7 @@ bool tim::sqlite_db::open(const std::filesystem::path &path)
     if (!exec(PRAGMAS))
         return false;
 /*
-    // \bug Enable trace only when it is explicitly enabled.
+    // \bug Включать трассировку только когда она явно включена.
     if (const int res = sqlite3_trace_v2(_d->_db.get(),
                                          SQLITE_TRACE_STMT
                                                 | SQLITE_TRACE_PROFILE
@@ -95,11 +105,17 @@ bool tim::sqlite_db::open(const std::filesystem::path &path)
     return true;
 }
 
+/** \return true, если БД сейчас открыта. */
 bool tim::sqlite_db::is_open() const
 {
     return (bool)_d->_db;
 }
 
+/**
+ * Делает sqlite "WAL checkpoint", сбрасывая страницы на диск.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::flush()
 {
     assert(_d->_db);
@@ -114,11 +130,13 @@ bool tim::sqlite_db::flush()
     return true;
 }
 
+/** Закрывает БД; идемпотентно. */
 void tim::sqlite_db::close()
 {
     _d->_db.reset();
 }
 
+/** \return Абсолютный путь к открытой БД, или пустой путь. */
 const std::filesystem::path &tim::sqlite_db::path() const
 {
     return _d->_path;
@@ -126,6 +144,13 @@ const std::filesystem::path &tim::sqlite_db::path() const
 
 #ifdef TIM_SQLITE_ENCRYPTION_ENABLED
 
+/**
+ * Устанавливает ключ шифрования. Должен вызываться до первой
+ * операции над БД.
+ *
+ * \param key Сырой ключ (бинарные данные либо PEM-строка).
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::set_key(const std::string &key)
 {
     assert(_d->_db);
@@ -140,6 +165,12 @@ bool tim::sqlite_db::set_key(const std::string &key)
     return true;
 }
 
+/**
+ * Меняет ключ шифрования открытой БД.
+ *
+ * \param key Новый ключ.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::rekey(const std::string &key)
 {
     assert(_d->_db);
@@ -154,6 +185,11 @@ bool tim::sqlite_db::rekey(const std::string &key)
     return true;
 }
 
+/**
+ * Отключает шифрование БД (rekey на пустую строку).
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::clear_key()
 {
     assert(_d->_db);
@@ -170,6 +206,13 @@ bool tim::sqlite_db::clear_key()
 
 #endif
 
+/**
+ * Читает PRAGMA user_version, не открывая БД полностью.
+ *
+ * \param path Путь к файлу БД.
+ * \param version Сюда записывается значение.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::get_version(const std::filesystem::path &path, std::uint32_t &version)
 {
     static const char SIGNATURE[] = "SQLite format 3\000";
@@ -197,6 +240,12 @@ bool tim::sqlite_db::get_version(const std::filesystem::path &path, std::uint32_
     return true;
 }
 
+/**
+ * Читает PRAGMA user_version открытой БД.
+ *
+ * \param version Сюда записывается значение.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::get_version(std::uint32_t &version) const
 {
     tim::sqlite_query q(const_cast<tim::sqlite_db *>(this), "PRAGMA user_version");
@@ -209,11 +258,24 @@ bool tim::sqlite_db::get_version(std::uint32_t &version) const
     return true;
 }
 
+/**
+ * Записывает PRAGMA user_version в открытую БД.
+ *
+ * \param version Новое значение.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::set_version(std::uint32_t version)
 {
     return exec("PRAGMA user_version = " + std::to_string(version));
 }
 
+/**
+ * Удаляет файл БД и открывает его заново. Не создаёт схему —
+ * это ответственность db/create-db.sh. virtual: наследник может
+ * добавить логику пост-инициализации.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::recreate()
 {
     TIM_TRACE(debug,
@@ -237,6 +299,12 @@ bool tim::sqlite_db::recreate()
     return open(_d->_path);
 }
 
+/**
+ * Выполняет SQL-стейтмент(ы), без bind.
+ *
+ * \param sql Любая корректная SQL-строка.
+ * \return true при успехе, false при ошибке (залогирована).
+ */
 bool tim::sqlite_db::exec(const std::string &sql)
 {
     assert(_d->_db);
@@ -279,6 +347,12 @@ failure:
                     sqlite3_errstr(res));
 }
 
+/**
+ * Загружает SQL-файл с диска и выполняет его как один скрипт.
+ *
+ * \param path Путь к .sql-файлу.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::exec_file(const std::filesystem::path &path)
 {
     std::string sql;
@@ -288,6 +362,12 @@ bool tim::sqlite_db::exec_file(const std::filesystem::path &path)
     return exec(sql);
 }
 
+/**
+ * Оборачивает SQL в BEGIN...COMMIT транзакцию.
+ *
+ * \param sql SQL-скрипт.
+ * \return true при успехе; при ошибке откатывает и возвращает false.
+ */
 bool tim::sqlite_db::transaction(const std::string &sql)
 {
     assert(!sql.empty());
@@ -300,6 +380,11 @@ bool tim::sqlite_db::transaction(const std::string &sql)
                 : rollback();
 }
 
+/**
+ * Открывает (вложенную) транзакцию через рефкаунт.
+ *
+ * \return true при успехе; на внешнем уровне выполняется BEGIN.
+ */
 bool tim::sqlite_db::begin()
 {
     if (!is_transaction_active())
@@ -314,6 +399,12 @@ bool tim::sqlite_db::begin()
     return true;
 }
 
+/**
+ * Открывает named SAVEPOINT.
+ *
+ * \param save_point Имя точки сохранения.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::begin(const std::string &save_point)
 {
     assert(!save_point.empty());
@@ -321,11 +412,17 @@ bool tim::sqlite_db::begin(const std::string &save_point)
     return exec("SAVEPOINT " + save_point);
 }
 
+/** \return true, если в БД сейчас открыта (вложенная) транзакция. */
 bool tim::sqlite_db::is_transaction_active() const
 {
     return !sqlite3_get_autocommit(_d->_db.get());
 }
 
+/**
+ * Фиксирует уровень вложенности; внешний уровень делает COMMIT.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::commit()
 {
     if (_d->_transaction_count < 1
@@ -344,6 +441,12 @@ bool tim::sqlite_db::commit()
     return true;
 }
 
+/**
+ * Освобождает named SAVEPOINT.
+ *
+ * \param save_point Имя точки сохранения.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::commit(const std::string &save_point)
 {
     assert(!save_point.empty());
@@ -351,6 +454,13 @@ bool tim::sqlite_db::commit(const std::string &save_point)
     return exec("RELEASE SAVEPOINT " + save_point);
 }
 
+/**
+ * ROLLBACK всей транзакции, сбрасывает счётчик вложенности в 0.
+ * Внимание: не refcount-aware — внутренний rollback отменит и
+ * внешнюю транзакцию тоже.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::rollback()
 {
     assert(_d->_db);
@@ -364,6 +474,12 @@ bool tim::sqlite_db::rollback()
     return true;
 }
 
+/**
+ * Откат к named SAVEPOINT.
+ *
+ * \param save_point Имя точки сохранения.
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::rollback(const std::string &save_point)
 {
     assert(!save_point.empty());
@@ -371,11 +487,20 @@ bool tim::sqlite_db::rollback(const std::string &save_point)
     return exec("ROLLBACK TRANSACTION TO SAVEPOINT " + save_point);
 }
 
+/**
+ * Выполняет VACUUM, дефрагментирует файл БД.
+ *
+ * \return true при успехе.
+ */
 bool tim::sqlite_db::vacuum()
 {
     return exec("VACUUM");
 }
 
+/**
+ * \return Число строк, изменённых последним INSERT/UPDATE/DELETE
+ *         (sqlite3_changes).
+ */
 int tim::sqlite_db::change_count() const
 {
     assert(_d->_db);
@@ -383,12 +508,18 @@ int tim::sqlite_db::change_count() const
     return sqlite3_changes(_d->_db.get());
 }
 
+/**
+ * Сырой указатель sqlite3* — для редких операций, не покрытых
+ * обёрткой (например, sqlite3_backup_init).
+ *
+ * \return Указатель на sqlite3*, либо nullptr если БД не открыта.
+ */
 sqlite3 *tim::sqlite_db::sqlite() const
 {
     return _d->_db.get();
 }
 
-// Private
+// Закрытые
 
 tim::p::sqlite_db::db_ptr tim::p::sqlite_db::open_db(const std::filesystem::path &path)
 {
@@ -491,8 +622,8 @@ int tim::p::sqlite_db::trace(unsigned event, void *self, void *p, void *x)
 
         case SQLITE_TRACE_PROFILE:
         {
-            // The current implementation of SQLite3 is only capable of millisecond
-            // resolution so the six least significant digits in the time are meaningless.
+            // Текущая реализация SQLite3 поддерживает только миллисекундное
+            // разрешение, поэтому шесть младших цифр времени бессмысленны.
             const char *sql = sqlite3_expanded_sql((sqlite3_stmt *)p);
             if (sql)
                 TIM_TRACE(debug,

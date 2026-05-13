@@ -16,7 +16,9 @@ tim::signal_connection::signal_connection()
 }
 
 /**
- * Конструирует токен, связанный с (signal, id).
+ * Конструирует токен, связанный с конкретным (signal, id).
+ *
+ * \param s_id Пара (указатель на сигнал, идентификатор слота).
  */
 tim::signal_connection::signal_connection(const std::pair<tim::a_signal *, std::size_t> &s_id)
     : tim::non_copyable()
@@ -28,7 +30,9 @@ tim::signal_connection::signal_connection(const std::pair<tim::a_signal *, std::
     _d->_connection_id = s_id.second;
 }
 
-/** Move-конструктор. \a other становится пустым. */
+/**
+ * Move-конструктор. \a other становится пустым.
+ */
 tim::signal_connection::signal_connection(tim::signal_connection &&other) noexcept
     : tim::non_copyable()
     , _d(std::move(other._d))
@@ -43,8 +47,11 @@ tim::signal_connection::~signal_connection()
 }
 
 /**
- * Move-присваивание. Перед перемещением активное подключение
- * текущего объекта отзывается.
+ * Move-присваивание. Если *this хранит активное подключение, оно
+ * отзывается; затем перемещается состояние из \a other.
+ *
+ * \param other Источник перемещения.
+ * \return *this.
  */
 tim::signal_connection &tim::signal_connection::operator=(tim::signal_connection &&other) noexcept
 {
@@ -64,7 +71,7 @@ bool tim::signal_connection::connected() const
 }
 
 /**
- * Отзывает подключение и помечает токен пустым. Идемпотентно.
+ * Явно отзывает подключение. Идемпотентно.
  */
 void tim::signal_connection::disconnect()
 {

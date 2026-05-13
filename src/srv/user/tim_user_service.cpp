@@ -18,8 +18,10 @@
 // Public
 
 /**
- * Конструирует сервис; подписка на сигнал connected повторно выдаёт
- * все семь MQTT-подписок при каждом (ре)подключении к брокеру.
+ * Конструирует сервис и подписывается на MQTT.
+ *
+ * \param mqtt MQTT-клиент; должен жить дольше сервиса.
+ * \param db Подключение к БД; должно жить дольше сервиса.
  */
 tim::user_service::user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("user")
@@ -33,6 +35,7 @@ tim::user_service::user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
         _d->subscribe();
 }
 
+/** Деструктор. */
 tim::user_service::~user_service() = default;
 
 

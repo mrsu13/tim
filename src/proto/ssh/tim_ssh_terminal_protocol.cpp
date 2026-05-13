@@ -9,8 +9,9 @@
 // Открытые
 
 /**
- * Конструктор. Сохраняет указатель на SSH-сервис, регистрирует
- * базовое подписание через a_terminal_protocol.
+ * Конструктор.
+ *
+ * \param io SSH-inetd-сервис; источник байт и параметров терминала.
  */
 tim::ssh_terminal_protocol::ssh_terminal_protocol(tim::a_ssh_inetd_service *io)
     : tim::a_terminal_protocol(io)
@@ -19,10 +20,10 @@ tim::ssh_terminal_protocol::ssh_terminal_protocol(tim::a_ssh_inetd_service *io)
     assert(io);
 }
 
-/** Деструктор по умолчанию. */
+/** Деструктор. */
 tim::ssh_terminal_protocol::~ssh_terminal_protocol() = default;
 
-/** \return Имя терминала клиента ($TERM). */
+/** \return Имя терминала клиента (значение $TERM). */
 const std::string &tim::ssh_terminal_protocol::terminal_name() const
 {
     return _ssh->term_name();
@@ -41,12 +42,17 @@ std::size_t tim::ssh_terminal_protocol::cols() const
 }
 
 /**
- * Пишет байты в SSH-канал. Перед записью одиночный LF превращается
- * в CRLF — это поведение, которое раньше прозрачно выполнял libtelnet
- * через telnet_send_text(). В SSH-канал байты идут как есть, поэтому
- * без подмены терминал клиента видит только перевод строки без
- * возврата каретки и текст «лестницей». Если LF уже предваряется CR,
- * ничего не добавляется.
+ * Пишет данные в SSH-канал (через _ssh->write()).
+ *
+ * Перед записью одиночный LF превращается в CRLF — это поведение,
+ * которое раньше прозрачно выполнял libtelnet через telnet_send_text().
+ * В SSH-канал байты идут как есть, поэтому без подмены терминал
+ * клиента видит только перевод строки без возврата каретки и текст
+ * «лестницей». Если LF уже предваряется CR, ничего не добавляется.
+ *
+ * \param data Указатель на данные.
+ * \param size Размер.
+ * \return true при успехе.
  */
 bool tim::ssh_terminal_protocol::write(const char *data, std::size_t size)
 {
@@ -66,8 +72,12 @@ bool tim::ssh_terminal_protocol::write(const char *data, std::size_t size)
 }
 
 /**
- * Передаёт сырые байты пользователю без обработки. libssh уже
- * расшифровал их; протокольного слоя поверх не требуется.
+ * Передаёт сырые байты пользователю без обработки — для SSH-канала
+ * протокольный layer не нужен. Испускает data_ready напрямую. libssh
+ * уже расшифровал их; протокольного слоя поверх не требуется.
+ *
+ * \param data Сырые байты.
+ * \param size Размер.
  */
 void tim::ssh_terminal_protocol::process_raw_data(const char *data, std::size_t size)
 {

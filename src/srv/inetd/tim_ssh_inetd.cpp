@@ -133,10 +133,7 @@ tim::uuid uuid_from_pubkey(::ssh_key pubkey)
 
 // Открытые
 
-/**
- * Деструктор. Корректно сворачивает все живые SSH-сессии и
- * освобождает ssh_event/ssh_bind.
- */
+/** Деструктор. Закрывает все живые сессии и освобождает ssh_bind. */
 tim::ssh_inetd::~ssh_inetd()
 {
     if (_d->_event)
@@ -162,9 +159,16 @@ tim::ssh_inetd::~ssh_inetd()
 }
 
 /**
- * Создаёт и запускает inetd. Гарантирует наличие host-key (генерирует
- * при первом запуске), затем конструирует ssh_inetd и проверяет, что
- * ssh_bind и ssh_event поднялись.
+ * Создаёт и запускает inetd. При ошибке открытия host key или
+ * прослушивания порта возвращает nullptr (логирует error).
+ *
+ * \param port TCP-порт для прослушивания.
+ * \param host_key_path Путь к ed25519 host-key. Если отсутствует —
+ *                     генерируется при первом запуске.
+ * \param factory Фабрика сервисов: создаёт прикладной сервис
+ *                для каждой аутентифицированной сессии.
+ * \param if_addr Интерфейс для bind (пусто = все).
+ * \return RAII-указатель на работающий inetd; nullptr при ошибке.
  */
 std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
                                                       const std::filesystem::path &host_key_path,
@@ -182,8 +186,10 @@ std::unique_ptr<tim::ssh_inetd> tim::ssh_inetd::start(std::uint16_t port,
 }
 
 /**
- * Зовёт interrupt() у всех живых прикладных сервисов — например,
- * чтобы прервать долгие Tcl-скрипты при завершении работы сервера.
+ * Прерывает работу всех живых сервисов (interrupt() на каждом).
+ *
+ * Нужно на завершении сервера, чтобы долгий /while 1 {} не
+ * блокировал выход из exec().
  */
 void tim::ssh_inetd::interrupt_all()
 {
@@ -193,9 +199,15 @@ void tim::ssh_inetd::interrupt_all()
 }
 
 /**
- * Опрашивает libssh-события и, на самом внешнем уровне вложенности,
- * освобождает сессии, помеченные _pending_close в обработчиках
- * eof/close. Re-entrancy guard через _dispatch_depth.
+ * Опрашивает libssh-события (приём новых соединений, рукопожатие,
+ * аутентификацию, обмен данными). Должна вызываться периодически
+ * из главного цикла приложения.
+ *
+ * Re-entrant safe: внутренний счётчик dispatch_depth откладывает
+ * освобождение сессий до самого внешнего уровня (Tcl-скрипт может
+ * рекурсивно дёрнуть dispatch через DISPATCH-обработчик).
+ *
+ * \param timeout_ms Максимальное время блокировки в миллисекундах.
  */
 void tim::ssh_inetd::dispatch(int timeout_ms)
 {
@@ -247,9 +259,12 @@ void tim::ssh_inetd::dispatch(int timeout_ms)
 // Закрытые
 
 /**
- * Закрытый конструктор. Открывает ssh_bind на указанном порту,
- * настраивает host-key, создаёт ssh_event и регистрирует обработчик
- * новых подключений (on_bind_ready).
+ * Закрытый конструктор; экземпляры создаются только через start().
+ *
+ * \param port TCP-порт.
+ * \param host_key_path Путь к host-key.
+ * \param if_addr Интерфейс bind.
+ * \param factory Фабрика сервисов.
  */
 tim::ssh_inetd::ssh_inetd(std::uint16_t port,
                           const std::filesystem::path &host_key_path,

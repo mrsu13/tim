@@ -30,15 +30,8 @@ class reaction_service : public tim::service
 
 public:
 
-    /**
-     * Конструирует сервис и подписывается на REACT_FILTER.
-     *
-     * \param mqtt MQTT-клиент; должен жить дольше сервиса.
-     * \param db Подключение к БД; должно жить дольше сервиса.
-     */
     reaction_service(tim::mqtt_client &mqtt, tim::sqlite_db &db);
 
-    /** Деструктор. */
     ~reaction_service();
 
 private:

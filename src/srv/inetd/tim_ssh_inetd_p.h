@@ -70,9 +70,9 @@ struct ssh_session_state
     /** Пользовательский сервис, обслуживающий канал (создан в shell-req). */
     std::unique_ptr<tim::a_inetd_service>         _service;
 
-    /** Структура колбэков для libssh server callbacks. */
+    /** Структура обработчиков для libssh server callbacks. */
     struct ssh_server_callbacks_struct            _server_cb {};
-    /** Структура колбэков для libssh channel callbacks. */
+    /** Структура обработчиков для libssh channel callbacks. */
     struct ssh_channel_callbacks_struct           _channel_cb {};
 };
 

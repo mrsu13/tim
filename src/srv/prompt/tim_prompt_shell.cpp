@@ -23,6 +23,12 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
 // Public
 
+/**
+ * Конструктор.
+ *
+ * \param term VT-терминал, в который шелл отрисовывает.
+ * \param engine Скрипт-движок (Tcl) для обработки /-команд.
+ */
 tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
     : tim::vt_shell(term, engine)
     , posted()
@@ -30,8 +36,22 @@ tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
 {
 }
 
+/** Деструктор. */
 tim::prompt_shell::~prompt_shell() = default;
 
+/**
+ * Рисует "плашку" сообщения: заголовок (ник автора) + тело.
+ *
+ * Если задан \a marker_color, перед заголовком в полосе плашки
+ * рисуется маркер ('★') этим цветом; сам заголовок отображается
+ * обычным авто-контрастным цветом текста. Используется для пометки
+ * сообщений от пользователей, на которых вы подписаны.
+ *
+ * \param title Заголовок плашки (ник/Я).
+ * \param text Тело сообщения.
+ * \param bg_color Цвет фона плашки (transparent — без фона).
+ * \param marker_color Цвет маркера-звёздочки (пусто — нет маркера).
+ */
 void tim::prompt_shell::cloud(const std::string &title,
                               const std::string &text,
                               const tim::color &bg_color,
@@ -63,7 +83,7 @@ void tim::prompt_shell::cloud(const std::string &title,
 
     const tim::color text_color = bg_color.text_color();
 
-    if (ttl_len > 2) // Not only padding spaces.
+    if (ttl_len > 2) // Не только дополняющие пробелы.
     {
         terminal()->set_bg_color(bg_color);
         // Если задан цвет маркера — рисуем ' ★' этим цветом, удерживая bg;
@@ -98,6 +118,17 @@ void tim::prompt_shell::cloud(const std::string &title,
 
 // Protected
 
+/**
+ * Принимает введённую строку как команду или как обычный текст.
+ *
+ * Если строка начинается с COMMAND_PREFIX, возвращает true
+ * и кладёт текст команды в \a command для исполнения Tcl-движком.
+ * Иначе испускает сигнал posted и возвращает false.
+ *
+ * \param line Введённая строка.
+ * \param command Сюда записывается текст команды (без префикса).
+ * \return true, если это команда — vt_shell исполнит её через engine.
+ */
 bool tim::prompt_shell::accept_command(const std::string &line, std::string &command)
 {
     if (line.empty())

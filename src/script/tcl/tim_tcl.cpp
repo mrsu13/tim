@@ -8,7 +8,7 @@
 #include "tim_trace.h"
 #include "tim_translator.h"
 
-// Commands (универсальные — относящиеся к самому скрипт-движку или
+// Команды (универсальные — относящиеся к самому скрипт-движку или
 // терминалу). Команды, специфичные для чата, регистрирует владелец
 // (например, prompt_service) после конструирования tim::tcl.
 #include "tim_tcl_cmd_general.h"
@@ -23,8 +23,11 @@
 // Public
 
 /**
- * Конструктор. Создаёт LIL-интерпретатор, регистрирует callbacks
- * WRITE и DISPATCH, и добавляет базовые команды (puts, palette256 и т.п.).
+ * Конструктор. Создаёт LIL-сессию, регистрирует обработчики WRITE и
+ * DISPATCH, и добавляет базовые команды (puts, palette256 и др.) через
+ * tcl_add_general / tcl_add_term.
+ *
+ * \param term Терминал, в который команды вроде /puts пишут.
  */
 tim::tcl::tcl(tim::a_terminal *term)
     : tim::a_script_engine("Tcl", term)
@@ -39,44 +42,68 @@ tim::tcl::tcl(tim::a_terminal *term)
     tim::tcl_add_term(_d->_lil);
 }
 
-/** Деструктор. Освобождает LIL-интерпретатор. */
+/** Деструктор. lil_free освобождает LIL-интерпретатор. */
 tim::tcl::~tcl()
 {
     lil_free(_d->_lil);
 }
 
-/** \return Внутренний lil_t для регистрации команд снаружи. */
+/**
+ * \return Внутренняя LIL-сессия. Нужна тем, кто регистрирует свои
+ *         команды снаружи (модуль владельца, например prompt).
+ *         Никакой защиты — лезть в lil_* нужно осознанно.
+ */
 lil_t tim::tcl::lil() const
 {
     return _d->_lil;
 }
 
-/** Сохраняет произвольный непрозрачный указатель. \param data Указатель. */
+/**
+ * Сохраняет произвольный непрозрачный указатель.
+ *
+ * Команды Tcl могут достать его через user_data() и привести к нужному
+ * типу — это позволяет держать tim::tcl независимым от конкретного
+ * контекста, в котором он используется (например, prompt_service).
+ *
+ * \param data Указатель пользовательских данных.
+ */
 void tim::tcl::set_user_data(void *data)
 {
     _d->_user_data = data;
 }
 
-/** \return Ранее сохранённый user_data. */
+/** \return Ранее сохранённый указатель пользовательских данных. */
 void *tim::tcl::user_data() const
 {
     return _d->_user_data;
 }
 
-/** Запоминает обработчик /quit. \param handler Колбэк выхода. */
+/**
+ * Регистрирует обработчик запроса /quit. Владелец (prompt_service)
+ * вешает сюда действие, которое закрывает СВОЁ соединение, не трогая
+ * остальной сервер.
+ *
+ * \param handler Обработчик выхода.
+ */
 void tim::tcl::set_quit_handler(std::function<void()> handler)
 {
     _d->_quit_handler = std::move(handler);
 }
 
-/** Вызывает зарегистрированный обработчик /quit, если он есть. */
+/** Вызывает обработчик /quit, если он зарегистрирован. */
 void tim::tcl::request_quit()
 {
     if (_d->_quit_handler)
         _d->_quit_handler();
 }
 
-/** Запоминает обработчик "тика" между Tcl-операторами. \param handler Колбэк. */
+/**
+ * Регистрирует обработчик "тика" между Tcl-операторами: LIL вызывает
+ * его через свой DISPATCH-обработчик, чтобы пока скрипт работает не
+ * зависали внешние event-loop-ы.
+ *
+ * \param handler Обработчик-тик.
+ */
 void tim::tcl::set_dispatch_handler(std::function<void()> handler)
 {
     _d->_dispatch_handler = std::move(handler);
@@ -93,6 +120,11 @@ bool tim::tcl::evaluating() const
  * сырое сообщение об ошибке, применяет таблицу RULES для подстановки
  * локализованных вариантов известных подстрок LIL, и добавляет
  * завершающую точку, если её ещё нет.
+ *
+ * \param program Исходный текст программы.
+ * \param res Если не nullptr: туда записывается значение последнего
+ *            выражения (lil_to_string результата).
+ * \return true, если LIL не выставил ошибку.
  */
 bool tim::tcl::eval(const std::string &program, std::string *res)
 {
@@ -193,19 +225,19 @@ bool tim::tcl::eval(const std::string &program, std::string *res)
     return ok;
 }
 
-/** Прерывает текущий eval через lil_break_run. */
+/** Прерывает выполнение текущего eval (lil_break_run). */
 void tim::tcl::break_eval()
 {
     lil_break_run(_d->_lil, true);
 }
 
-/** \return Префикс приглашения шелла. */
+/** \return Префикс приглашения ("► " по умолчанию). */
 const std::string &tim::tcl::prompt() const
 {
     return _d->_prompt;
 }
 
-/** \return Текст последней ошибки в выбранной локали. */
+/** \return Текст последней ошибки на текущем языке. */
 const std::string &tim::tcl::error_msg() const
 {
     return _d->_error_msg;
@@ -220,6 +252,9 @@ std::size_t tim::tcl::error_pos() const
 /**
  * Возвращает список имён LIL-функций, начинающихся с prefix. Использует
  * lil_names для генерации списка.
+ *
+ * \param prefix Префикс для автодополнения.
+ * \return Список имён LIL-функций, начинающихся с \a prefix.
  */
 std::vector<std::string> tim::tcl::complete(const std::string &prefix) const
 {
@@ -237,13 +272,13 @@ std::vector<std::string> tim::tcl::complete(const std::string &prefix) const
     return res;
 }
 
-/** \return Пустое множество — у LIL нет зарезервированных ключевых слов. */
+/** \return Зарезервированные ключевые слова (для LIL — пустое множество). */
 std::unordered_set<std::string> tim::tcl::keywords() const
 {
     return {};
 }
 
-/** \return Множество всех зарегистрированных LIL-функций. */
+/** \return Все зарегистрированные функции LIL-сессии. */
 std::unordered_set<std::string> tim::tcl::functions() const
 {
     std::unordered_set<std::string> funcs;

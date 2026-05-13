@@ -42,48 +42,16 @@ public:
         random         =  4  ///< (0 1 0 0) Random: случайные числа для всех секций.
     };
 
-    /** Конструирует nil-UUID (все нули, valid=false). */
     uuid();
 
-    /**
-     * Копирует другой UUID.
-     *
-     * \param other Источник копирования.
-     */
     uuid(const tim::uuid &other);
 
-    /**
-     * Конструирует UUID из 11 целочисленных частей.
-     *
-     * \param l 32-битный data1.
-     * \param w1 16-битный data2.
-     * \param w2 16-битный data3.
-     * \param b1 Первый байт data4.
-     * \param b2 Второй байт data4.
-     * \param b3 Третий байт data4.
-     * \param b4 Четвёртый байт data4.
-     * \param b5 Пятый байт data4.
-     * \param b6 Шестой байт data4.
-     * \param b7 Седьмой байт data4.
-     * \param b8 Восьмой байт data4.
-     */
     uuid(unsigned int l, unsigned short w1, unsigned short w2,
          unsigned char b1, unsigned char b2, unsigned char b3, unsigned char b4,
          unsigned char b5, unsigned char b6, unsigned char b7, unsigned char b8);
 
-    /**
-     * Парсит UUID из std::string.
-     *
-     * \param text Строковое представление в любом из поддерживаемых
-     *             форматов (canonical / no_brackets / compact).
-     */
     uuid(const std::string &text);
 
-    /**
-     * Парсит UUID из C-строки.
-     *
-     * \param text Нуль-терминированная строка.
-     */
     uuid(const char *text);
 
     /**
@@ -99,26 +67,13 @@ public:
     /** \return UUID в формате canonical (с фигурными скобками). */
     inline std::string to_string() const;
 
-    /**
-     * Возвращает UUID в выбранном формате.
-     *
-     * \param format Желаемый формат.
-     * \return Строковое представление.
-     */
     std::string to_string(const format format) const;
 
-    /**
-     * Парсит UUID из строки, заменяя текущее значение.
-     *
-     * \param text Строковое представление.
-     * \return true при успешном разборе.
-     */
     bool from_string(const std::string &text);
 
     /** Неявное приведение к строке (через to_string() canonical). */
     inline operator std::string() const;
 
-    /** \return true, если все 128 бит нулевые (nil-UUID). */
     bool is_null() const;
 
     /** \return Результат предыдущего from_string() (true, если разбор прошёл). */
@@ -127,15 +82,8 @@ public:
     /** \return true, если UUID валиден И не nil. */
     inline operator bool() const;
 
-    /** Сбрасывает все поля в ноль и помечает UUID как invalid. */
     void clear();
 
-    /**
-     * Копи-присваивание.
-     *
-     * \param other Источник.
-     * \return *this.
-     */
     tim::uuid &operator=(const tim::uuid &other);
 
     /**
@@ -146,27 +94,17 @@ public:
      */
     inline tim::uuid &operator=(const std::string &text);
 
-    /** Покомпонентное сравнение UUID. */
     bool operator==(const tim::uuid &orig) const;
 
     /** Покомпонентное сравнение UUID (отрицание operator==). */
     inline bool operator!=(const tim::uuid &orig) const;
 
-    /** Лексикографическое сравнение (для упорядоченных контейнеров). */
     bool operator<(const tim::uuid &other) const;
-    /** Лексикографическое сравнение (для упорядоченных контейнеров). */
     bool operator>(const tim::uuid &other) const;
 
-    /**
-     * Генерирует новый случайный UUID v4 (DCE, random).
-     *
-     * \return Свежий UUID.
-     */
     static tim::uuid create();
 
-    /** \return Вариант (см. enum variant). */
     variant uuid_variant() const;
-    /** \return Версия (см. enum version). */
     version uuid_version() const;
 
 private:

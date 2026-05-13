@@ -16,8 +16,10 @@
 // Открытые
 
 /**
- * Конструирует сервис; подписывается на сигнал connected, чтобы
- * повторно выдавать MQTT-подписку при (ре)подключении.
+ * Конструирует сервис и подписывается на REACT_FILTER.
+ *
+ * \param mqtt MQTT-клиент; должен жить дольше сервиса.
+ * \param db Подключение к БД; должно жить дольше сервиса.
  */
 tim::reaction_service::reaction_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("reaction")
@@ -31,6 +33,7 @@ tim::reaction_service::reaction_service(tim::mqtt_client &mqtt, tim::sqlite_db &
         _d->subscribe();
 }
 
+/** Деструктор. */
 tim::reaction_service::~reaction_service() = default;
 
 

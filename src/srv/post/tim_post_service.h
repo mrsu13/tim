@@ -28,16 +28,8 @@ class post_service : public tim::service
 
 public:
 
-    /**
-     * Конструирует сервис; подписывается на MQTT при наличии соединения,
-     * иначе ждёт первого сигнала connected.
-     *
-     * \param mqtt MQTT-клиент; должен жить дольше сервиса.
-     * \param db Подключение к БД; должно жить дольше сервиса.
-     */
     post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db);
 
-    /** Деструктор. Подписки и сигналы закрываются через RAII-токены. */
     ~post_service();
 
 private:

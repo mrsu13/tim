@@ -8,6 +8,15 @@
 #include <fstream>
 
 
+/**
+ * Нормализует путь (expand "~"; lexically_normal) и опционально создаёт
+ * каталог.
+ *
+ * \param path Исходный путь; может содержать "~" (раскрывается в $HOME).
+ * \param f Стратегия создания родительских каталогов перед возвратом.
+ * \return Нормализованный абсолютный путь; пустой при ошибке создания
+ *         каталогов.
+ */
 std::filesystem::path tim::complete_path(const std::filesystem::path &path,
                                          tim::create_path f)
 {
@@ -56,6 +65,13 @@ std::filesystem::path tim::complete_path(const std::filesystem::path &path,
     return completed;
 }
 
+/**
+ * Читает файл целиком в строку.
+ *
+ * \param path Путь к файлу (поддерживается "~").
+ * \param text Сюда записывается содержимое.
+ * \return true при успехе.
+ */
 bool tim::read_file(const std::filesystem::path &path, std::string &text)
 {
     const std::filesystem::path epath = tim::complete_path(path);
@@ -69,7 +85,7 @@ bool tim::read_file(const std::filesystem::path &path, std::string &text)
                          std::strerror(errno));
 
     const std::ifstream::pos_type size = is.tellg();
-    text.resize(size, '\0'); // Construct string to stream size.
+    text.resize(size, '\0'); // Размер строки под весь поток.
     is.seekg(0);
     if (!is.read(&text[0], size))
         return TIM_TRACE(error,
@@ -81,6 +97,14 @@ bool tim::read_file(const std::filesystem::path &path, std::string &text)
     return true;
 }
 
+/**
+ * Пишет строку в файл (текстовый или бинарный, операция не различает).
+ *
+ * \param path Путь к файлу; родительский каталог создаётся при необходимости.
+ * \param text Содержимое для записи.
+ * \param mode Append или Overwrite.
+ * \return true при успехе.
+ */
 bool tim::write_to_file(const std::filesystem::path &path,
                         const std::string &text,
                         tim::file_write_mode mode)

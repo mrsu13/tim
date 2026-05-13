@@ -7,16 +7,16 @@
 
 // Public
 
-/** Деструктор. PIMPL разрушает _d автоматически. */
+/** Виртуальный деструктор для полиморфного удаления. */
 tim::service::~service() = default;
 
-/** \return Уникальный идентификатор экземпляра сервиса. */
+/** \return Уникальный 64-битный идентификатор экземпляра сервиса. */
 std::uint64_t tim::service::id() const
 {
     return _d->_id;
 }
 
-/** \return Имя сервиса (задаётся в конструкторе наследника). */
+/** \return Имя сервиса, задаваемое в конструкторе. */
 const std::string &tim::service::name() const
 {
     return _d->_name;
@@ -26,7 +26,9 @@ const std::string &tim::service::name() const
 // Protected
 
 /**
- * Конструктор для наследников: запоминает имя и присваивает свежий id.
+ * Конструктор только для наследников.
+ *
+ * \param name Имя сервиса (используется в логах).
  */
 tim::service::service(const std::string &name)
     : _d(new tim::p::service())

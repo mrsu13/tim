@@ -8,14 +8,19 @@
 
 // Открытые
 
-/** Пустой токен; подписка отсутствует. */
+/** Конструирует "пустой" токен — подписка отсутствует. */
 tim::mqtt_subscription::mqtt_subscription()
     : tim::non_copyable()
     , _d(new tim::p::mqtt_subscription())
 {
 }
 
-/** Связывает токен с конкретной подпиской (client, id). */
+/**
+ * Конструирует токен, связанный с конкретной подпиской (client, id).
+ *
+ * \param client MQTT-клиент, выдавший подписку.
+ * \param id Идентификатор подписки внутри client.
+ */
 tim::mqtt_subscription::mqtt_subscription(tim::mqtt_client *client, std::size_t id)
     : tim::non_copyable()
     , _d(new tim::p::mqtt_subscription())
@@ -26,14 +31,16 @@ tim::mqtt_subscription::mqtt_subscription(tim::mqtt_client *client, std::size_t 
     _d->_id = id;
 }
 
-/** Move-конструктор. \a other становится пустым. */
+/**
+ * Перемещает подписку из \a other в *this. \a other становится пустым.
+ */
 tim::mqtt_subscription::mqtt_subscription(tim::mqtt_subscription &&other) noexcept
     : tim::non_copyable()
     , _d(std::move(other._d))
 {
 }
 
-/** Деструктор. Если подписка активна — отзывает её. */
+/** Деструктор. Если подписка активна — вызывает unsubscribe(). */
 tim::mqtt_subscription::~mqtt_subscription()
 {
     if (_d)
@@ -41,8 +48,11 @@ tim::mqtt_subscription::~mqtt_subscription()
 }
 
 /**
- * Move-присваивание. Перед перемещением активная подписка
- * текущего объекта отзывается.
+ * Move-присваивание. Если *this хранит активную подписку, она сначала
+ * отзывается; затем перемещается состояние из \a other.
+ *
+ * \param other Источник перемещения.
+ * \return *this.
  */
 tim::mqtt_subscription &tim::mqtt_subscription::operator=(tim::mqtt_subscription &&other) noexcept
 {
@@ -55,14 +65,16 @@ tim::mqtt_subscription &tim::mqtt_subscription::operator=(tim::mqtt_subscription
     return *this;
 }
 
-/** \return true, если токен хранит активную подписку. */
+/** \return true, если объект хранит активную подписку. */
 bool tim::mqtt_subscription::active() const
 {
     return _d && _d->_client;
 }
 
 /**
- * Отзывает подписку у клиента и помечает токен пустым. Идемпотентно.
+ * Явно отзывает подписку у клиента и помечает токен пустым.
+ * Идемпотентно: повторный вызов на пустом или уже отозванном токене
+ * безопасен.
  */
 void tim::mqtt_subscription::unsubscribe()
 {
