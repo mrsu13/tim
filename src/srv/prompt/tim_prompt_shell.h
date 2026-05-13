@@ -4,6 +4,8 @@
 #include "tim_signal.h"
 #include "tim_vt_shell.h"
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -49,7 +51,7 @@ protected:
 private:
 
     /** PIMPL: cигналы и состояние шелла. */
-    std::unique_ptr<tim::p::prompt_shell> _d;
+    tim::pimpl<tim::p::prompt_shell> _d;
 };
 
 }

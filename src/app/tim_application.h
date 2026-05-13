@@ -1,8 +1,9 @@
 #pragma once
 
 #include <filesystem>
-#include <memory>
 #include <string>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -50,7 +51,7 @@ public:
 private:
 
     /** PIMPL: всё внутреннее состояние (signals, mongoose, подсистемы). */
-    std::unique_ptr<tim::p::application> _d;
+    tim::pimpl<tim::p::application> _d;
 };
 
 }

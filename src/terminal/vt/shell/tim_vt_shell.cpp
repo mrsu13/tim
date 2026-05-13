@@ -26,7 +26,7 @@
  * \param engine Скрипт-движок, исполняющий введённые команды.
  */
 tim::vt_shell::vt_shell(tim::vt *term, tim::a_script_engine *engine)
-    : _d(new tim::p::vt_shell())
+    : _d()
 {
     assert(term);
     assert(engine);

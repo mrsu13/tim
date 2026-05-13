@@ -5,6 +5,11 @@ tim_test
 # Sublime Project Files
 *.sublime-*
 
+# Visual Studio Code
+.vscode
+*.code-workspace
+*.workspace
+
 # Prerequisites
 *.d
 

@@ -297,7 +297,7 @@ static const tim::color VT_PALETTE256[] =
  */
 tim::vt::vt(tim::a_terminal_protocol *proto)
     : tim::a_terminal(proto)
-    , _d(new tim::p::vt(this))
+    , _d(this)
 {
     _d->_term_proto = proto;
 }

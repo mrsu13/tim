@@ -2,9 +2,10 @@
 
 #include <filesystem>
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -98,7 +99,7 @@ public:
 private:
 
     /** PIMPL: буфер, история, флаги режимов, обработчики. */
-    std::unique_ptr<tim::p::line_edit> _d;
+    tim::pimpl<tim::p::line_edit> _d;
 };
 
 }

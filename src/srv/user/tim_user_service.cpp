@@ -24,7 +24,7 @@
  */
 tim::user_service::user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("user")
-    , _d(new tim::p::user_service(mqtt, db))
+    , _d(mqtt, db)
 {
     // Повторная выдача подписок на каждом (ре)подключении.
     _d->_on_connected = mqtt.connected.connect(

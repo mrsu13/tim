@@ -1,0 +1,3 @@
+shlibs:Depends=libc6 (>= 2.38), libgcc-s1 (>= 3.0), libssh-4 (>= 0.8.0), libstdc++6 (>= 11)
+misc:Depends=
+misc:Pre-Depends=

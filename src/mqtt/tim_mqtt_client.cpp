@@ -27,7 +27,7 @@ static const int TIM_MQTT_QOS = 1;
 tim::mqtt_client::mqtt_client(mg_mgr *mg)
     : connected{}
     , disconnected{}
-    , _d(new tim::p::mqtt_client(this))
+    , _d(this)
 {
     assert(mg);
     _d->_mg = mg;

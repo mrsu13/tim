@@ -1,0 +1,25 @@
+Source: tim
+Section: net
+Priority: optional
+Maintainer: Mikhail Borisov <m.borisov@localhost>
+Build-Depends: debhelper-compat (= 13),
+               libssh-dev,
+               pkg-config,
+               sqlite3
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: tim
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         adduser
+Description: Terminal Instant Messenger (TIM) server
+ TIM is an SSH-accessible instant messaging server. Clients connect over
+ SSH and get a Tcl-scriptable terminal prompt to read and post messages;
+ fan-out between sessions is done through an external MQTT broker, and
+ messages are persisted in SQLite.
+ .
+ The package installs a systemd unit running TIM under a dedicated
+ unprivileged system user. State lives in /var/lib/tim/; configuration
+ in /etc/tim/config.json.

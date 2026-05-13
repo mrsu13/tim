@@ -3,7 +3,7 @@
 #include "tim_language.h"
 #include "tim_translation.h"
 
-#include <memory>
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -44,7 +44,7 @@ private:
     translator();
 
     /** PIMPL: текущий выбранный язык. */
-    std::unique_ptr<tim::p::translator> _d;
+    tim::pimpl<tim::p::translator> _d;
 };
 
 }

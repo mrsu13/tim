@@ -128,6 +128,12 @@ struct prompt_service
     /** UUID автора последнего увиденного сообщения. */
     tim::uuid                                   _last_seen_post_author;
 
+    // Подписки и сигнал-соединения объявлены ПОСЛЕ полей-зависимостей
+    // (_mqtt, _db, _profiles, _proto, _terminal, _tcl, _shell и т.д.)
+    // намеренно: при разрушении они уничтожаются ПЕРВЫМИ, и их
+    // обработчики обращаются к этим полям. Перестановка проверяется
+    // static_assert ниже.
+
     /** Сигнал-токен: data_ready от ssh-протокола. */
     tim::signal_connection                      _on_data_ready;
     /** Сигнал-токен: posted от prompt_shell. */
@@ -154,6 +160,14 @@ struct prompt_service
      */
     std::unordered_set<tim::uuid>               _subscriptions;
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(prompt_service, _on_data_ready) > offsetof(prompt_service, _last_seen_post_author),
+              "MQTT-подписки и сигнал-соединения должны быть объявлены ПОСЛЕ "
+              "полей-зависимостей — они уничтожаются первыми, и их обработчики "
+              "читают эти поля.");
+#pragma GCC diagnostic pop
 
 }
 

@@ -32,7 +32,7 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.";
 tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
     : tim::vt_shell(term, engine)
     , posted()
-    , _d(new tim::p::prompt_shell(this))
+    , _d(this)
 {
 }
 

@@ -34,15 +34,45 @@
 
 
 /**
+ * Минимальный уровень важности, при котором сообщения попадают в лог
+ * (вычисляется компилятором). Соответствие числовых значений
+ * tim::severity:
+ * \code
+ *   0 — fatal      3 — info
+ *   1 — error      4 — debug
+ *   2 — warning    5 — trace
+ * \endcode
+ *
+ * По умолчанию — 5 (trace, всё логируется). Можно переопределить через
+ * флаг компилятора -DTIM_TRACE_MIN_LEVEL=N. Сообщения уровней с числом
+ * больше указанного полностью устраняются компилятором (короткое
+ * замыкание тернарного оператора) — нулевая стоимость в runtime.
+ *
+ * Fatal (значение 0) всегда выводится и завершает процесс; его нельзя
+ * подавить через этот лимит, пока TIM_TRACE_MIN_LEVEL >= 0.
+ */
+#ifndef TIM_TRACE_MIN_LEVEL
+#  define TIM_TRACE_MIN_LEVEL 5
+#endif
+
+
+/**
  * Сахар над tim::tracef: подставляет __FILE__, __LINE__,
  * TIM_TRACE_FUNCTION (см. выше).
+ *
+ * Сравнение в тернарном операторе вычисляется на этапе компиляции,
+ * поэтому вызовы для подавленных уровней не оставляют кода в бинарнике
+ * (включая аргументы format и их побочные эффекты — см. документацию
+ * к TIM_TRACE_MIN_LEVEL выше).
  *
  * \param svrt Не-полностью-квалифицированный элемент tim::severity
  *             (debug, info, warning, error, fatal, trace).
  * \param ... printf-подобный формат и аргументы.
  */
 #define TIM_TRACE(svrt, ...) \
-    tim::tracef(tim::severity::svrt, __FILE__, __LINE__, TIM_TRACE_FUNCTION, ##__VA_ARGS__)
+    (((int)tim::severity::svrt <= TIM_TRACE_MIN_LEVEL) \
+        ? tim::tracef(tim::severity::svrt, __FILE__, __LINE__, TIM_TRACE_FUNCTION, ##__VA_ARGS__) \
+        : false)
 
 
 namespace tim

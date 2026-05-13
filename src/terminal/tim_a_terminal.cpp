@@ -121,7 +121,7 @@ int tim::a_terminal::cprintf(const tim::color &text_color,
  * \param proto Терминальный протокол (источник байт и приёмник вывода).
  */
 tim::a_terminal::a_terminal(tim::a_protocol *proto)
-    : _d(new tim::p::a_terminal())
+    : _d()
 {
     assert(proto);
 

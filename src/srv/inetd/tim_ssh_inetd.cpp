@@ -3,6 +3,7 @@
 #include "tim_ssh_inetd_p.h"
 
 #include "tim_a_ssh_inetd_service.h"
+#include "tim_config.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 #include "tim_uuid.h"
@@ -207,12 +208,24 @@ void tim::ssh_inetd::interrupt_all()
  * освобождение сессий до самого внешнего уровня (Tcl-скрипт может
  * рекурсивно дёрнуть dispatch через DISPATCH-обработчик).
  *
+ * Глубина рекурсии ограничена tim::MAX_DISPATCH_DEPTH: ошибочный
+ * Tcl-скрипт, бесконечно вызывающий dispatch, иначе уронит стек.
+ *
  * \param timeout_ms Максимальное время блокировки в миллисекундах.
  */
 void tim::ssh_inetd::dispatch(int timeout_ms)
 {
     if (!_d->_event)
         return;
+
+    if (_d->_dispatch_depth >= (int)tim::MAX_DISPATCH_DEPTH)
+    {
+        TIM_TRACE(warning,
+                  TIM_TR("ssh_inetd::dispatch recursion depth %d reached; skipping nested poll."_en,
+                         "ssh_inetd::dispatch достиг глубины рекурсии %d; вложенный опрос пропущен."_ru),
+                  _d->_dispatch_depth);
+        return;
+    }
 
     ++_d->_dispatch_depth;
     ssh_event_dopoll(_d->_event, timeout_ms);
@@ -271,7 +284,7 @@ tim::ssh_inetd::ssh_inetd(std::uint16_t port,
                           const std::string &if_addr,
                           service_factory factory)
     : tim::inetd("ssh_inetd")
-    , _d(new tim::p::ssh_inetd())
+    , _d()
 {
     assert(port && "port must be non-zero.");
     assert(factory);

@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+# debian/rules для TIM. Использует debhelper.
+#
+# Сборка делегируется ./build.sh (release-режим): он сам выставляет
+# TIM_PLATFORM, флаги и параллельность. Цель `all` собирает и сам
+# исполняемый файл tim, и шаблонную БД tim.db (см. build/linux/rules.mk).
+# Файлы устанавливаются через debian/tim.install + dh_install;
+# у проекта нет make install-цели.
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	./build.sh release
+
+override_dh_auto_test:
+	cd tests && ./build.sh
+
+override_dh_auto_install:
+	# Файлы устанавливаются через debian/tim.install.
+
+override_dh_auto_clean:
+	./clean.sh

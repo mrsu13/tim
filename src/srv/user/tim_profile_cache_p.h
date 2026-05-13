@@ -51,6 +51,11 @@ struct profile_cache
     /** Кэш профилей других пользователей (по UUID). */
     std::unordered_map<tim::uuid, tim::user> _known;
 
+    // Подписки объявлены ПОСЛЕ полей-зависимостей (_mqtt, _db, _self,
+    // _known) намеренно: при разрушении они уничтожаются ПЕРВЫМИ, и их
+    // обработчики обращаются к этим полям. Перестановка проверяется
+    // static_assert ниже.
+
     /** Подписка на user/setnick/+ — обновляет ники в кэше. */
     tim::mqtt_subscription _sub_setnick;
     /** Подписка на user/seticon/+ — обновляет иконки в кэше. */
@@ -58,6 +63,14 @@ struct profile_cache
     /** Подписка на user/setmotto/+ — обновляет девизы в кэше. */
     tim::mqtt_subscription _sub_setmotto;
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(profile_cache, _sub_setnick) > offsetof(profile_cache, _known),
+              "MQTT-подписки должны быть объявлены ПОСЛЕ полей-зависимостей "
+              "(_mqtt, _db, _self, _known) — подписки уничтожаются первыми, и "
+              "их обработчики читают эти поля.");
+#pragma GCC diagnostic pop
 
 }
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <string>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -51,7 +52,7 @@ protected:
 private:
 
     /** PIMPL: line_edit, путь к истории, ссылка на engine. */
-    std::unique_ptr<tim::p::vt_shell> _d;
+    tim::pimpl<tim::p::vt_shell> _d;
 };
 
 }

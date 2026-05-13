@@ -4,7 +4,7 @@
 #include "tim_user.h"
 #include "tim_uuid.h"
 
-#include <memory>
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -56,7 +56,7 @@ public:
 private:
 
     /** PIMPL: всё состояние (включая подписки и кэш-карту). */
-    std::unique_ptr<tim::p::profile_cache> _d;
+    tim::pimpl<tim::p::profile_cache> _d;
 };
 
 }

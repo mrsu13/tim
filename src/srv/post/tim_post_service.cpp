@@ -25,7 +25,7 @@
  */
 tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("post")
-    , _d(new tim::p::post_service(mqtt, db))
+    , _d(mqtt, db)
 {
     // Повторно выдаём подписки на каждое (ре)подключение к брокеру.
     _d->_on_connected = mqtt.connected.connect(

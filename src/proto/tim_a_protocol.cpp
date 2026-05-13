@@ -16,7 +16,7 @@
  */
 tim::a_protocol::a_protocol(tim::a_io_device *io)
     : data_ready()
-    , _d(new tim::p::a_protocol(this))
+    , _d(this)
 {
     assert(io);
 

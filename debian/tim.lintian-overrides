@@ -1,0 +1,4 @@
+# mbedTLS is vendored on purpose: the upstream MQTT client (mongoose)
+# is built with MG_TLS=MG_TLS_MBED and pins a specific mbedtls version.
+# Linking the system libmbedcrypto would defeat the version-pin.
+tim: embedded-library mbedtls [usr/bin/tim]

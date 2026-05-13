@@ -2,6 +2,8 @@
 
 #include "tim_service.h"
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -36,7 +38,7 @@ public:
 private:
 
     /** PIMPL: подписки на все семь топиков. */
-    std::unique_ptr<tim::p::user_service> _d;
+    tim::pimpl<tim::p::user_service> _d;
 };
 
 }

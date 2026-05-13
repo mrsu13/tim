@@ -22,7 +22,7 @@
  */
 tim::reaction_service::reaction_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("reaction")
-    , _d(new tim::p::reaction_service(mqtt, db))
+    , _d(mqtt, db)
 {
     // Повторная выдача подписки на каждом (ре)подключении.
     _d->_on_connected = mqtt.connected.connect(

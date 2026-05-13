@@ -1,0 +1,53 @@
+#!/bin/sh
+# postinst для пакета tim: создаёт системного пользователя, каталог
+# данных и копирует подготовленный шаблон БД при первой установке.
+
+set -e
+
+USER=tim
+GROUP=tim
+DATA_DIR=/var/lib/tim
+DB_FILE="$DATA_DIR/tim.db"
+DB_TEMPLATE=/usr/share/tim/tim.db
+
+case "$1" in
+    configure)
+        # Системная группа.
+        if ! getent group "$GROUP" > /dev/null; then
+            addgroup --system "$GROUP"
+        fi
+
+        # Системный пользователь без shell-доступа; $HOME = DATA_DIR.
+        if ! getent passwd "$USER" > /dev/null; then
+            adduser --system --ingroup "$GROUP" \
+                    --home "$DATA_DIR" \
+                    --no-create-home \
+                    --gecos "TIM messaging server" \
+                    --shell /usr/sbin/nologin \
+                    "$USER"
+        fi
+
+        # Каталог данных: чтение/запись только для tim.
+        install -d -m 0750 -o "$USER" -g "$GROUP" "$DATA_DIR"
+
+        # Копируем шаблонную БД из /usr/share/tim/tim.db, если файла
+        # ещё нет. На обновлениях не перезаписываем — данные пользователя
+        # сохраняются. Сравнение версии схемы выполняет сам tim при
+        # старте (см. EXPECTED_DB_SCHEMA_VERSION).
+        if [ ! -f "$DB_FILE" ] && [ -f "$DB_TEMPLATE" ]; then
+            install -m 0640 -o "$USER" -g "$GROUP" "$DB_TEMPLATE" "$DB_FILE"
+        fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

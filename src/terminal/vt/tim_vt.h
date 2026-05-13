@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -66,7 +68,7 @@ public:
 private:
 
     /** PIMPL: цвета, буферы, состояние ANSI-state machine. */
-    std::unique_ptr<tim::p::vt> _d;
+    tim::pimpl<tim::p::vt> _d;
 };
 
 }

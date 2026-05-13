@@ -51,11 +51,25 @@ struct reaction_service
     /** Подключение к БД. */
     tim::sqlite_db &_db;
 
+    // Подписки и сигнал-соединения объявлены ПОСЛЕ полей-зависимостей
+    // (_mqtt, _db) намеренно: при разрушении они уничтожаются ПЕРВЫМИ,
+    // и их обработчики обращаются к _mqtt/_db. Перестановка проверяется
+    // static_assert ниже.
+
     /** Сигнал mqtt.connected — повторно выдаёт подписку. */
     tim::signal_connection _on_connected;
     /** Подписка на REACT_FILTER. */
     tim::mqtt_subscription _sub_react;
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+static_assert(offsetof(reaction_service, _on_connected) > offsetof(reaction_service, _db),
+              "MQTT-подписки и сигнал-соединения должны быть объявлены ПОСЛЕ "
+              "полей-зависимостей (_mqtt, _db) — они уничтожаются первыми, и их "
+              "обработчики читают эти ссылки.");
+#pragma GCC diagnostic pop
+
 }
 
 }

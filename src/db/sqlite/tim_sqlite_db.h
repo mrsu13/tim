@@ -1,8 +1,9 @@
 #pragma once
 
 #include <filesystem>
-#include <memory>
 #include <string>
+
+#include "tim_pimpl.h"
 
 
 struct sqlite3;
@@ -88,7 +89,7 @@ public:
 private:
 
     /** PIMPL: путь к файлу, sqlite3*, refcount транзакций. */
-    std::unique_ptr<tim::p::sqlite_db> _d;
+    tim::pimpl<tim::p::sqlite_db> _d;
 };
 
 }

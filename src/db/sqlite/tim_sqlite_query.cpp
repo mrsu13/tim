@@ -21,7 +21,7 @@
  * \param sql SQL-текст с '?' или ':name' плейсхолдерами.
  */
 tim::sqlite_query::sqlite_query(const tim::sqlite_db *db, const std::string &sql)
-    : _d(new tim::p::sqlite_query(db))
+    : _d(db)
 {
     assert(!sql.empty());
 

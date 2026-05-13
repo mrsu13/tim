@@ -14,16 +14,24 @@ export SUBDIRS := $(shell find $(SRC_PATH) -type d -execdir test -f {}/IGNORE ';
 export INCLUDES := $(addprefix -I, $(SUBDIRS)) $(TIM_INCLUDES)
 
 ifdef TIM_DEBUG_MODE
-	TIM_DEFINES  := -DTIM_OS_LINUX -DTIM_DEBUG
+	TIM_DEFINES  := -DTIM_OS_LINUX -DTIM_DEBUG -DTIM_TRACE_MIN_LEVEL=5
 	TIM_CFLAGS   := -g -O0 -Wall -Werror
 	TIM_CPPFLAGS := -g -O0 -fno-exceptions -Wall -Werror
 	TIM_STRIP    := touch
 else
-	TIM_DEFINES  := -DTIM_OS_LINUX
+	TIM_DEFINES  := -DTIM_OS_LINUX -DTIM_TRACE_MIN_LEVEL=2
 	TIM_CFLAGS   := -O3 -Wall -Werror
-	TIM_CPPFLAGS := -O3 -fno-exceptions -Wall -Werror
+	# GCC 13 даёт ложноположительный -Warray-bounds в шаблонах
+	# nlohmann/json при -O3 (см. tim_settings.cpp). Подавляем его,
+	# но не глушим остальные -Werror.
+	TIM_CPPFLAGS := -O3 -fno-exceptions -Wall -Werror -Wno-array-bounds
 	TIM_STRIP    := $(STRIP)
 endif
+
+# Флаги для 3rdparty/* — у нас нет прав/желания править вендорный код,
+# поэтому подавляем шумные предупреждения, которые он триггерит на -O2+
+# (например, fread/fwrite без use-check в lil.c).
+CFLAGS_3RD := -Wno-unused-result
 
 TIM_LIBS := -lm -lssh
 
@@ -72,7 +80,15 @@ CPP_SRCS := $(shell find $(SRC_PATH) -type f -name *.cpp -execdir test ! -f IGNO
 
 VPATH := $(SUBDIRS)
 
-all:	tim
+### База данных
+### -----------
+
+DB_FILE          := tim.db
+DB_SCHEMA_FILES  := $(sort $(wildcard db/??-*.sql))
+DB_SCHEMA_VER    := $(shell tr -d '" \n' < DB_SCHEMA_VERSION)
+
+
+all:	tim $(DB_FILE)
 
 ### Load dependencies
 ### -----------------
@@ -112,7 +128,7 @@ C_OBJS   := $(patsubst %.c,$(OBJ_DIR)/%.o,$(notdir $(C_SRCS)))
 CPP_OBJS := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(CPP_SRCS)))
 
 .SECONDARY:	$(C_OBJS) $(CPP_OBJS)
-.PHONY:	clean build-time
+.PHONY:	clean build-time db
 
 ### Target rules
 ### ------------
@@ -134,6 +150,19 @@ tim: build-time $(OBJ_DIR) $(C_OBJS) $(CPP_OBJS)
 		$(AT)$(CPP) $(CFLAGS) $(DEFINES) -o $@ $(C_OBJS) $(CPP_OBJS) $(LIBS)
 		$(AT)$(TIM_STRIP) $@
 
+# Готовая БД схемы: применяет все db/??-*.sql и фиксирует PRAGMA
+# user_version. Пересобирается при изменении любого SQL-файла или
+# DB_SCHEMA_VERSION. Используется при сборке .deb-пакета, чтобы
+# не тащить sqlite3-скрипты в postinst.
+$(DB_FILE): DB_SCHEMA_VERSION $(DB_SCHEMA_FILES)
+		@echo $(TEXT_BG_BLUE)$(TEXT_FG_BOLD_YELLOW)"DB "$(TEXT_NORM)$(TEXT_FG_BOLD_CYAN)$@ $(TEXT_NORM)
+		$(AT)rm -f $@ $@-shm $@-wal
+		$(AT)for sql in $(DB_SCHEMA_FILES); do sqlite3 -bail -batch $@ < $$sql; done
+		$(AT)echo "PRAGMA user_version = $(DB_SCHEMA_VER);" | sqlite3 -bail -batch $@
+
+# Удобный псевдоним: `make db` собирает только БД.
+db: $(DB_FILE)
+
 $(OBJ_DIR):
 		$(AT)mkdir $(OBJ_DIR)
 
@@ -141,4 +170,6 @@ clean:
 		@echo $(TEXT_FG_LIGHT_GREEN)"> Cleaning ... "$(TEXT_NORM)
 		$(AT)rm -rf $(OBJ_DIR)
 		$(AT)rm -f *~ *.d *.gdb core* *.so *.a *.log BUILD_TIME .DS_Store tim
+		$(AT)rm -f tim.db tim.db-shm tim.db-wal
+		$(AT)rm -f tests/tim_test tests/sqlite3.o tests/*.d tests/*~ tests/core*
 		@echo $(TEXT_FG_LIGHT_GREEN)"> Done :) "$(TEXT_NORM)

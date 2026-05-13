@@ -7,6 +7,8 @@
 #include <functional>
 #include <memory>
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -59,7 +61,7 @@ private:
               service_factory factory);
 
     /** PIMPL: ssh_bind, ssh_event, карта сессий, счётчик вложенности. */
-    std::unique_ptr<tim::p::ssh_inetd> _d;
+    tim::pimpl<tim::p::ssh_inetd> _d;
 };
 
 }

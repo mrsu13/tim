@@ -19,7 +19,8 @@ fi
 
 INCLUDES="-I../src -I../src/mqtt -I../src/types -I../src/signal -I../src/tools \
           -I../src/db/sqlite -I../src/3rdparty/sqlite -I../src/translator \
-          -I../src/app -I../src/3rdparty/jsoncpp -I../src/3rdparty/mongoose"
+          -I../src/app -I../src/3rdparty/jsoncpp -I../src/3rdparty/mongoose \
+          -I../src/srv"
 
 DEFINES="-DTIM_OS_LINUX -DJSON_NOEXCEPTION=1 -DJSON_DIAGNOSTICS=1 -DJSON_DIAGNOSTIC_POSITIONS=1"
 
@@ -60,11 +61,13 @@ $CXX -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter $OPT $INCLUDES $DEFI
     -o tim_test \
     test_main.cpp \
     test_mqtt_topic.cpp \
+    test_service_base.cpp \
     test_signal.cpp \
     test_sqlite_tx.cpp \
     test_uuid.cpp \
     ../src/mqtt/tim_mqtt_topic.cpp \
     ../src/signal/tim_signal_connection.cpp \
+    ../src/srv/tim_service.cpp \
     ../src/types/tim_uuid.cpp \
     ../src/db/sqlite/tim_sqlite_db.cpp \
     ../src/db/sqlite/tim_sqlite_query.cpp \

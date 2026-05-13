@@ -31,7 +31,7 @@
  */
 tim::tcl::tcl(tim::a_terminal *term)
     : tim::a_script_engine("Tcl", term)
-    , _d(new tim::p::tcl(this))
+    , _d(this)
 {
     _d->_lil = lil_new();
 

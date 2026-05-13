@@ -11,7 +11,7 @@
 /** Пустой токен: не связан ни с одним сигналом. */
 tim::signal_connection::signal_connection()
     : tim::non_copyable()
-    , _d(new tim::p::signal_connection())
+    , _d()
 {
 }
 
@@ -22,7 +22,7 @@ tim::signal_connection::signal_connection()
  */
 tim::signal_connection::signal_connection(const std::pair<tim::a_signal *, std::size_t> &s_id)
     : tim::non_copyable()
-    , _d(new tim::p::signal_connection())
+    , _d()
 {
     assert(s_id.first);
 

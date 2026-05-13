@@ -3,7 +3,8 @@
 #include "tim_non_copyable.h"
 
 #include <cstddef>
-#include <memory>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -47,7 +48,7 @@ public:
 private:
 
     /** PIMPL: указатель на клиента и id подписки. */
-    std::unique_ptr<tim::p::mqtt_subscription> _d;
+    tim::pimpl<tim::p::mqtt_subscription> _d;
 };
 
 }

@@ -31,7 +31,7 @@ const std::string &tim::service::name() const
  * \param name Имя сервиса (используется в логах).
  */
 tim::service::service(const std::string &name)
-    : _d(new tim::p::service())
+    : _d()
 {
     assert(!name.empty() && "Service name must not be empty.");
 

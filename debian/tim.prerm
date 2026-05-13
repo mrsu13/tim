@@ -1,0 +1,8 @@
+#!/bin/sh
+# prerm для пакета tim. Сервис останавливается debhelper-фрагментом ниже.
+
+set -e
+
+#DEBHELPER#
+
+exit 0

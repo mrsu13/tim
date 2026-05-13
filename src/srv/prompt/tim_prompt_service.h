@@ -4,6 +4,8 @@
 
 #include <functional>
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -50,7 +52,7 @@ public:
 private:
 
     /** PIMPL: терминал, Tcl, подписки, кэши. */
-    std::unique_ptr<tim::p::prompt_service> _d;
+    tim::pimpl<tim::p::prompt_service> _d;
 };
 
 }

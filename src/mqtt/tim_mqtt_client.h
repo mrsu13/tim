@@ -6,8 +6,9 @@
 
 #include <chrono>
 #include <cstdint>
-#include <memory>
 #include <string_view>
+
+#include "tim_pimpl.h"
 
 
 struct mg_mgr;
@@ -73,7 +74,7 @@ public:
 private:
 
     /** PIMPL: соединение, таймер, карта подписчиков, очередь публикаций. */
-    std::unique_ptr<tim::p::mqtt_client> _d;
+    tim::pimpl<tim::p::mqtt_client> _d;
 };
 
 }

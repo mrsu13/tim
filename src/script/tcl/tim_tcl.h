@@ -4,8 +4,9 @@
 
 #include <cstddef>
 #include <functional>
-#include <memory>
 #include <string>
+
+#include "tim_pimpl.h"
 
 
 typedef struct _lil_t *lil_t;
@@ -77,7 +78,7 @@ private:
     friend struct tim::p::tcl;
 
     /** PIMPL: lil_t, обработчики, текущее состояние ошибки. */
-    std::unique_ptr<tim::p::tcl> _d;
+    tim::pimpl<tim::p::tcl> _d;
 };
 
 }

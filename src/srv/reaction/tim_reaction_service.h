@@ -2,6 +2,8 @@
 
 #include "tim_service.h"
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -37,7 +39,7 @@ public:
 private:
 
     /** PIMPL: подписка на REACT_FILTER. */
-    std::unique_ptr<tim::p::reaction_service> _d;
+    tim::pimpl<tim::p::reaction_service> _d;
 };
 
 }

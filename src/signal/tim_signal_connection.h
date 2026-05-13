@@ -3,8 +3,9 @@
 #include "tim_non_copyable.h"
 
 #include <cstddef>
-#include <memory>
 #include <utility>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -45,7 +46,7 @@ public:
 private:
 
     /** PIMPL: указатель на сигнал и id слота. */
-    std::unique_ptr<tim::p::signal_connection> _d;
+    tim::pimpl<tim::p::signal_connection> _d;
 };
 
 }

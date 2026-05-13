@@ -1,0 +1,45 @@
+#!/bin/sh
+# postrm для пакета tim. На purge удаляем данные и системного
+# пользователя; на обычном remove оставляем /var/lib/tim, чтобы не
+# терять переписку и host-ключ при обновлении/переустановке.
+
+set -e
+
+USER=tim
+GROUP=tim
+DATA_DIR=/var/lib/tim
+
+case "$1" in
+    purge)
+        # Удаляем данные (БД, host-ключ, журнал шелла).
+        rm -rf "$DATA_DIR"
+
+        # /etc/tim/config.json удаляется dpkg как conffile;
+        # пустой каталог /etc/tim пытаемся убрать.
+        rmdir /etc/tim 2>/dev/null || true
+
+        # Удаляем системного пользователя/группу, если deluser доступен.
+        if command -v deluser > /dev/null; then
+            if getent passwd "$USER" > /dev/null; then
+                deluser --system --quiet "$USER" 2>/dev/null || true
+            fi
+        fi
+        if command -v delgroup > /dev/null; then
+            if getent group "$GROUP" > /dev/null; then
+                delgroup --system --quiet --only-if-empty "$GROUP" 2>/dev/null || true
+            fi
+        fi
+        ;;
+
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+
+    *)
+        echo "postrm called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

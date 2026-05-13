@@ -2,7 +2,7 @@
 
 #include "tim_signal.h"
 
-#include <memory>
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -62,7 +62,7 @@ public:
 private:
 
     /** PIMPL: подключение к ready_read и указатель на io. */
-    std::unique_ptr<tim::p::a_protocol> _d;
+    tim::pimpl<tim::p::a_protocol> _d;
 };
 
 }

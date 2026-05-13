@@ -11,7 +11,7 @@
 /** Конструирует "пустой" токен — подписка отсутствует. */
 tim::mqtt_subscription::mqtt_subscription()
     : tim::non_copyable()
-    , _d(new tim::p::mqtt_subscription())
+    , _d()
 {
 }
 
@@ -23,7 +23,7 @@ tim::mqtt_subscription::mqtt_subscription()
  */
 tim::mqtt_subscription::mqtt_subscription(tim::mqtt_client *client, std::size_t id)
     : tim::non_copyable()
-    , _d(new tim::p::mqtt_subscription())
+    , _d()
 {
     assert(client);
 

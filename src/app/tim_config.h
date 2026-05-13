@@ -37,4 +37,13 @@ static const char DB_FILE_NAME[] = "tim.db";
  * db/create-db.sh.
  */
 static const std::uint32_t EXPECTED_DB_SCHEMA_VERSION = 2;
+
+/**
+ * Максимальная глубина рекурсивного вызова ssh_inetd::dispatch.
+ * Защищает стек от бесконечной рекурсии, если Tcl-скрипт неправильно
+ * пользуется DISPATCH-обработчиком (например, бесконечно дёргает dispatch
+ * из обработчика события). При достижении лимита вложенный опрос
+ * пропускается с предупреждением в лог.
+ */
+static const std::size_t MAX_DISPATCH_DEPTH = 8;
 }

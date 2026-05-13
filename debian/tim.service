@@ -1,0 +1,33 @@
+[Unit]
+Description=TIM (Terminal Instant Messenger) server
+Documentation=file:///usr/share/doc/tim/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tim
+Group=tim
+WorkingDirectory=/var/lib/tim
+ExecStart=/usr/bin/tim --config /etc/tim/config.json
+Restart=on-failure
+RestartSec=5
+
+# Hardening.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/tim
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

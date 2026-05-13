@@ -23,7 +23,7 @@
 tim::profile_cache::profile_cache(tim::mqtt_client &mqtt,
                                   tim::sqlite_db &db,
                                   const tim::uuid &self_id)
-    : _d(new tim::p::profile_cache(mqtt, db))
+    : _d(mqtt, db)
 {
     _d->_self = _d->load_user(self_id);
 }

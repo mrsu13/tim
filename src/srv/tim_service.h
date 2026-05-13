@@ -1,8 +1,11 @@
 #pragma once
 
+#include "tim_non_copyable.h"
+
 #include <cstdint>
-#include <memory>
 #include <string>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -19,9 +22,11 @@ struct service;
  * Базовый класс именованных серверных сервисов TIM.
  *
  * Несёт лишь уникальный id и имя — конкретное поведение (подписки
- * MQTT, обработка SSH-канала и т.п.) добавляет наследник.
+ * MQTT, обработка SSH-канала и т.п.) добавляет наследник. Копирование
+ * запрещено: сервисы регистрируют MQTT-подписки и иные ресурсы в
+ * конструкторе, и дублирование владельца приводит к двойной отписке.
  */
-class service
+class service : private tim::non_copyable
 {
 
 public:
@@ -39,7 +44,7 @@ protected:
 private:
 
     /** PIMPL: id и имя. */
-    std::unique_ptr<tim::p::service> _d;
+    tim::pimpl<tim::p::service> _d;
 };
 
 }

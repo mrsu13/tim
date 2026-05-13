@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -77,7 +78,7 @@ public:
 private:
 
     /** PIMPL: имя языка и указатель на терминал. */
-    std::unique_ptr<tim::p::a_script_engine> _d;
+    tim::pimpl<tim::p::a_script_engine> _d;
 };
 
 }

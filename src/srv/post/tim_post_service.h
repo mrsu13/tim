@@ -2,6 +2,8 @@
 
 #include "tim_service.h"
 
+#include "tim_pimpl.h"
+
 
 namespace tim
 {
@@ -35,7 +37,7 @@ public:
 private:
 
     /** PIMPL: состояние подписок и обработчиков. */
-    std::unique_ptr<tim::p::post_service> _d;
+    tim::pimpl<tim::p::post_service> _d;
 };
 
 }

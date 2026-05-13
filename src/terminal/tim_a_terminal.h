@@ -3,7 +3,8 @@
 #include "tim_terminal_theme.h"
 
 #include <cstdarg>
-#include <memory>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -86,7 +87,7 @@ protected:
 private:
 
     /** PIMPL: указатель на протокол и текущая тема. */
-    std::unique_ptr<tim::p::a_terminal> _d;
+    tim::pimpl<tim::p::a_terminal> _d;
 };
 
 }

@@ -39,7 +39,7 @@ static const int SLEEP = 250;
 
 /** Конструирует объект без открытой БД. */
 tim::sqlite_db::sqlite_db()
-    : _d(new tim::p::sqlite_db())
+    : _d()
 {
 }
 

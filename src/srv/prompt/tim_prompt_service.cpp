@@ -38,7 +38,7 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
                                     tim::sqlite_db &db,
                                     std::function<void()> dispatch_handler)
     : tim::a_ssh_inetd_service("prompt", info)
-    , _d(new tim::p::prompt_service(this, mqtt, db, info.user_id))
+    , _d(this, mqtt, db, info.user_id)
 {
     _d->load_subscriptions();
     _d->_proto.reset(new tim::ssh_terminal_protocol(this));

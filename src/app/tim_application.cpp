@@ -34,9 +34,12 @@
  *                    для пробрасывания аргумента --config из main().
  */
 tim::application::application(const std::string &config_path)
-    : _d(new tim::p::application())
+    : _d()
 {
-    assert(!tim::p::application::instance() && "tim::application instantiated already.");
+    if (tim::p::application::instance())
+        TIM_TRACE(fatal, "%s",
+                  TIM_TR("tim::application is a singleton; second instantiation is forbidden."_en,
+                         "tim::application существует в единственном экземпляре; повторное создание запрещено."_ru));
 
     tim::p::application::instance() = this;
 

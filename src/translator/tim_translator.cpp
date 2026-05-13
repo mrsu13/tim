@@ -90,7 +90,7 @@ const char *tim::translator::translate(const tim::translations &translations,
 
 /** Закрытый конструктор: только через instance(). */
 tim::translator::translator()
-    : _d(new tim::p::translator())
+    : _d()
 {
 }
 

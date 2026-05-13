@@ -18,7 +18,7 @@
  */
 tim::a_script_engine::a_script_engine(const std::string &language,
                                       tim::a_terminal *term)
-    : _d(new tim::p::a_script_engine())
+    : _d()
 {
     assert(!language.empty() && "Script language name must not be empty.");
     assert(term);

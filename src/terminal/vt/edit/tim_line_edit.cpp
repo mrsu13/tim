@@ -32,7 +32,7 @@
  * \param term Терминал, на котором редактируется строка.
  */
 tim::line_edit::line_edit(tim::vt *term)
-    : _d(new tim::p::line_edit())
+    : _d()
 {
     assert(term);
 

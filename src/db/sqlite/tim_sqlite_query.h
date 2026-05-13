@@ -6,7 +6,8 @@
 
 #include <cstdint>
 #include <string>
-#include <memory>
+
+#include "tim_pimpl.h"
 
 
 namespace tim
@@ -87,7 +88,7 @@ public:
 private:
 
     /** PIMPL: sqlite3_stmt*, текст SQL, указатель на БД. */
-    std::unique_ptr<tim::p::sqlite_query> _d;
+    tim::pimpl<tim::p::sqlite_query> _d;
 };
 
 }

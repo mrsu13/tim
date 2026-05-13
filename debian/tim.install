@@ -1,0 +1,3 @@
+tim                          usr/bin
+tim.db                       usr/share/tim
+debian/misc/config.json      etc/tim
