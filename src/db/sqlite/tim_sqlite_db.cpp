@@ -400,7 +400,7 @@ bool tim::sqlite_db::begin()
 }
 
 /**
- * Открывает named SAVEPOINT.
+ * Открывает именованный SAVEPOINT.
  *
  * \param save_point Имя точки сохранения.
  * \return true при успехе.
@@ -442,7 +442,7 @@ bool tim::sqlite_db::commit()
 }
 
 /**
- * Освобождает named SAVEPOINT.
+ * Освобождает именованный SAVEPOINT.
  *
  * \param save_point Имя точки сохранения.
  * \return true при успехе.
@@ -456,7 +456,7 @@ bool tim::sqlite_db::commit(const std::string &save_point)
 
 /**
  * ROLLBACK всей транзакции, сбрасывает счётчик вложенности в 0.
- * Внимание: не refcount-aware — внутренний rollback отменит и
+ * Внимание: не учитывает счётчик вложенности — внутренний rollback отменит и
  * внешнюю транзакцию тоже.
  *
  * \return true при успехе.
@@ -475,7 +475,7 @@ bool tim::sqlite_db::rollback()
 }
 
 /**
- * Откат к named SAVEPOINT.
+ * Откат к именованный SAVEPOINT.
  *
  * \param save_point Имя точки сохранения.
  * \return true при успехе.

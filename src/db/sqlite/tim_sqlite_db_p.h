@@ -65,7 +65,7 @@ struct sqlite_db
     /** Текущее sqlite3-соединение (или пустой ptr). */
     db_ptr _db;
 
-    /** Счётчик вложенности begin()/commit() для refcount-aware транзакций. */
+    /** Счётчик вложенности begin()/commit() для транзакций со счётчиком ссылок. */
     int _transaction_count = 0;
 };
 

@@ -75,10 +75,10 @@ static bool colors_enabled()
 
 /**
  * ANSI SGR ESC-последовательность цвета для уровня. Палитра как
- * в rxi/log.c: fatal — magenta, error — red, warning — yellow,
- * info — green, debug — cyan, trace — bright blue.
+ * в rxi/log.c: fatal — пурпурный, error — красный, warning — жёлтый,
+ * info — зелёный, debug — голубой, trace — ярко-синий.
  *
- * \return Строка-литерал, начинающаяся с ESC; либо "" для unknown.
+ * \return Строка-литерал, начинающаяся с ESC; либо "" для неизвестного уровня.
  */
 static const char *level_color(tim::severity s)
 {

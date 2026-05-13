@@ -5,7 +5,7 @@
 
 
 /**
- * \name nlohmann/json macro-hooks
+ * \name Макро-перехватчики nlohmann/json
  *
  * TIM собирается с -fno-exceptions; nlohmann/json по умолчанию использует
  * исключения. Через эти макросы переопределяем "try/catch/throw" так,
