@@ -1,27 +1,31 @@
+% Шрифты и языковые настройки для XeLaTeX.
+%
+% Под XeLaTeX UTF-8 — родная кодировка, а Cyrillic-поддержка обеспечена
+% через polyglossia + fontspec. Это избавляет от старой связки
+% inputenc + fontenc(T1,T2A) + babel + cmap + textgreek + newunicodechar
+% и заодно решает проблему box-drawing символов в логах TIM (одна
+% строчка monofont вместо ручных \newunicodechar).
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+
+\setdefaultlanguage{russian}
+\setotherlanguage{english}
+
+% Шрифты: оставляем CMU-семейство (визуально близкое к привычному
+% Computer Modern), но monospace берём DejaVu Sans Mono — у CMU
+% Typewriter в Cyrillic-наборе нет полного покрытия box-drawing
+% символов, которые встречаются в выводе TIM (┌ ─ ┐ │ └ ┘ и т.п.).
+\setmainfont{CMU Serif}
+\setsansfont{CMU Sans Serif}
+\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]
+
+% Тело документа набираем sans-serif (как в исходной pdflatex-сборке).
+\renewcommand{\familydefault}{\sfdefault}
+
 \usepackage{xstring}
-\usepackage[T1, T2A]{fontenc}
-\usepackage[utf8]{inputenc}
-\usepackage[english,russian]{babel}
-\usepackage{cmap}
-\usepackage{textgreek}
 \usepackage[autostyle]{csquotes}
 \usepackage[hang,flushmargin]{footmisc}
-\usepackage{pmboxdraw}
-\usepackage{newunicodechar}
 
-\newunicodechar{╔}{\textSFxxxix}
-\newunicodechar{═}{\textSFxliii}
-\newunicodechar{╗}{\textSFxxv}
-\newunicodechar{║}{\textSFxxiv}
-\newunicodechar{╚}{\textSFxxxviii}
-\newunicodechar{╝}{\textSFxxvi}
-
-\renewcommand{\sfdefault}{cmss}
-\renewcommand{\ttdefault}{cmtt}
-\renewcommand{\rmdefault}{cmss}
-
-% Font for footnotes.
+% Меньший кегль сносок.
 \renewcommand{\footnotesize}{\fontsize{6}{7}\selectfont}
-
-\catcode`\"=13
-%\def"{\begingroup\og \def"{\fg\endgroup}}

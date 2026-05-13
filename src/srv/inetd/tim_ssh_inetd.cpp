@@ -529,10 +529,6 @@ int tim::p::ssh_inetd::on_auth_pubkey(::ssh_session session, const char *user, :
     return channel;
 }
 
-/**
- * libssh-обработчик pty-request. Сохраняет $TERM и геометрию в
- * ssh_session_state — они будут переданы в фабрику при shell-request.
- */
 int tim::p::ssh_inetd::on_pty_request(::ssh_session, ::ssh_channel, const char *term,
                                       int x, int y, int /*px*/, int /*py*/, void *userdata)
 {
@@ -547,11 +543,6 @@ int tim::p::ssh_inetd::on_pty_request(::ssh_session, ::ssh_channel, const char *
     return SSH_OK;
 }
 
-/**
- * libssh-обработчик shell-request. Собирает ssh_session_info из
- * накопленных полей и зовёт фабрику для создания прикладного сервиса
- * (обычно prompt_service).
- */
 int tim::p::ssh_inetd::on_shell_request(::ssh_session, ::ssh_channel channel, void *userdata)
 {
     ssh_session_state *st = (ssh_session_state *)userdata;

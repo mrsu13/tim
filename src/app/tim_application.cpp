@@ -254,12 +254,6 @@ void tim::application::quit()
 
 #ifdef TIM_OS_LINUX
 
-/**
- * Обработчик SIGINT/SIGTERM. Async-signal-safe: только запрашивает
- * выход у живого application через instance().
- *
- * \param sig_num Номер сигнала.
- */
 void tim::p::application::signal_handler(int sig_num)
 {
     switch (sig_num)

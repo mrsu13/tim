@@ -38,10 +38,8 @@ Any whitespaces between sequences and arguments should be ignored. They are pres
 | `VT`  | 11      | 013   | 0x0B | `\v`     | `^K`     | Vertical TAB                   |
 | `FF`  | 12      | 014   | 0x0C | `\f`     | `^L`     | Formfeed (also: New page `NP`) |
 | `CR`  | 13      | 015   | 0x0D | `\r`     | `^M`     | Carriage return                |
-| `ESC` | 27      | 033   | 0x1B | `\e`[*](#escape) | `^[` | Escape character           |
+| `ESC` | 27      | 033   | 0x1B | `\e`     | `^[`     | Escape character (see note)    |
 | `DEL` | 127     | 177   | 0x7F | `<none>` | `<none>` | Delete character               |
-
-<div id="escape"></div>
 
 > **Note:** Some control escape sequences, like `\e` for `ESC`, are not guaranteed to work in all languages and compilers. It is recommended to use the decimal, octal or hex representation as escape code.
 

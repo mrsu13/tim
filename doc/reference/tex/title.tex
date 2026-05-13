@@ -1,4 +1,12 @@
-\renewcommand{\date}{\input{../last-modified.tex}}
+% Титульная страница.
+% Дата сборки берётся из tex/last-modified.tex (генерируется Makefile-ом).
+% Файл может отсутствовать при сборке вне `make pdf` — подстраховываемся
+% \IfFileExists.
+\IfFileExists{../last-modified.tex}{%
+    \renewcommand{\date}{\input{../last-modified.tex}}%
+}{%
+    \renewcommand{\date}{}%
+}
 
 \begin{titlepage}
 
@@ -11,11 +19,9 @@
 \begin{spacing}{3}
     \thickrule
     \begin{flushright}
-        \includegraphics[width=0.4\textwidth]{../images/bicycle.jpg}
-        \vskip 5mm
         \begin{minipage}{\textwidth}
             \begin{flushright}
-                \textbf{\Huge\title{}}
+                \textbf{\Huge\timproductname{}}
             \end{flushright}
         \end{minipage}
     \end{flushright}

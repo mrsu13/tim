@@ -26,8 +26,8 @@ struct prompt_service;
  * Конструируется фабрикой ssh_inetd при подключении клиента; владеет
  * SSH-терминальным протоколом, VT-эмулятором, Tcl-интерпретатором,
  * prompt_shell, profile_cache и набором MQTT-подписок (POST_FILTER,
- * REACT_EVENT_FILTER, user/subscribe/<self>, user/unsubscribe/<self>,
- * session/notice/<self>).
+ * REACT_EVENT_FILTER, user/subscribe/&lt;self&gt;, user/unsubscribe/&lt;self&gt;,
+ * session/notice/&lt;self&gt;).
  */
 class prompt_service : public tim::a_ssh_inetd_service
 {

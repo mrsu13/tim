@@ -53,7 +53,7 @@ void tim::p::reaction_service::subscribe()
  * Парсит topic "react/<post-uuid>/<user-uuid>" и payload-вес. weight = 0
  * трактуется как снятие реакции (DELETE); иное значение — INSERT OR REPLACE
  * по UNIQUE(post_id, user_id). После успешной записи публикует
- * react_event/<post>/<user> с тем же payload-весом.
+ * react_event/&lt;post&gt;/&lt;user&gt; с тем же payload-весом.
  */
 void tim::p::reaction_service::on_react(const tim::mqtt_topic &topic,
                                         const char *data, std::size_t size)

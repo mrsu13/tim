@@ -5,12 +5,17 @@
 
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 %\cftsetpnumwidth{1.0cm}
+\makeatletter
 \def\l@figure{\@dottedtocline{1}{1.5em}{4em}}
 \def\l@table{\@dottedtocline{1}{1.5em}{4em}}
+\makeatother
 
 \setcounter{secnumdepth}{5}
 \setcounter{tocdepth}{5}
 
+% Перехватываем секционирующие команды, чтобы при заходе в новый раздел
+% подменять правый колонтитул. Имена с `@` требуют \makeatletter.
+\makeatletter
 \let\latex@section\section
 \def\section{\pagebreak\secdef\my@section{\latex@section*}}
 \def\my@section[#1]#2{\latex@section[#2]{#1}\setrheader{\thesection~#1}\setcounter{figure}{0}}
@@ -26,6 +31,7 @@
 \let\latex@paragraph\paragraph
 \def\paragraph{\secdef\my@paragraph{\latex@paragraph*}}
 \def\my@paragraph[#1]#2{\latex@paragraph[#2]{#1}\setrheader{\theparagraph~#1}\mbox{}\\}
+\makeatother
 
 \newtheoremstyle{thstyle}
     {\topsep}   % ABOVESPACE
@@ -86,5 +92,3 @@
     boxrule=0.5pt,colback=notecolor!10!white,colframe=notecolor!75!black,fonttitle=\bfseries,
     title=ЗАМЕЧАНИЕ~\thetcbcounter%
 }
-
-\makeindex

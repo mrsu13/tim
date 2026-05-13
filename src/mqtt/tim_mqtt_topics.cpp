@@ -23,7 +23,7 @@ inline std::string nb(const tim::uuid &uid)
 
 
 /**
- * Строит топик "user/setnick/<uuid>".
+ * Строит топик "user/setnick/&lt;uuid&gt;".
  *
  * \param uid UUID пользователя, у которого меняется ник.
  * \return Сконструированный топик.
@@ -34,7 +34,7 @@ tim::mqtt_topic tim::topics::user_setnick(const tim::uuid &uid)
 }
 
 /**
- * Строит топик "user/seticon/<uuid>".
+ * Строит топик "user/seticon/&lt;uuid&gt;".
  *
  * \param uid UUID пользователя.
  * \return Сконструированный топик.
@@ -45,7 +45,7 @@ tim::mqtt_topic tim::topics::user_seticon(const tim::uuid &uid)
 }
 
 /**
- * Строит топик "user/setmotto/<uuid>".
+ * Строит топик "user/setmotto/&lt;uuid&gt;".
  *
  * \param uid UUID пользователя.
  * \return Сконструированный топик.
@@ -56,7 +56,7 @@ tim::mqtt_topic tim::topics::user_setmotto(const tim::uuid &uid)
 }
 
 /**
- * Строит топик "user/setpubkey/<uuid>".
+ * Строит топик "user/setpubkey/&lt;uuid&gt;".
  *
  * \param uid UUID пользователя.
  * \return Сконструированный топик.
@@ -67,7 +67,7 @@ tim::mqtt_topic tim::topics::user_setpubkey(const tim::uuid &uid)
 }
 
 /**
- * Строит топик "user/subscribe/<subscriber>".
+ * Строит топик "user/subscribe/&lt;subscriber&gt;".
  *
  * \param subscriber UUID подписавшегося пользователя.
  * \return Сконструированный топик; payload — UUID издателя.
@@ -78,7 +78,7 @@ tim::mqtt_topic tim::topics::user_subscribe(const tim::uuid &subscriber)
 }
 
 /**
- * Строит топик "user/unsubscribe/<subscriber>".
+ * Строит топик "user/unsubscribe/&lt;subscriber&gt;".
  *
  * \param subscriber UUID отписавшегося пользователя.
  * \return Сконструированный топик; payload — UUID издателя.
@@ -89,7 +89,7 @@ tim::mqtt_topic tim::topics::user_unsubscribe(const tim::uuid &subscriber)
 }
 
 /**
- * Строит топик "post/<author>/<post-id>".
+ * Строит топик "post/&lt;author&gt;/&lt;post-id&gt;".
  *
  * \param author UUID автора сообщения.
  * \param post_id UUID самого сообщения.
@@ -101,7 +101,7 @@ tim::mqtt_topic tim::topics::post(const tim::uuid &author, const tim::uuid &post
 }
 
 /**
- * Строит топик "react/<post-id>/<reactor>" — запрос реакции.
+ * Строит топик "react/&lt;post-id&gt;/&lt;reactor&gt;" — запрос реакции.
  *
  * \param post_id UUID сообщения.
  * \param reactor UUID реагирующего пользователя.
@@ -113,7 +113,7 @@ tim::mqtt_topic tim::topics::react(const tim::uuid &post_id, const tim::uuid &re
 }
 
 /**
- * Строит топик "react_event/<post-id>/<reactor>" — уведомление об успешно
+ * Строит топик "react_event/&lt;post-id&gt;/&lt;reactor&gt;" — уведомление об успешно
  * записанной реакции.
  *
  * \param post_id UUID сообщения.
@@ -126,7 +126,7 @@ tim::mqtt_topic tim::topics::react_event(const tim::uuid &post_id, const tim::uu
 }
 
 /**
- * Строит топик "session/notice/<uuid>" — личное уведомление пользователю
+ * Строит топик "session/notice/&lt;uuid&gt;" — личное уведомление пользователю
  * (например, "ник занят"). Payload — текст; клиент отрисовывает цветом warning.
  *
  * \param uid UUID получателя.

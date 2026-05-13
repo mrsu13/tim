@@ -18,7 +18,9 @@ class flags
 
 public:
 
+    /** Целочисленный тип-носитель флагов (битовая маска). */
     using value_type = unsigned;
+    /** Тип-перечисление, на основе которого строятся флаги. */
     using enum_type = Enum;
 
     constexpr inline flags(value_type value = 0);
@@ -28,6 +30,8 @@ public:
     constexpr inline operator bool() const;
 
     constexpr inline bool test(Enum f) const;
+    /** Устанавливает биты по битовой маске целиком (заменяет состояние).
+     *  \param mask Новая битовая маска флагов. */
     inline void set(value_type mask);
     inline void set(Enum f, bool on = true);
     inline void clear(Enum f);
@@ -67,12 +71,20 @@ constexpr inline bool operator==(const tim::flags<Enum> &f1, const tim::flags<En
 namespace std
 {
 
+/**
+ * Специализация std::hash для tim::flags: хешируется через
+ * std::hash<value_type> по битовой маске. Достаточно для
+ * unordered-контейнеров.
+ */
 template<typename Enum>
 struct hash<tim::flags<Enum>>
 {
 
 public:
 
+    /** Вычисляет хеш флагов через хеш битовой маски.
+     *  \param f Объект флагов.
+     *  \return Целочисленный хеш. */
     inline std::size_t operator()(const tim::flags<Enum> &f) const
     {
         return std::hash<typename tim::flags<Enum>::value_type>()((typename tim::flags<Enum>::value_type)f);

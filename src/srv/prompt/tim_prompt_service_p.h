@@ -64,7 +64,7 @@ struct prompt_service
 
     /**
      * Выдаёт MQTT-подписки сессии (POST, REACT_EVENT, user/subscribe|
-     * unsubscribe/<self>, session/notice/<self>) и зовёт _profiles.subscribe().
+     * unsubscribe/&lt;self&gt;, session/notice/&lt;self&gt;) и зовёт _profiles.subscribe().
      * Вызывается на каждом connect/reconnect.
      */
     void subscribe();
@@ -79,7 +79,7 @@ struct prompt_service
     void on_data_ready(const char *data, std::size_t size);
 
     /**
-     * Обработчик входящего post/<author>/<post-id>. Парсит UUID-ы,
+     * Обработчик входящего post/&lt;author&gt;/&lt;post-id&gt;. Парсит UUID-ы,
      * сохраняет как "последний увиденный" и отрисовывает плашку сообщения.
      *
      * \param topic Полный топик публикации.
@@ -89,7 +89,7 @@ struct prompt_service
     void on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * Обработчик react_event/<post>/<reactor>. Выводит уведомление
+     * Обработчик react_event/&lt;post&gt;/&lt;reactor&gt;. Выводит уведомление
      * "X отреагировал(а) на ваш пост" в чат.
      *
      * \param topic Топик события реакции.
@@ -98,12 +98,6 @@ struct prompt_service
      */
     void on_react_event(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
-    /**
-     * Рисует одного сообщения: общая часть on_post() и load_post_history().
-     *
-     * \param publisher_id UUID автора.
-     * \param text Текст сообщения.
-     */
     void render_post(const tim::uuid &publisher_id, std::string_view text);
 
     /** Внешний prompt_service (владелец). */

@@ -52,32 +52,32 @@ void tim::p::user_service::subscribe()
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { connect(topic, data, size); });
 
-    // user/setnick/<uuid> — payload nick; UPDATE user.nick + проверка коллизии.
+    // user/setnick/&lt;uuid&gt; — payload nick; UPDATE user.nick + проверка коллизии.
     _sub_setnick = _mqtt.subscribe(tim::topics::USER_SETNICK_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setnick(topic, data, size); });
 
-    // user/seticon/<uuid> — payload icon; UPDATE user.icon.
+    // user/seticon/&lt;uuid&gt; — payload icon; UPDATE user.icon.
     _sub_seticon = _mqtt.subscribe(tim::topics::USER_SETICON_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { seticon(topic, data, size); });
 
-    // user/setmotto/<uuid> — payload motto; UPDATE user.motto.
+    // user/setmotto/&lt;uuid&gt; — payload motto; UPDATE user.motto.
     _sub_setmotto = _mqtt.subscribe(tim::topics::USER_SETMOTTO_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setmotto(topic, data, size); });
 
-    // user/setpubkey/<uuid> — payload OpenSSH-pub_key; UPDATE user.pub_key.
+    // user/setpubkey/&lt;uuid&gt; — payload OpenSSH-pub_key; UPDATE user.pub_key.
     _sub_setpubkey = _mqtt.subscribe(tim::topics::USER_SETPUBKEY_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { setpubkey(topic, data, size); });
 
-    // user/subscribe/<subscriber> — payload publisher; INSERT subscription.
+    // user/subscribe/&lt;subscriber&gt; — payload publisher; INSERT subscription.
     _sub_subscribe = _mqtt.subscribe(tim::topics::USER_SUBSCRIBE_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { subscribe_to(topic, data, size); });
 
-    // user/unsubscribe/<subscriber> — payload publisher; DELETE subscription.
+    // user/unsubscribe/&lt;subscriber&gt; — payload publisher; DELETE subscription.
     _sub_unsubscribe = _mqtt.subscribe(tim::topics::USER_UNSUBSCRIBE_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { unsubscribe_from(topic, data, size); });
@@ -109,9 +109,9 @@ void tim::p::user_service::connect(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/setnick/<uuid>: проверяет уникальность ника и пишет
+ * Обработчик user/setnick/&lt;uuid&gt;: проверяет уникальность ника и пишет
  * UPDATE user SET nick. При коллизии шлёт уведомление через
- * session/notice/<uuid> вместо тихого "не сработало".
+ * session/notice/&lt;uuid&gt; вместо тихого "не сработало".
  */
 void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
                                    const char *data, std::size_t size)
@@ -169,7 +169,7 @@ void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/seticon/<uuid>: пишет UPDATE user SET icon.
+ * Обработчик user/seticon/&lt;uuid&gt;: пишет UPDATE user SET icon.
  */
 void tim::p::user_service::seticon(const tim::mqtt_topic &topic,
                                    const char *data, std::size_t size)
@@ -197,7 +197,7 @@ void tim::p::user_service::seticon(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/setmotto/<uuid>: пишет UPDATE user SET motto.
+ * Обработчик user/setmotto/&lt;uuid&gt;: пишет UPDATE user SET motto.
  */
 void tim::p::user_service::setmotto(const tim::mqtt_topic &topic,
                                     const char *data, std::size_t size)
@@ -224,7 +224,7 @@ void tim::p::user_service::setmotto(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/setpubkey/<uuid>: гарантирует существование пользователя
+ * Обработчик user/setpubkey/&lt;uuid&gt;: гарантирует существование пользователя
  * через ensure_user и пишет UPDATE user SET pub_key в единой транзакции.
  * UNIQUE(pub_key) защищает от привязки одного ключа к двум разным id.
  */
@@ -278,7 +278,7 @@ void tim::p::user_service::setpubkey(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/subscribe/<subscriber>: создаёт запись в subscription
+ * Обработчик user/subscribe/&lt;subscriber&gt;: создаёт запись в subscription
  * с FK на обе стороны (ensure_user для обоих). Самоподписка отбрасывается.
  */
 void tim::p::user_service::subscribe_to(const tim::mqtt_topic &topic,
@@ -339,7 +339,7 @@ void tim::p::user_service::subscribe_to(const tim::mqtt_topic &topic,
 }
 
 /**
- * Обработчик user/unsubscribe/<subscriber>: DELETE из subscription
+ * Обработчик user/unsubscribe/&lt;subscriber&gt;: DELETE из subscription
  * по паре (publisher_id, subscriber_id).
  */
 void tim::p::user_service::unsubscribe_from(const tim::mqtt_topic &topic,

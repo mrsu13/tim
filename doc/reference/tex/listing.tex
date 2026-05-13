@@ -138,9 +138,12 @@
     \endminipage\hfill\null
 }
 
-% List of Listing appearance in the Table of Contents.
+% Список листингов в оглавлении: создаём свой `\listoflistings`.
+% Имена внутренних команд используют `@`, поэтому весь блок —
+% внутри \makeatletter/\makeatother.
+\makeatletter
 \renewcommand{\lstlistingname}{Listing}
-\let\l@lstlisting\l@subsection% 
+\let\l@lstlisting\l@subsection
 \renewcommand{\lstlistlistingname}{Listings}
 \begingroup\let\newcounter\@gobble\let\setcounter\@gobbletwo
   \globaldefs\@ne \let\c@loldepth\@ne
@@ -148,6 +151,7 @@
 \endgroup
 \let\l@lstlisting\l@listings
 \AtBeginDocument{\addtocontents{lol}{\protect\addvspace{10\p@}}}
+\makeatother
 \renewcommand{\lstlistoflistings}{\listoflistings}
 %\renewcommand{\cftlistingsfont}{\itshape}
 \cftsetindents{listings}{1.5em}{4em}

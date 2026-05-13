@@ -1,44 +1,39 @@
-\usepackage{psfrag}
-%\usepackage{psboxit,pstricks}
+% Совместимость с ninecolors 2022D на Ubuntu 24.04.
+%
+% tabularray (через doxygen-сгенерированный tim.sty) подтягивает
+% ninecolors. ninecolors зовёт \definecolor с моделью «rgb:Hsb», что в
+% xcolor 3.01 больше не поддерживается — сборка падает. Сами имена
+% (red1..red9 и т.п.) из ninecolors tabularray не использует, поэтому
+% безопаснее всего пометить пакет как уже подгруженный — настоящий .sty
+% просто не запустится.
+\makeatletter
+\@namedef{ver@ninecolors.sty}{2022/02/13 v2022D ninecolors stub}
+\expandafter\let\csname opt@ninecolors.sty\endcsname\@empty
+\makeatother
 
-\usepackage{ifpdf}
-\ifpdf
-\usepackage[pdftex,
-            hyperindex,
-            pdffitwindow   = true,
-            pdfstartview   = Fit,
-            colorlinks     = true,
-            linkcolor      = red,
-            filecolor      = blue,
-            citecolor      = darkgreen,
-            bookmarksopen  = true,
-            bookmarksopenlevel = 0,
-            plainpages     = false,
-            pdfpagelabels  = true,
-            pagebackref    = true,
-            pdftoolbar     = false,
-            unicode        = true
-           ]{hyperref}
-\else
-\usepackage[ps2pdf,
-            hyperindex,
-            pdffitwindow   = true,
-            pdfstartview   = Fit,
-            colorlinks     = true,
-            linkcolor      = red,
-            filecolor      = blue,
-            citecolor      = darkgreen,
-            bookmarksopen  = true,
-            bookmarksopenlevel = 0,
-            plainpages     = false,
-            pdfpagelabels  = true,
-            pagebackref    = true,
-            pdftoolbar     = false,
-            unicode        = true
-           ]{hyperref}
-\usepackage{pspicture}
-\fi
 
-% To overcome problems with too many open files.
-\let\mypdfximage\pdfximage\def\pdfximage{\immediate\mypdfximage}
-\pdfminorversion=7
+% Гиперссылки и PDF-метаданные для XeLaTeX.
+
+\usepackage[xetex,
+            hyperindex,
+            pdffitwindow      = true,
+            pdfstartview      = Fit,
+            colorlinks        = true,
+            linkcolor         = NavyBlue,
+            filecolor         = NavyBlue,
+            urlcolor          = NavyBlue,
+            citecolor         = DarkGreen,
+            bookmarksopen     = true,
+            bookmarksopenlevel = 0,
+            plainpages        = false,
+            pdfpagelabels     = true,
+            pdftoolbar        = false,
+            unicode           = true
+           ]{hyperref}
+
+% Метаданные документа.
+\hypersetup{
+    pdftitle   = {\timproductname},
+    pdfauthor  = {\timproductauthor},
+    pdfsubject = {TIM developer reference}
+}

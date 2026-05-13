@@ -36,9 +36,9 @@ struct reaction_service
     void subscribe();
 
     /**
-     * Обработчик react/<post>/<reactor>. Парсит UUID-ы и weight,
+     * Обработчик react/&lt;post&gt;/&lt;reactor&gt;. Парсит UUID-ы и weight,
      * пишет в таблицу reaction в транзакции с ensure_user, затем
-     * публикует react_event/<post>/<reactor>.
+     * публикует react_event/&lt;post&gt;/&lt;reactor&gt;.
      *
      * \param topic Топик с UUID-ами.
      * \param data Payload: целочисленный вес.

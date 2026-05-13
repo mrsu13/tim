@@ -1,11 +1,12 @@
-% Latex header for doxygen 1.11.0
+% Заголовок для XeLaTeX-сборки документации TIM.
+% Формат — book, A4, двустороння печать.
 
 \documentclass[12pt,titlepage,openbib,a4paper,twoside]{book}
 
 \usepackage{array}
 \usepackage{ifthen}
 \usepackage{soul}
-\usepackage[svgnames,dvipsnames,table,pdftex,fixpdftex,rgb]{xcolor}
+\usepackage[svgnames,dvipsnames,table,rgb]{xcolor}
 \usepackage{alltt}
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -13,7 +14,7 @@
 \usepackage{xspace}
 \usepackage{datetime}
 \usepackage[fit]{truncate}
-\usepackage[pdftex]{graphicx}
+\usepackage{graphicx}
 \usepackage{multicol}
 \usepackage{float}
 \usepackage{textcomp}
@@ -26,7 +27,6 @@
 \usepackage{enumitem}
 \usepackage{mathtools}
 \usepackage{bchart}
-\usepackage{svg}
 
 \input{../tex/defines.tex}
 
@@ -36,21 +36,18 @@
 \input{../tex/structure.tex}
 \input{../tex/page_header.tex}
 \input{../tex/page_footer.tex}
-%\input{../tex/diagram.tex}
 \input{../tex/listing.tex}
-%\input{../tex/table.tex}
 \input{../tex/command.tex}
 \input{../tex/index.tex}
-\input{../tex/watermark.tex}
 
 \input{../tex/doxygen.tex}
 
 \newcommand{\+}{\discretionary{\mbox{\scriptsize$\hookleftarrow$}}{}{}}
 
-% Arguments of doxygenemoji:
-% 1) ':<text>:' form of the emoji, already LaTeX-escaped
-% 2) file with the name of the emoji without the .png extension
-% in case image exist use this otherwise use the ':<text>:' form
+% Аргументы doxygenemoji:
+% 1) форма ':<text>:' emoji-я (уже экранированная для LaTeX);
+% 2) имя файла emoji без расширения .png.
+% Если файл существует — подставляется картинка, иначе — текстовая форма.
 \newcommand{\doxygenemoji}[2]{%
     \IfFileExists{$latexemojidirectory/#2.png}{\raisebox{-0.1em}{\includegraphics[height=0.9em]{$latexemojidirectory/#2.png}}}{#1}%
 }
@@ -59,9 +56,10 @@
 \newcommand\hrulefilll{\leavevmode\leaders\hrule\hskip 0pt plus 1filll\kern\z@}
 \makeatother
 
-% Headers & footers
+% Колонтитулы.
 \usepackage{fancyhdr}
 \pagestyle{fancyplain}
+\setlength{\headheight}{15pt}
 \renewcommand{\footrulewidth}{0.4pt}
 
 \fancypagestyle{fancyplain}{
@@ -69,39 +67,27 @@
     \fancyhead[LE, RO]{\bfseries\thepage}
     \fancyhead[LO]{\bfseries\scriptsize\rightmark}
     \fancyhead[RE]{\bfseries\scriptsize\leftmark}
-    \fancyfoot[LE, RO]{\bfseries\scriptsize\company{}}
-    \fancyfoot[LO, RE]{\bfseries\scriptsize\title{}}
+    \fancyfoot[LO, RE]{\bfseries\scriptsize\timproductname{}}
 }
 
 \fancypagestyle{plain}{
     \fancyhf{}
-    \fancyfoot[LO, RE]{\bfseries\scriptsize \title{} }
+    \fancyfoot[LO, RE]{\bfseries\scriptsize \timproductname{} }
     \renewcommand{\headrulewidth}{0pt}
 }
 
 \pagestyle{fancyplain}
 
-% ToC, LoF, LoT, bibliography, and index
-% Indices & bibliography
-%\usepackage{natbib}
-%\usepackage[titles]{tocloft}
-%\setcounter{tocdepth}{5}
-%\setcounter{secnumdepth}{5}
-
-
-% Custom commands used by the header
-% Custom commands
 \newcommand{\clearemptydoublepage}{%
     \newpage{\pagestyle{empty}\cleardoublepage}%
 }
 
-% caption style definition
+% Подписи к таблицам и рисункам — жирные, по центру, сверху.
 \usepackage{caption}
 \captionsetup{labelsep=space,justification=centering,font={bf},singlelinecheck=off,skip=4pt,position=top}
 
-% in page table of contents
+% Локальные оглавления (etoc).
 \usepackage[deeplevels]{etoc}
-%\etocsettocstyle{\doxytocparskip}{\doxynormalparskip}
 \etocsetlevel{subsubsubsection}{4}
 \etocsetlevel{subsubsubsubsection}{5}
 \etocsetlevel{subsubsubsubsubsection}{6}
@@ -109,10 +95,8 @@
 \etocsetlevel{paragraph}{8}
 \etocsetlevel{subparagraph}{9}
 
-% Prevent numbers overlap the titles in toc.
+% Чтобы номера разделов в оглавлении не наезжали на заголовки.
 \renewcommand{\numberline}[1]{#1~}
-
-% End of preamble, now comes the document contents
 
 \begin{document}
 

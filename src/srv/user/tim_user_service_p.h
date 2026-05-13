@@ -49,8 +49,8 @@ struct user_service
     void connect(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/setnick/<uuid>: обновляет ник пользователя. Если ник занят,
-     * шлёт notice через session/notice/<uuid>.
+     * user/setnick/&lt;uuid&gt;: обновляет ник пользователя. Если ник занят,
+     * шлёт notice через session/notice/&lt;uuid&gt;.
      *
      * \param topic Топик с UUID в последнем уровне.
      * \param data Новый ник.
@@ -59,7 +59,7 @@ struct user_service
     void setnick(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/seticon/<uuid>: обновляет иконку пользователя.
+     * user/seticon/&lt;uuid&gt;: обновляет иконку пользователя.
      *
      * \param topic Топик с UUID.
      * \param data Новая иконка.
@@ -68,7 +68,7 @@ struct user_service
     void seticon(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/setmotto/<uuid>: обновляет девиз пользователя.
+     * user/setmotto/&lt;uuid&gt;: обновляет девиз пользователя.
      *
      * \param topic Топик с UUID.
      * \param data Новый девиз.
@@ -77,7 +77,7 @@ struct user_service
     void setmotto(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/setpubkey/<uuid>: сохраняет открытый ключ пользователя
+     * user/setpubkey/&lt;uuid&gt;: сохраняет открытый ключ пользователя
      * в транзакции с ensure_user.
      *
      * \param topic Топик с UUID.
@@ -87,7 +87,7 @@ struct user_service
     void setpubkey(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/subscribe/<subscriber>: создаёт связь subscriber → publisher
+     * user/subscribe/&lt;subscriber&gt;: создаёт связь subscriber → publisher
      * в таблице subscription. Гарантирует обоих пользователей через
      * ensure_user в одной транзакции.
      *
@@ -98,7 +98,7 @@ struct user_service
     void subscribe_to(const tim::mqtt_topic &topic, const char *data, std::size_t size);
 
     /**
-     * user/unsubscribe/<subscriber>: удаляет связь subscriber → publisher.
+     * user/unsubscribe/&lt;subscriber&gt;: удаляет связь subscriber → publisher.
      *
      * \param topic Топик с UUID подписчика.
      * \param data Payload: UUID издателя.

@@ -82,13 +82,13 @@ tim::color::color(const char *html_color)
               html_color);
 }
 
-/** \return Чёрный цвет (#000000FF). */
+/** \return Чёрный цвет (\#000000FF). */
 tim::color tim::color::black()
 {
     return tim::color{ 0, 0, 0, 0xFF };
 }
 
-/** \return Белый цвет (#FFFFFFFF). */
+/** \return Белый цвет (\#FFFFFFFF). */
 tim::color tim::color::white()
 {
     return tim::color{ 0xFF, 0xFF, 0xFF, 0xFF };

@@ -61,7 +61,7 @@ struct ssh_session_state
     tim::uuid                                     _user_id;
     /** Открытый ключ клиента в OpenSSH-форме. */
     std::string                                   _pub_key;
-    /** $TERM, переданный клиентом через pty-req. */
+    /** переменная TERM, переданный клиентом через pty-req. */
     std::string                                   _term_name;
     /** Высота окна (rows), значение по умолчанию 24. */
     std::size_t                                   _rows = 24;
@@ -119,9 +119,9 @@ struct ssh_inetd
     static ::ssh_channel on_channel_open(::ssh_session session, void *userdata);
 
     /**
-     * Callback: pty-request. Сохраняет $TERM и геометрию.
+     * Callback: pty-request. Сохраняет переменная TERM и геометрию.
      *
-     * \param term $TERM от клиента.
+     * \param term переменная TERM от клиента.
      * \param x Ширина в колонках.
      * \param y Высота в строках.
      * \param px Ширина в пикселях (не используем).
@@ -136,6 +136,7 @@ struct ssh_inetd
      * Callback: shell-request. Создаёт пользовательский сервис через
      * фабрику и сохраняет его в ssh_session_state.
      *
+     * \param channel Канал SSH-сессии, по которому пришёл shell-request.
      * \param userdata Указатель на ssh_session_state.
      * \return SSH_OK при успехе.
      */

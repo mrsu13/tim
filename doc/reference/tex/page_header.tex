@@ -7,6 +7,7 @@
 \newlength{\RHeaderLength}
 
 % Even - on a left page.
+\makeatletter
 \renewcommand{\@evenhead}
 {\raisebox{0pt}[\headheight][0pt]{% Block begin.
 \vbox{\hbox to\textwidth{\rm\thepage\hfil\strut
@@ -19,6 +20,7 @@
 \vbox{\hbox to\textwidth{\usebox{\RHeader}\hfil\strut
 \hfil\rm\thepage}\hrule}}% Block end.
 }
+\makeatother
 
 \newcommand{\setlheader}[1] {%
 \settowidth{\LHeaderLength}{{\small\sl #1}}%
