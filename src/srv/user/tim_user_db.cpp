@@ -1,6 +1,5 @@
 #include "tim_user_db.h"
 
-#include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_trace.h"
 #include "tim_translator.h"

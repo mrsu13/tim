@@ -4,11 +4,9 @@
 
 #include "tim_a_terminal_protocol.h"
 #include "tim_string_tools.h"
-#include "tim_trace.h"
 
 #include "utf8/utf8.h"
 
-#include <cassert>
 
 
 namespace tim

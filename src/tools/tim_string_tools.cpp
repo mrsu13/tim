@@ -7,7 +7,6 @@
 #include <cassert>
 #include <codecvt>
 #include <cstdlib>
-#include <cwctype>
 #include <locale>
 
 

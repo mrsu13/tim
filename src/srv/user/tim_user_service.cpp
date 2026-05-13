@@ -7,7 +7,6 @@
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topics.h"
 #include "tim_mqtt_topic.h"
-#include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_sqlite_tx.h"
 #include "tim_string_tools.h"

@@ -3,15 +3,12 @@
 #include "tim_application_p.h"
 
 #include "tim_config.h"
-#include "tim_file_tools.h"
 #include "tim_settings.h"
 #include "tim_ssh_inetd.h"
-#include "tim_a_ssh_inetd_service.h"
 #include "tim_mqtt_client.h"
 #include "tim_sqlite_db.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
-#include "tim_version.h"
 
 #include "fort.h"
 

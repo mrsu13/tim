@@ -8,7 +8,6 @@
 #include "tim_config.h"
 #include "tim_file_tools.h"
 #include "tim_line_edit.h"
-#include "tim_trace.h"
 #include "tim_translator.h"
 #include "tim_vt.h"
 

@@ -2,10 +2,8 @@
 
 #include "tim_a_terminal.h"
 #include "tim_mqtt_client.h"
-#include "tim_mqtt_topic.h"
 #include "tim_mqtt_topics.h"
 #include "tim_prompt_service.h"
-#include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_tcl.h"
 #include "tim_tcl_cmd.h"

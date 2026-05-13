@@ -1,7 +1,6 @@
 #include "tim_prompt_cmd_post.h"
 
 #include "tim_mqtt_client.h"
-#include "tim_mqtt_topic.h"
 #include "tim_mqtt_topics.h"
 #include "tim_prompt_service.h"
 #include "tim_string_tools.h"

@@ -7,7 +7,6 @@
 #include "tim_prompt_cmd_post.h"
 #include "tim_prompt_cmd_user.h"
 #include "tim_prompt_shell.h"
-#include "tim_sqlite_db.h"
 #include "tim_sqlite_query.h"
 #include "tim_ssh_terminal_protocol.h"
 #include "tim_string_tools.h"

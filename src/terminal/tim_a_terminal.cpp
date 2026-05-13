@@ -4,7 +4,6 @@
 
 #include "tim_a_protocol.h"
 #include "tim_string_tools.h"
-#include "tim_trace.h"
 
 #include <cassert>
 

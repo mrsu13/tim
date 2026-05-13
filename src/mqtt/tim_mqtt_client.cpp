@@ -3,7 +3,6 @@
 #include "tim_mqtt_client_p.h"
 
 #include "tim_application.h"
-#include "tim_file_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 

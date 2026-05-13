@@ -4,7 +4,6 @@
 
 #include "tim_config.h"
 #include "tim_sqlite_db.h"
-#include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 

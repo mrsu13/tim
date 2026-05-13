@@ -4,7 +4,6 @@
 #include "tim_a_terminal.h"
 #include "tim_tcl.h"
 #include "tim_tcl_cmd.h"
-#include "tim_trace.h"
 #include "tim_translator.h"
 
 #include "lil.hpp"
