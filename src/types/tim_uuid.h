@@ -1,10 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
-#include <list>
-#include <unordered_map>
-#include <unordered_set>
 
 
 namespace tim
@@ -188,15 +184,6 @@ private:
     unsigned char  data4[8];
 };
 
-/** Псевдоним для вектора UUID. */
-using uuid_vector = std::vector<tim::uuid>;
-/** Псевдоним для списка UUID. */
-using uuid_list = std::list<tim::uuid>;
-/** Псевдоним для отображения UUID → UUID. */
-using uuid_map = std::unordered_map<tim::uuid, tim::uuid>;
-/** Псевдоним для множества UUID. */
-using uuid_set = std::unordered_set<tim::uuid>;
-
 }
 
 
@@ -224,23 +211,6 @@ public:
         return std::hash<std::string>()(uuid.to_string());
     }
 };
-
-}
-
-
-namespace tim
-{
-
-/**
- * Свободная функция-хеш для UUID (для совместимости с boost-стилем).
- *
- * \param uuid Хешируемый UUID.
- * \return Тот же результат, что и std::hash<tim::uuid>().
- */
-inline std::size_t hash_value(const tim::uuid &uuid)
-{
-    return std::hash<tim::uuid>()(uuid);
-}
 
 }
 

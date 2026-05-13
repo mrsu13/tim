@@ -376,18 +376,6 @@ std::string tim::sqlite_query::to_string(int index) const
                 : std::string{};
 }
 
-nlohmann::json tim::sqlite_query::to_json(int index, bool *ok) const
-{
-    nlohmann::json j;
-    const bool res = tim::from_string(to_string(index), j);
-    if (ok)
-        *ok = res;
-
-    return res
-                ? j
-                : nlohmann::json{};
-}
-
 bool tim::sqlite_query::reset()
 {
     assert(_d->_stmt);

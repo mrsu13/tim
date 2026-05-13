@@ -5,6 +5,7 @@
 #include "tim_a_protocol.h"
 #include "tim_file_tools.h"
 #include "tim_string_tools.h"
+#include "tim_trace.h"
 #include "tim_vt.h"
 
 #include "utf8/utf8.h"

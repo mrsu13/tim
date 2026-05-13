@@ -1,10 +1,10 @@
 #include "tim_file_tools.h"
 
-#include "tim_string_tools.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 
 
@@ -81,42 +81,6 @@ bool tim::read_file(const std::filesystem::path &path, std::string &text)
     return true;
 }
 
-bool tim::read_json(const std::filesystem::path &path, nlohmann::json &j)
-{
-    const std::filesystem::path epath = tim::complete_path(path);
-
-    if (epath.empty())
-        return TIM_TRACE(error,
-                         "%s",
-                         TIM_TR("Empty file path."_en,
-                                "Пустой путь к файлу."_ru));
-
-    {
-        std::string js;
-        if (!tim::read_file(epath, js))
-            return false;
-
-        j = nlohmann::json::parse(js.c_str(),
-                                  js.c_str() + js.size(),
-                                  nullptr, // Parser call-back.
-                                  false, // Allow exceptions.
-                                  true); // Ignore comments.
-        if (j.is_discarded())
-            return TIM_TRACE(error,
-                             TIM_TR("Failed to parse JSON file '%s' at position %s-%s."_en,
-                                    "Ошибка при разборе JSON-файла '%s' в позиции %s-%s."_ru),
-                             epath.string().c_str(),
-                             j.start_pos() == std::string::npos
-                                 ? tim::na()
-                                 : std::to_string(j.start_pos()).c_str(),
-                             j.end_pos() == std::string::npos
-                                 ? tim::na()
-                                 : std::to_string(j.end_pos()).c_str());
-    }
-
-    return true;
-}
-
 bool tim::write_to_file(const std::filesystem::path &path,
                         const std::string &text,
                         tim::file_write_mode mode)
@@ -150,134 +114,4 @@ bool tim::write_to_file(const std::filesystem::path &path,
                          std::strerror(errno));
 
     return true;
-}
-
-bool tim::write_json(const std::filesystem::path &path, const nlohmann::json &j, int indent)
-{
-    const std::filesystem::path epath = tim::complete_path(path, tim::create_path::base);
-    if (epath.empty())
-        return TIM_TRACE(error,
-                         "%s",
-                         TIM_TR("Empty file path."_en,
-                                "Пустое имя файла."_ru));
-
-    return tim::write_to_file(epath, j.dump(indent));
-}
-
-std::size_t tim::process_file(const std::filesystem::path &path,
-                              std::function<bool(const tim::byte_vector &)> fn,
-                              std::size_t chunk_size)
-{
-    assert(fn);
-    assert(chunk_size);
-
-    const std::filesystem::path epath = tim::complete_path(path);
-
-    if (epath.empty())
-        return 0;
-
-    std::ifstream is(epath, std::ios::binary);
-
-    if (!is.is_open())
-        return TIM_TRACE(error,
-                         TIM_TR("Failed to open file '%s': %s"_en,
-                                "Ошибка при открытии файла '%s': %s"_ru),
-                         epath.string().c_str(),
-                         std::strerror(errno));
-
-    is.seekg(0, std::ios_base::end);
-    std::size_t size = is.tellg();
-    is.seekg(0, std::ios_base::beg);
-    std::size_t bytes_processed = 0;
-
-    tim::byte_vector buf(chunk_size);
-
-    while (size > 0)
-    {
-        const std::size_t bytes_to_read = size > chunk_size
-                                            ? chunk_size
-                                            : size;
-        buf.resize(bytes_to_read);
-
-        if (!is.read((char *)(&buf[0]), bytes_to_read))
-        {
-            TIM_TRACE(error,
-                      TIM_TR("Failed to read file '%s': %s"_en,
-                             "Ошибка при чтении файла '%s': %s"_ru),
-                      epath.string().c_str(),
-                      std::strerror(errno));
-            return 0;
-        }
-
-        if (!fn(buf))
-            return 0;
-
-        size -= bytes_to_read;
-        bytes_processed += bytes_to_read;
-    }
-
-    is.close();
-
-    return bytes_processed;
-}
-
-bool tim::path_exists(const std::filesystem::path &path)
-{
-    std::error_code ec;
-    return std::filesystem::exists(tim::complete_path(path), ec);
-}
-
-bool tim::is_network_url(const std::filesystem::path &path)
-{
-    if (path.empty())
-        return false;
-
-    const std::string schema = path.begin()->string();
-
-    return schema == "http:"
-                || schema == "https:"
-                || schema == "ftp:"
-                || schema == "ftps:"
-                || schema == "ws:"
-                || schema == "wss:"
-                || schema == "mailto:"
-                || schema == "tel:";
-}
-
-bool tim::is_valid_path(const std::filesystem::path &path)
-{
-    return !path.empty()
-                && (tim::is_network_url(path)
-                        || tim::path_exists(path));
-}
-
-std::vector<std::filesystem::path> tim::files(const std::filesystem::path &root)
-{
-    const std::filesystem::path epath = tim::complete_path(root);
-
-    std::vector<std::filesystem::path> list;
-    if (std::filesystem::exists(epath))
-        for (const std::filesystem::path &p: std::filesystem::directory_iterator(epath))
-            if (!std::filesystem::is_directory(p))
-                list.emplace_back(p);
-    return list;
-}
-
-/** Get file vector in the directory non-recursively.
-
-    \param root Directory path.
-    \param re A regular expression to filter the file names.
-    \return Absolute paths vector.
- */
-std::vector<std::filesystem::path> tim::files(const std::filesystem::path &root, const std::regex &re)
-{
-    const std::filesystem::path epath = tim::complete_path(root);
-
-    std::vector<std::filesystem::path> list;
-    if (std::filesystem::exists(epath))
-        for (const std::filesystem::path &p: std::filesystem::directory_iterator(epath))
-            if (!std::filesystem::is_directory(p)
-                    && std::regex_match(p.string(), re))
-                list.emplace_back(p);
-    return list;
 }

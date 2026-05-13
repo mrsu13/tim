@@ -1,11 +1,7 @@
 #pragma once
 
-#include "tim_byte_vector.h"
 #include "tim_elide.h"
-#include "tim_endian.h"
-#include "tim_json.h"
 #include "tim_translator.h"
-#include "tim_type_traits.h"
 
 #include <cstdarg>
 #include <list>
@@ -33,22 +29,6 @@ std::wstring to_wstring(const std::string &s);
 std::string from_wstring(const std::wstring &ws);
 
 /**
- * Заменяет двойные кавычки в строке на экранированные (\").
- *
- * \param str Исходная строка.
- * \return Копия со всеми " → \".
- */
-std::string escape_quotes(const std::string &str);
-
-/**
- * Парсит unicode escape-последовательности (\\uXXXX) в реальные UTF-8 байты.
- *
- * \param str Строка, возможно содержащая \\uXXXX.
- * \return Декодированная строка.
- */
-std::string parse_unicode(const std::string &str);
-
-/**
  * Заменяет все вхождения \a old_str на \a new_str в \a str (in-place).
  *
  * \param str Строка, изменяемая по месту.
@@ -58,57 +38,6 @@ std::string parse_unicode(const std::string &str);
 void replace(std::string &str,
              const std::string &old_str,
              const std::string &new_str);
-
-/** Переводит строку в нижний регистр (in-place). \param s Строка. */
-void to_lower(std::string &s);
-/** \param s Строка. \return Копия в нижнем регистре. */
-std::string to_lower(const std::string &s);
-
-/** Переводит строку в верхний регистр (in-place). \param s Строка. */
-void to_upper(std::string &s);
-/** \param s Строка. \return Копия в верхнем регистре. */
-std::string to_upper(const std::string &s);
-
-/**
- * Делает первую букву заглавной, остальные — строчные.
- *
- * \param s Строка.
- * \return Копия с capitalized-видом.
- */
-std::string to_capitalized(const std::string &s);
-
-/**
- * Чувствительность к регистру для функций сравнения строк.
- */
-enum class cs
-{
-    sensitive   = 0, ///< С учётом регистра.
-    insensitive = 1  ///< Без учёта регистра.
-};
-
-/**
- * Проверка, начинается ли \a str с \a prefix.
- *
- * \param str Проверяемая строка.
- * \param prefix Искомый префикс.
- * \param cs Чувствительность к регистру.
- * \return true, если \a str начинается с \a prefix.
- */
-bool starts_with(const std::string &str,
-                 const std::string &prefix,
-                 const tim::cs cs = tim::cs::sensitive);
-
-/**
- * Проверка, заканчивается ли \a str на \a suffix.
- *
- * \param str Проверяемая строка.
- * \param suffix Искомый суффикс.
- * \param cs Чувствительность к регистру.
- * \return true, если \a str заканчивается на \a suffix.
- */
-bool ends_with(const std::string &str,
-               const std::string &suffix,
-               const tim::cs cs = tim::cs::sensitive);
 
 /**
  * Обрезает указанные символы с правого конца строки.
@@ -136,39 +65,6 @@ std::string trim_left(const std::string &s, const char *delimiters = " \t\r\n");
  * \return Копия без концевых делимитеров.
  */
 std::string trim(const std::string &s, const char *delimiters = " \t\r\n");
-
-/**
- * Делает trim() и заменяет повторяющиеся пробельные на одиночные.
- *
- * \param s Исходная строка.
- * \return "Упрощённая" строка.
- */
-std::string simplify(const std::string &s);
-
-/**
- * Переносы по позиции: вставляет '\\n' каждые \a pos символов.
- *
- * \param s Строка, изменяемая по месту.
- * \param pos Позиция переноса (длина строки выводимого блока).
- */
-void wrap(std::string &s, std::size_t pos);
-
-/**
- * Обратная операция к wrap(): убирает '\\n' и склеивает в одну строку.
- *
- * \param s Исходная строка.
- * \return Строка без '\\n'.
- */
-std::string unwrap(const std::string &s);
-
-/**
- * Удаляет PEM-обрамление (BEGIN/END и переносы строк), оставляя только
- * base64-данные.
- *
- * \param pem PEM-строка.
- * \return Очищенный base64-блок.
- */
-std::string strip_pem(const std::string &pem);
 
 /**
  * printf-like форматирование в std::string (va_list-вариант).
@@ -211,100 +107,6 @@ std::string sprintf(const char *format, ...)
                     __attribute__ ((format(printf, 1, 2)));
 
 /**
- * Универсальный to_string() для целочисленного типа.
- *
- * \tparam T Целочисленный тип.
- * \param value Значение.
- * \return std::to_string(value).
- */
-template<typename T>
-inline typename std::enable_if_t<std::is_integral_v<T>, std::string> to_string(T value);
-
-/**
- * to_string() для пользовательского типа с методом to_string()
- * (определяется через has_to_string_v).
- *
- * \tparam T Тип с to_string() → std::string.
- * \param value Значение.
- * \return Результат value.to_string().
- */
-template<class T>
-inline typename std::enable_if_t<tim::has_to_string_v<T>, std::string> to_string(const T &value);
-
-/**
- * to_string() для std::string — идентичность (для шаблонных контекстов).
- *
- * \tparam T std::string.
- * \param value Значение.
- * \return \a value без изменений.
- */
-template<class T>
-inline typename std::enable_if_t<std::is_same_v<T, std::string>, std::string> to_string(const T &value);
-
-/**
- * to_string() для std::filesystem::path: возвращает .string().
- *
- * \tparam T std::filesystem::path.
- * \param value Значение.
- * \return value.string().
- */
-template<class T>
-inline typename std::enable_if_t<std::is_same_v<T, std::filesystem::path>, std::string> to_string(const T &value);
-
-/**
- * Шестнадцатеричное представление беззнакового целого, MSB-first.
- *
- * \tparam Unsigned Беззнаковый целочисленный тип.
- * \param value Значение.
- * \return Hex-строка из 2 * sizeof(value) символов.
- */
-template<typename Unsigned>
-std::string to_hex(Unsigned value);
-
-/**
- * Парсит одиночный hex-символ.
- *
- * \param c Символ '0'..'9'/'a'..'f'/'A'..'F'.
- * \return Числовое значение 0..15, либо 0 для невалидного символа.
- */
-char from_hex(char c);
-
-/**
- * Сериализует байтовый буфер как hex-строку (без разделителей).
- *
- * \param data Байты.
- * \return Hex-строка длиной 2 * data.size().
- */
-std::string to_string(const tim::byte_vector &data);
-
-/**
- * Парсит hex-строку в байтовый буфер.
- *
- * \param s Hex-строка чётной длины.
- * \param ok Если не nullptr: true при успешном разборе.
- * \return Байтовый буфер; пустой при ошибке.
- */
-tim::byte_vector from_string(const std::string &s, bool *ok = nullptr);
-
-/**
- * Парсит JSON-строку в nlohmann::json.
- *
- * \param json Исходный JSON-текст.
- * \param j Сюда записывается результат.
- * \return true при успешном разборе.
- */
-bool from_string(const std::string &json, nlohmann::json &j);
-
-/**
- * Парсит строку как bool ("true"/"false"/"1"/"0").
- *
- * \param s Строка.
- * \param ok Если не nullptr: true при успехе.
- * \return Распарсенное значение; false при ошибке.
- */
-bool to_bool(const std::string &s, bool *ok = nullptr);
-
-/**
  * Парсит строку как int.
  *
  * \param s Строка.
@@ -312,17 +114,6 @@ bool to_bool(const std::string &s, bool *ok = nullptr);
  * \return Число; 0 при ошибке.
  */
 int to_int(const std::string &s, bool *ok = nullptr);
-
-/** Парсит строку как unsigned. \param s Строка. \param ok успех/нет. \return значение или 0. */
-unsigned to_uint(const std::string &s, bool *ok = nullptr);
-/** Парсит строку как long long. */
-long long to_long_long(const std::string &s, bool *ok = nullptr);
-/** Парсит строку как unsigned long long. */
-unsigned long long to_ulong_long(const std::string &s, bool *ok = nullptr);
-/** Парсит строку как float. */
-float to_float(const std::string &s, bool *ok = nullptr);
-/** Парсит строку как double. */
-double to_double(const std::string &s, bool *ok = nullptr);
 
 /**
  * Поведение split() при встрече пустых фрагментов.
@@ -363,53 +154,6 @@ inline std::vector<String> split_v(const String &s,
                                    tim::split_mode behavior = tim::split_mode::skip_empty_parts);
 
 /**
- * Сахар над split() для случая Collection == std::list<String>.
- *
- * \tparam String Тип строки.
- * \param s Исходная строка.
- * \param delimiters Символы-разделители.
- * \param behavior Что делать с пустыми фрагментами.
- * \return std::list<String> фрагментов.
- */
-template<class String>
-inline std::list<String> split_l(const String &s,
-                                 const typename String::value_type *delimiters = " \t\r\n",
-                                 tim::split_mode behavior = tim::split_mode::skip_empty_parts);
-
-/**
- * Преобразует __PRETTY_FUNCTION__-подобное имя в имя класса/метода.
- *
- * \param name Исходное имя (например, "void tim::foo::bar(int)").
- * \return Сокращённое имя.
- */
-std::string member_name(const char *name);
-
-/**
- * Преобразует snake_case в dotted.case (foo_bar → foo.bar).
- *
- * \param snake Имя в snake_case.
- * \return Имя через точки.
- */
-std::string to_dotted(const std::string &snake);
-
-/**
- * Преобразует dotted.case в snake_case.
- *
- * \param dotted Имя через точки.
- * \return Имя в snake_case.
- */
-std::string to_snake(const std::string &dotted);
-
-/**
- * Центрирует строку до указанной ширины пробелами по краям.
- *
- * \param str Исходная строка.
- * \param width Желаемая ширина.
- * \return Строка длины не меньше \a width.
- */
-std::string centered(const std::string &str, std::size_t width);
-
-/**
  * Усекает строку до указанной ширины, вставляя эллипсис (…) в выбранной
  * позиции.
  *
@@ -444,39 +188,6 @@ std::string aligned(const std::string &str,
                     std::size_t width = 80);
 
 /**
- * Сравнение строк двух (возможно разных) типов с учётом или без учёта
- * регистра.
- *
- * \tparam S1 Тип первой строки.
- * \tparam S2 Тип второй строки.
- * \param str1 Первая строка.
- * \param str2 Вторая строка.
- * \param cs Чувствительность к регистру.
- * \return true, если строки равны (по выбранным правилам).
- */
-template<class S1, class S2>
-bool equal(const S1 &str1,
-           const S2 &str2,
-           const tim::cs cs = tim::cs::sensitive);
-
-/**
- * Case-insensitive strcmp для C-строк.
- *
- * \param s1 Первая C-строка.
- * \param s2 Вторая C-строка.
- * \return true, если строки равны без учёта регистра.
- */
-bool strcasecmp(const char *s1, const char *s2);
-
-/**
- * Возвращает локализованное "Да"/"Нет" в зависимости от флага.
- *
- * \param f Значение.
- * \return Указатель на статический литерал TIM_TR.
- */
-inline const char *yes_no(bool f);
-
-/**
  * Возвращает локализованное "Не задано" / "N/A".
  *
  * \return Указатель на статический литерал TIM_TR.
@@ -487,75 +198,6 @@ inline const char *na();
 
 
 // Implementation
-
-/**
- * Делегирует на std::to_string. Сделан шаблоном, чтобы выбираться
- * SFINAE для целочисленных типов.
- */
-template<typename T>
-typename std::enable_if_t<std::is_integral_v<T>, std::string> tim::to_string(T value)
-{
-    return std::to_string(value);
-}
-
-/**
- * Делегирует на value.to_string() для типов, у которых он есть.
- */
-template<class T>
-typename std::enable_if_t<tim::has_to_string_v<T>, std::string> tim::to_string(const T &value)
-{
-    return value.to_string();
-}
-
-/**
- * Идентичная перегрузка для std::string.
- */
-template<class T>
-typename std::enable_if_t<std::is_same_v<T, std::string>, std::string> tim::to_string(const T &value)
-{
-    return value;
-}
-
-/**
- * Возвращает .string() от std::filesystem::path.
- */
-template<class T>
-typename std::enable_if_t<std::is_same_v<T, std::filesystem::path>, std::string> tim::to_string(const T &value)
-{
-    return value.string();
-}
-
-/**
- * Сериализует беззнаковое целое в hex-строку MSB-first.
- *
- * \param value Беззнаковое целое.
- * \return Hex-строка длиной 2 * sizeof(value).
- */
-template<typename Unsigned>
-std::string tim::to_hex(Unsigned value)
-{
-    static_assert(std::is_unsigned_v<Unsigned>,
-                  "Unsigned must be of unsigned integer type.");
-
-    static const char *const DIGITS = "0123456789abcdef";
-
-    value = tim::to_be(value);
-
-    const char *p = reinterpret_cast<const char *>(&value);
-
-    std::string s;
-    s.reserve(sizeof(value) * 2);
-
-    for (unsigned i = 0; i < sizeof(Unsigned); ++i)
-    {
-        unsigned int j = (p[i] >> 4) & 0xF;
-        s.push_back(DIGITS[j]);
-        j = p[i] & 0xF;
-        s.push_back(DIGITS[j]);
-    }
-
-    return s;
-}
 
 /**
  * Реализация split: используется и для vector, и для list-перегрузок.
@@ -630,49 +272,6 @@ std::vector<String> tim::split_v(const String &s,
                                  tim::split_mode behavior)
 {
     return tim::split<std::vector<String>>(s, delimiters, behavior);
-}
-
-/**
- * Шаблонный фасад над split<>() для случая std::list<String>.
- */
-template<class String>
-std::list<String> tim::split_l(const String &s,
-                               const typename String::value_type *delimiters,
-                               tim::split_mode behavior)
-{
-    return tim::split<std::list<String>>(s, delimiters, behavior);
-}
-
-/**
- * Сравнение строк двух типов. Для cs::sensitive используется
- * оператор ==; для cs::insensitive — std::equal с tolower-предикатом.
- */
-template<class S1, class S2>
-bool tim::equal(const S1 &str1,
-                const S2 &str2,
-                const tim::cs cs)
-{
-    if (str1.size() != str2.size())
-        return false;
-
-    return cs == tim::cs::sensitive
-                ? str1 == str2
-                : std::equal(str2.cbegin(), str2.cend(),
-                              str1.cbegin(),
-                              [](char a, char b)
-                              {
-                                    return std::tolower(a) == std::tolower(b);
-                              });
-}
-
-/**
- * Локализованное "Да"/"Нет".
- */
-const char *tim::yes_no(bool f)
-{
-    return f
-                ? TIM_TR("Yes"_en, "Да"_ru)
-                : TIM_TR("No"_en, "Нет"_ru);
 }
 
 /**

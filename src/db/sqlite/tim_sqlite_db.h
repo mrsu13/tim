@@ -22,8 +22,7 @@ struct sqlite_db;
  *
  * Управляет жизненным циклом sqlite3*, поддерживает refcount-aware
  * begin/commit (вложенные begin() инкрементируют счётчик, реальный
- * BEGIN/COMMIT выполняются только на внешнем уровне), и выставляет
- * полезные служебные операции (recreate, exec_file, version).
+ * BEGIN/COMMIT выполняются только на внешнем уровне).
  */
 class sqlite_db
 {

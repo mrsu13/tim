@@ -4,51 +4,33 @@
 #include "tim_trace.h"
 #include "tim_translator.h"
 
-#include "nlohmann/json.hpp"
-
-#include <algorithm>
-#include <cerrno>
+#include <cassert>
 #include <codecvt>
 #include <cstdlib>
-#include <cstring>
 #include <cwctype>
 #include <locale>
-#include <regex>
 
 
+/**
+ * Преобразует UTF-8 строку в wide-string через codecvt_utf8.
+ */
 std::wstring tim::to_wstring(const std::string &s)
 {
     return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().from_bytes(s);
 }
 
+/**
+ * Преобразует wide-string в UTF-8 через codecvt_utf8.
+ */
 std::string tim::from_wstring(const std::wstring &ws)
 {
     return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().to_bytes(ws);
 }
 
-std::string tim::escape_quotes(const std::string &str)
-{
-    std::string esc_str;
-    esc_str.reserve(str.size());
-
-    for (const char c: str)
-        if (c == '"')
-            esc_str += "\\\"";
-        else
-            esc_str += c;
-
-    return esc_str;
-}
-
-std::string tim::parse_unicode(const std::string &str)
-{
-    const nlohmann::json j = nlohmann::json::parse("\"" + tim::escape_quotes(str) + "\"",
-                                                   nullptr, false, true);
-    return j.is_discarded()
-                ? str
-                : j.get<std::string>();
-}
-
+/**
+ * Заменяет все вхождения подстроки. Идёт линейно, сдвигая курсор на
+ * длину замены — устойчиво к случаю, когда new_str содержит old_str.
+ */
 void tim::replace(std::string &str,
                  const std::string &old_str,
                  const std::string &new_str)
@@ -63,75 +45,10 @@ void tim::replace(std::string &str,
     }
 }
 
-std::string tim::to_lower(const std::string &s)
-{
-    std::wstring ws = tim::to_wstring(s);
-    std::transform(ws.cbegin(), ws.cend(), ws.begin(),
-                   [](std::wstring::value_type c)
-                   {
-                       return std::towlower(c);
-                   });
-    return tim::from_wstring(ws);
-}
-
-std::string tim::to_upper(const std::string &s)
-{
-    std::wstring ws = tim::to_wstring(s);
-    std::transform(ws.cbegin(), ws.cend(), ws.begin(),
-                   [](std::wstring::value_type c)
-                   {
-                       return std::towupper(c);
-                   });
-    return tim::from_wstring(ws);
-}
-
-std::string tim::to_capitalized(const std::string &s)
-{
-    if (s.empty())
-        return {};
-
-    std::wstring cs = tim::to_wstring(s);
-    bool space = true;
-    for (wchar_t &c: cs)
-    {
-        if (std::iswspace(c))
-            space = true;
-        else if (space)
-        {
-            c = std::towupper(c);
-            space = false;
-        }
-    }
-
-    return tim::from_wstring(cs);
-}
-
-bool tim::starts_with(const std::string &str,
-                      const std::string &prefix,
-                      const tim::cs cs)
-{
-    if (prefix.length() > str.length())
-        return false;
-    if (cs == tim::cs::sensitive)
-        return std::strncmp(str.c_str(), prefix.c_str(), std::min(str.length(), prefix.length())) == 0;
-
-    return std::equal(prefix.cbegin(), prefix.cend(),
-                      str.cbegin(),
-                      [](char a, char b)
-                      {
-                            return std::tolower(a) == std::tolower(b);
-                      });
-}
-
-bool tim::ends_with(const std::string &str,
-                    const std::string &suffix,
-                    const tim::cs cs)
-{
-    return str.length() < suffix.length()
-                ? false
-                : tim::equal(str.substr(str.length() - suffix.length()), suffix, cs);
-}
-
+/**
+ * Обрезает delimiters с правого конца строки. delimiters не должен
+ * быть пуст (проверяется ассертом).
+ */
 std::string tim::trim_right(const std::string &s, const char *delimiters)
 {
     assert(delimiters && *delimiters);
@@ -145,6 +62,9 @@ std::string tim::trim_right(const std::string &s, const char *delimiters)
                 : st + 1);
 }
 
+/**
+ * Обрезает delimiters с левого конца строки.
+ */
 std::string tim::trim_left(const std::string &s, const char *delimiters)
 {
     assert(delimiters && *delimiters);
@@ -155,6 +75,9 @@ std::string tim::trim_left(const std::string &s, const char *delimiters)
     return s.substr(st);
 }
 
+/**
+ * Обрезает delimiters с обоих концов строки.
+ */
 std::string tim::trim(const std::string &s, const char *delimiters)
 {
     assert(delimiters && *delimiters);
@@ -173,79 +96,16 @@ std::string tim::trim(const std::string &s, const char *delimiters)
                             : st2 + 1 - st1);
 }
 
-std::string tim::simplify(const std::string &s)
-{
-    if (s.empty())
-        return s;
-
-    const std::string::value_type *src = s.data();
-    const std::string::value_type *end = s.data() + s.size();
-    std::string result = s;
-
-    std::string::value_type *dst = result.data();
-    std::string::value_type *ptr = dst;
-    bool unmodified = true;
-    while (true)
-    {
-        while (src != end
-                    && std::isspace(*src))
-            ++src;
-        while (src != end
-                && !std::isspace(*src))
-            *ptr++ = *src++;
-        if (src == end)
-            break;
-        if (*src != ' ')
-            unmodified = false;
-        *ptr++ = ' ';
-    }
-    if (ptr != dst
-            && ptr[-1] == ' ')
-        --ptr;
-
-    const std::size_t newlen = ptr - dst;
-    if (newlen == s.size()
-            && unmodified)
-        return s;
-
-    result.resize(newlen);
-
-    return result;
-}
-
-void tim::wrap(std::string &s, std::size_t pos)
-{
-    if (pos)
-        for (std::size_t i = pos; i < s.length(); i += pos)
-            s.insert(i++, 1, '\n');
-}
-
-std::string tim::unwrap(const std::string &s)
-{
-    std::string line(s.size(), ' ');
-
-    std::size_t i = 0;
-    for (const std::string::value_type &c: s)
-        line[i++] = (c == '\n'
-                            || c == '\r')
-                        ? ' '
-                        : c;
-    return line;
-}
-
-std::string tim::strip_pem(const std::string &pem)
-{
-    static const char *const RE_PEM_HEADER = R"(\-{5}[\w\s]+\-{5})";
-
-    std::string s = tim::trim(std::regex_replace(pem, std::regex(RE_PEM_HEADER, std::regex::ECMAScript), ""));
-    return tim::unwrap(s);
-}
-
+/**
+ * Форматирует через vsnprintf, удваивая буфер при нехватке места.
+ * Ограничивает рост буфера 10MB — за пределом считает запрос ошибочным
+ * и логирует error.
+ */
 int tim::vsprintf(std::string &s, const char *format, va_list args)
 {
     assert(format && *format);
 
-    static const std::size_t SIZE_LIMIT = 10 * 1024 * 1024; // 10MB
+    static const std::size_t SIZE_LIMIT = 10 * 1024 * 1024; // 10 МБ
 
     std::size_t size = 1024;
     s.resize(size);
@@ -282,6 +142,9 @@ int tim::vsprintf(std::string &s, const char *format, va_list args)
     return n;
 }
 
+/**
+ * Удобный перегруз vsprintf(): возвращает новую строку с результатом.
+ */
 std::string tim::vsprintf(const char *format, va_list args)
 {
     std::string s;
@@ -292,6 +155,9 @@ std::string tim::vsprintf(const char *format, va_list args)
     return s;
 }
 
+/**
+ * Variadic-обёртка над vsprintf(string&, format, va_list).
+ */
 int tim::sprintf(std::string &s, const char *format, ...)
 {
     assert(format && *format);
@@ -305,6 +171,9 @@ int tim::sprintf(std::string &s, const char *format, ...)
     return n;
 }
 
+/**
+ * Variadic-обёртка над vsprintf(format, va_list): возвращает строку.
+ */
 std::string tim::sprintf(const char *format, ...)
 {
     assert(format && *format);
@@ -319,130 +188,9 @@ std::string tim::sprintf(const char *format, ...)
 }
 
 /**
- * \param c Hex digit. Both upper and lower case characters are supported.
- * \return Decimal number.
+ * Парсит строку как int через strtol. Если \a ok не nullptr,
+ * записывает в него true только когда вся строка распознана.
  */
-char tim::from_hex(char c)
-{
-    return (c >= '0' && c <= '9')
-                ? c - '0'
-                : ((c >= 'A' && c <= 'F')
-                       ? c - 'A' + 10
-                       : c - 'a' + 10);
-}
-
-/**
- * Convert vector of bytes to string containing its hex representation.
- */
-std::string tim::to_string(const tim::byte_vector &data)
-{
-    static const char *const DIGITS = "0123456789abcdef";
-
-    if (data.empty())
-        return {};
-
-    std::string s;
-    s.reserve(data.size() * 2);
-    for (std::uint8_t c: data)
-    {
-        s += DIGITS[(c >> 4) & 0xF];
-        s += DIGITS[c & 0xF];
-    }
-
-    return s;
-}
-
-/**
- * Convert string containing hex representation to a vector of bytes.
- *
- * \param s Hex representation.
- * \param ok \c true if succeeded, and \c false --- if failed.
- * \return Vector of bytes if succeeded, and empty vector if failed.
- */
-tim::byte_vector tim::from_string(const std::string &s, bool *ok)
-{
-    if (ok)
-        *ok = true;
-
-    if (s.empty())
-        return {};
-
-    if (s.length() % 2)
-    {
-        TIM_TRACE(error,
-                  TIM_TR("Invalid hex string '%s'."_en,
-                         "Некорректная шестнадцатеричная строка '%s'."_ru),
-                  s.c_str());
-        if (ok)
-            *ok = false;
-        return {};
-    }
-
-    tim::byte_vector data;
-    data.reserve(s.size() / 2);
-    std::string::const_iterator i = s.cbegin();
-    std::string::const_iterator e = s.cend();
-    for (; i != e; ++i)
-        data.emplace_back((from_hex(*i++) << 4) + from_hex(*i));
-
-    return data;
-}
-
-bool tim::from_string(const std::string &json, nlohmann::json &j)
-{
-    if (json.empty())
-    {
-        j = nlohmann::json();
-        return true;
-    }
-
-    j = nlohmann::json::parse(json,
-                              nullptr, // Parser call-back.
-                              false, // Allow exceptions.
-                              true); // Ignore comments.
-
-    if (j.is_discarded())
-        return TIM_TRACE(error,
-                         TIM_TR("Failed to parse JSON at position %s-%s."_en,
-                                "Ошибка при разборе JSON в позиции %s-%s."_ru),
-                         j.start_pos() == std::string::npos
-                            ? tim::na()
-                            : std::to_string(j.start_pos()).c_str(),
-                         j.end_pos() == std::string::npos
-                            ? tim::na()
-                            : std::to_string(j.end_pos()).c_str());
-
-    return true;
-}
-
-bool tim::to_bool(const std::string &s, bool *ok)
-{
-    if (s.empty()
-            || tim::strcasecmp(s.c_str(), "false")
-            || tim::strcasecmp(s.c_str(), "0")
-            || tim::strcasecmp(s.c_str(), "no")
-            || tim::strcasecmp(s.c_str(), "off"))
-    {
-        if (ok)
-            *ok = true;
-        return false;
-    }
-
-    if (tim::strcasecmp(s.c_str(), "true")
-            || tim::strcasecmp(s.c_str(), "1")
-            || tim::strcasecmp(s.c_str(), "yes")
-            || tim::strcasecmp(s.c_str(), "on"))
-    {
-        if (ok)
-            *ok = true;
-        return true;
-    }
-
-    if (ok)
-        *ok = false;
-    return false;
-}
-
 int tim::to_int(const std::string &s, bool *ok)
 {
     if (s.empty())
@@ -455,135 +203,10 @@ int tim::to_int(const std::string &s, bool *ok)
     return i;
 }
 
-unsigned tim::to_uint(const std::string &s, bool *ok)
-{
-    if (s.empty())
-        return 0;
-
-    char *e;
-    const unsigned i = std::strtoul(s.c_str(), &e, 0);
-    if (ok)
-        *ok = ! *e;
-    return i;
-}
-
-long long tim::to_long_long(const std::string &s, bool *ok)
-{
-    if (s.empty())
-        return 0;
-
-    char *e;
-    const long long i = std::strtoll(s.c_str(), &e, 0);
-    if (ok)
-        *ok = ! *e;
-    return i;
-}
-
-unsigned long long tim::to_ulong_long(const std::string &s, bool *ok)
-{
-    if (s.empty())
-        return 0;
-
-    char *e;
-    const unsigned long long i = std::strtoull(s.c_str(), &e, 0);
-    if (ok)
-        *ok = ! *e;
-    return i;
-}
-
-float tim::to_float(const std::string &s, bool *ok)
-{
-    if (s.empty())
-        return 0.0f;
-
-    char *e;
-    const float f = std::strtof(s.c_str(), &e);
-    if (ok)
-        *ok = ! *e;
-    return f;
-}
-
-double tim::to_double(const std::string &s, bool *ok)
-{
-    if (s.empty())
-        return 0.0;
-
-    char *e;
-    const double d = std::strtod(s.c_str(), &e);
-    if (ok)
-        *ok = ! *e;
-    return d;
-}
-
-std::string tim::member_name(const char *name)
-{
-    assert(name && *name);
-
-    const char *c = name;
-    const char *n = name;
-    while (*c)
-    {
-        if (*c == ':')
-            n = c + 1;
-        ++c;
-    }
-    return std::string(n);
-}
-
-/** Constructs a dotted name on the base of its
-    name in camel or snake case.
-
-    \param snake Name in camel or snake case.
-    \return Name with dots.
-*/
-std::string tim::to_dotted(const std::string &snake)
-{
-    if (snake.empty())
-        return "";
-
-    std::string dotted;
-    bool prev_upper = std::isupper(snake[0]); // If the first letter in property name is capital,
-                                              // do not add a leading dot.
-    for (const std::string::value_type c: snake)
-    {
-        if (!prev_upper
-                && (c == '_'
-                        || std::isupper(c)))
-        {
-            prev_upper = true;
-            dotted += '.';
-            if (c == '_')
-                continue;
-        }
-        else
-            prev_upper = false;
-
-        dotted += std::tolower(c);
-    }
-    return dotted;
-}
-
-std::string tim::to_snake(const std::string &dotted)
-{
-    std::string snake(dotted);
-    std::replace(snake.begin(), snake.end(), '.', '_');
-    return snake;
-}
-
-std::string tim::centered(const std::string &str, std::size_t width)
-{
-    const int l = static_cast<int>(width - str.size());
-    if (l <= 0)
-        return str;
-
-    const std::size_t q = l >> 1;
-    const std::size_t r = l & 1;
-
-    return std::string(q, ' ')
-                + str
-                + std::string(q + r, ' ');
-}
-
+/**
+ * Усекает строку до \a width, заменяя усечённую часть на "...".
+ * При width <= 3 (длина эллипсиса) возвращает сам эллипсис.
+ */
 std::string tim::elided(const std::string &str, std::size_t width, tim::elide el)
 {
     static const wchar_t *DOTS = L"...";
@@ -622,6 +245,11 @@ std::string tim::elided(const std::string &str, std::size_t width, tim::elide el
     return tim::from_wstring(wstr);
 }
 
+/**
+ * Выравнивает многострочный текст по ширине. Каждый абзац (разделённый
+ * \\n) выравнивается отдельно: режется по словам и собирается строками
+ * не шире \a width с добавлением пробелов согласно \a al.
+ */
 std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t width)
 {
     if (str.empty()
@@ -722,13 +350,4 @@ std::string tim::aligned(const std::string &str, tim::text_align al, std::size_t
     }
 
     return tim::from_wstring(aligned_text);
-}
-
-bool tim::strcasecmp(const char *s1, const char *s2)
-{
-#ifdef TIM_OS_WINDOWS
-    return _stricmp(s1, s2) == 0;
-#else
-    return ::strcasecmp(s1, s2) == 0;
-#endif
 }

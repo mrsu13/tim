@@ -1,6 +1,7 @@
 #pragma once
 
-#include "nlohmann/json.hpp"
+#include "tim_json.h"
+
 #include "sqlite3.h"
 
 #include <cstdint>
@@ -143,14 +144,6 @@ public:
     double to_double(int index) const;
     /** \return Значение столбца как std::string. \param index 0-based индекс. */
     std::string to_string(int index) const;
-    /**
-     * Парсит значение столбца как JSON.
-     *
-     * \param index 0-based индекс столбца.
-     * \param ok Если не nullptr: true при успешном парсинге.
-     * \return Распарсенный nlohmann::json; пустой при ошибке.
-     */
-    nlohmann::json to_json(int index, bool *ok = nullptr) const;
 
     /**
      * Возвращает sqlite3_stmt в начальное состояние (sqlite3_reset),

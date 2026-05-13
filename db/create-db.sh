@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 ARGS=$@
 DB=tim.db
 DB_SCHEMA_VERSION=`cat ../DB_SCHEMA_VERSION`
@@ -36,38 +38,18 @@ TEXT_BG_GRAY="[47m"
 
 TEXT_NORM="[0m" # Back to normal text
 
-function _errcho()
-{
-    echo "$@" 1>&2
-}
-
 function _print()
 {
-    _errcho $ECHO_ESCAPE $TEXT_FG_YELLOW"$1"$TEXT_NORM
-}
-
-function _error()
-{
-    _errcho $ECHO_ESCAPE $TEXT_BG_RED$TEXT_FG_YELLOW"> Error: $1 "$TEXT_NORM
-}
-
-function _exec()
-{
-    _errcho $TEXT_FG_GREEN"$ "$@ $TEXT_NORM
-    if ! $@
-    then
-        _error "Command execution failed."
-        exit 1
-    fi
+    echo $ECHO_ESCAPE $TEXT_FG_YELLOW"$1"$TEXT_NORM
 }
 
 function _banner()
 {
-    _errcho
-    _errcho $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"┌──────────────"$TEXT_FG_WHITE"┐"$TEXT_NORM
-    _errcho $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"│ "$TEXT_FG_YELLOW"TIM"$TEXT_FG_WHITE" Database"$TEXT_FG_LIGHT_WHITE" │"$TEXT_NORM
-    _errcho $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"└"$TEXT_FG_WHITE"──────────────┘"$TEXT_NORM
-    _errcho
+    echo
+    echo $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"┌──────────────"$TEXT_FG_WHITE"┐"$TEXT_NORM
+    echo $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"│ "$TEXT_FG_YELLOW"TIM"$TEXT_FG_WHITE" Database"$TEXT_FG_LIGHT_WHITE" │"$TEXT_NORM
+    echo $ECHO_ESCAPE " "$TEXT_BG_CYAN$TEXT_FG_DARK_GRAY"└"$TEXT_FG_WHITE"──────────────┘"$TEXT_NORM
+    echo
 }
 
 _banner
@@ -79,13 +61,13 @@ _print "> Done!"
 _print "> Creating the database ..."
 for i in `ls ??-*.sql`
 do
-    _exec $SHELL -bail -batch -init $i -cmd .quit $DB
+    $SHELL -bail -batch -init $i -cmd .quit $DB
 done
 _print "> Done!"
 
 # Set Schema Version
 _print "> Setting the database schema version ..."
-echo "PRAGMA user_version = $DB_SCHEMA_VERSION;" | _exec $SHELL -bail -batch $DB
+echo "PRAGMA user_version = $DB_SCHEMA_VERSION;" | $SHELL -bail -batch $DB
 _print "> Done!"
 
 # Create Scheme Diagram
