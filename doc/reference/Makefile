@@ -91,4 +91,4 @@ changelog:
 	git log --no-merges --date-order --format="| %cd | %cN | %s |" --date="format-local:%d/%m/%y %I:%M %p %Z" . >> md/01-changelog.md
 
 clean:
-	rm -rf html latex plantuml-images *.pdf *.epub *.docx md/01-changelog.md *.log tex/*.aux tex/*.fdb_latexmk tex/*.fls tex/*.log symbols.sql last-modified.tex doxy.log Doxyfile.bak
+	rm -rf html latex plantuml-images *.pdf *.epub *.docx md/01-changelog.md *.log tex/*.aux tex/*.fdb_latexmk tex/*.fls tex/*.log symbols.sql last-modified.tex doxy.log Doxyfile.bak *.aux
