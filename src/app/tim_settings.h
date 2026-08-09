@@ -25,14 +25,14 @@ namespace tim
 struct settings
 {
     /** Порт, на котором SSH-сервер TIM слушает входящие соединения. */
-    std::uint16_t         ssh_port  = 2222;
+    std::uint16_t ssh_port = 2222;
     /** URL MQTT-брокера; mqtts:// — TLS, mqtt:// — без шифрования. */
-    std::string           mqtt_url  = "mqtts://127.0.0.1:8883";
+    std::string mqtt_url = "mqtts://127.0.0.1:8883";
     /** Рабочий каталог: БД, SSH host-key, история шелла, TLS-сертификаты.
      *  По умолчанию $HOME/.tim. */
-    std::filesystem::path data_dir;
+    std::filesystem::path data_dir{};
     /** Язык, на котором TIM_TR выдаёт пользовательские сообщения. */
-    tim::language         language  = tim::language::ru_ru;
+    tim::language language = tim::language::ru_ru;
 
     static std::filesystem::path default_config_path();
 

@@ -4,7 +4,6 @@
 
 #include "tim_a_protocol.h"
 #include "tim_config.h"
-#include "tim_math_tools.h"
 #include "tim_string_tools.h"
 #include "tim_vt.h"
 
@@ -69,10 +68,10 @@ void tim::prompt_shell::cloud(const std::string &title,
                                 + tim::elided(tim::trim(title), 16)
                                 + ' ';
     const std::size_t ttl_len = utf8len(ttl.c_str());
-    const std::size_t text_width = tim::bound(ttl_len,
-                                              t_len > terminal()->cols() * 2
+    const std::size_t text_width = std::clamp(t_len > terminal()->cols() * 2
                                                   ? terminal()->cols() / 2
                                                   : terminal()->cols() / 3,
+                                              ttl_len,
                                               terminal()->cols() - 6);
     ft_table_t *table = ft_create_table();
 
