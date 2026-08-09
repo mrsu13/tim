@@ -35,7 +35,7 @@ struct user_service
     {
     }
 
-    /** Выдаёт подписки на все обслуживаемые топики. */
+    /** Оформляет подписки на все обслуживаемые топики. */
     void subscribe();
 
     /**
@@ -50,7 +50,7 @@ struct user_service
 
     /**
      * user/setnick/&lt;uuid&gt;: обновляет ник пользователя. Если ник занят,
-     * шлёт notice через session/notice/&lt;uuid&gt;.
+     * отправляет notice через session/notice/&lt;uuid&gt;.
      *
      * \param topic Топик с UUID в последнем уровне.
      * \param data Новый ник.
@@ -116,7 +116,7 @@ struct user_service
     // и их обработчики обращаются к _mqtt/_db. Перестановка проверяется
     // static_assert ниже.
 
-    /** Сигнал mqtt.connected — повторно выдаёт подписки при реконнекте. */
+    /** Сигнал mqtt.connected — повторно оформляет подписки при восстановлении соединения. */
     tim::signal_connection _on_connected;
     /** Подписка на user/connect. */
     tim::mqtt_subscription _sub_connect;

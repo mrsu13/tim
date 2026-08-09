@@ -21,12 +21,11 @@ pariatur. Excepteur sint occaecat cupidatat non proident, \
 sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
 // Public
-
 /**
  * Конструктор.
  *
- * \param term VT-терминал, в который шелл отрисовывает.
- * \param engine Скрипт-движок (Tcl) для обработки /-команд.
+ * \param term VT-терминал, в который интерпретатор выводит текст.
+ * \param engine Скриптовый движок (Tcl) для обработки /-команд.
  */
 tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
     : tim::vt_shell(term, engine)
@@ -39,16 +38,16 @@ tim::prompt_shell::prompt_shell(tim::vt *term, tim::a_script_engine *engine)
 tim::prompt_shell::~prompt_shell() = default;
 
 /**
- * Рисует "плашку" сообщения: заголовок (ник автора) + тело.
+ * Выводит карточку сообщения: заголовок (ник автора) + тело.
  *
- * Если задан \a marker_color, перед заголовком в полосе плашки
- * рисуется маркер ('★') этим цветом; сам заголовок отображается
+ * Если задан \a marker_color, перед заголовком в полосе карточки
+ * выводится маркер ('★') этим цветом; сам заголовок отображается
  * обычным авто-контрастным цветом текста. Используется для пометки
  * сообщений от пользователей, на которых вы подписаны.
  *
- * \param title Заголовок плашки (ник/Я).
+ * \param title Заголовок карточки (ник/Я).
  * \param text Тело сообщения.
- * \param bg_color Цвет фона плашки (transparent — без фона).
+ * \param bg_color Цвет фона карточки (transparent — без фона).
  * \param marker_color Цвет маркера-звёздочки (пусто — нет маркера).
  */
 void tim::prompt_shell::cloud(const std::string &title,
@@ -85,8 +84,8 @@ void tim::prompt_shell::cloud(const std::string &title,
     if (ttl_len > 2) // Не только дополняющие пробелы.
     {
         terminal()->set_bg_color(bg_color);
-        // Если задан цвет маркера — рисуем ' ★' этим цветом, удерживая bg;
-        // потом переключаем цвет на text_color и пишем сам заголовок.
+        // Если задан цвет маркера — выводим ' ★' этим цветом, сохраняя фон;
+        // затем переключаем цвет на text_color и выводим сам заголовок.
         if (!marker_color.empty())
         {
             terminal()->set_color(marker_color);
@@ -116,7 +115,6 @@ void tim::prompt_shell::cloud(const std::string &title,
 
 
 // Protected
-
 /**
  * Принимает введённую строку как команду или как обычный текст.
  *

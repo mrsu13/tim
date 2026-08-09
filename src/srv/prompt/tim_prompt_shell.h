@@ -50,7 +50,7 @@ protected:
 
 private:
 
-    /** PIMPL: cигналы и состояние шелла. */
+    /** PIMPL: сигналы и состояние интерпретатора. */
     tim::pimpl<tim::p::prompt_shell> _d;
 };
 

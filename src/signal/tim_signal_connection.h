@@ -21,7 +21,7 @@ struct signal_connection;
 }
 
 /**
- * RAII-токен подключения слота к сигналу. При разрушении вызывает
+ * RAII-объект подключения слота к сигналу. При разрушении вызывает
  * disconnect() на сигнале. Перемещаемый, не копируемый.
  */
 class signal_connection : private tim::non_copyable

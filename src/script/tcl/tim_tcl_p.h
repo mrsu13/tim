@@ -43,7 +43,7 @@ struct tcl
     static void write(lil_t lil, const char *msg);
 
     /**
-     * LIL_CALLBACK_DISPATCH: тик между Tcl-операторами. Делегирует
+     * LIL_CALLBACK_DISPATCH: такт между Tcl-операторами. Делегирует
      * на зарегистрированный _dispatch_handler.
      *
      * \param lil LIL-сессия.
@@ -59,11 +59,11 @@ struct tcl
     void *_user_data = nullptr;
     /** Обработчик /quit. */
     std::function<void()> _quit_handler;
-    /** Обработчик "тика" между операторами. */
+    /** Обработчик такта между операторами. */
     std::function<void()> _dispatch_handler;
     /** true, если сейчас выполняется eval(). */
     bool _evaluating = false;
-    /** Префикс приглашения для шелла. */
+    /** Префикс приглашения командного интерпретатора. */
     std::string _prompt = "► ";
     /** Текст последней ошибки на выбранном языке. */
     std::string _error_msg;

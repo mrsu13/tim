@@ -25,7 +25,6 @@
  */
 
 // Public
-
 /**
  * Конструктор.
  *
@@ -508,7 +507,6 @@ void tim::line_edit::set_hinter(tim::line_edit::hinter_fn fn)
 }
 
 // Private
-
 /**
  * Добавляет строку в историю.
  */

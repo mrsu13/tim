@@ -15,7 +15,6 @@
 
 
 // Public
-
 /**
  * Конструирует сервис; подписывается на MQTT при наличии соединения,
  * иначе ждёт первого сигнала connected.
@@ -27,7 +26,8 @@ tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("post")
     , _d(mqtt, db)
 {
-    // Повторно выдаём подписки на каждое (ре)подключение к брокеру.
+    // Повторно оформляем подписки при каждом подключении к брокеру
+    // и восстановлении соединения.
     _d->_on_connected = mqtt.connected.connect(
         [d = _d.get()]{ d->subscribe(); });
 
@@ -35,12 +35,11 @@ tim::post_service::post_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
         _d->subscribe();
 }
 
-/** Деструктор. Подписки и сигналы закрываются через RAII-токены. */
+/** Деструктор. Подписки и сигналы закрываются через RAII-объекты. */
 tim::post_service::~post_service() = default;
 
 
 // Private
-
 /**
  * Подписывается на post/+/+ и делегирует каждое сообщение в on_post().
  */

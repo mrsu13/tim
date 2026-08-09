@@ -154,9 +154,7 @@ public:
 
 
 // Implementation
-
 // Public
-
 /**
  * Эквивалентно to_string(format::canonical).
  */

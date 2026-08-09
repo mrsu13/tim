@@ -47,7 +47,7 @@ static bool stderr_is_tty()
  * актуальный статус. На Linux достаточно проверки TTY; на Windows
  * дополнительно включается ENABLE_VIRTUAL_TERMINAL_PROCESSING
  * (Windows 10+) — без него ANSI ESC-последовательности выводятся
- * как мусор.
+ * как нечитаемые символы.
  *
  * \return true, если цвета можно использовать.
  */

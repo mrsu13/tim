@@ -24,7 +24,7 @@ namespace p
 struct ssh_inetd;
 
 /**
- * Состояние одной живой SSH-сессии.
+ * Состояние одной активной SSH-сессии.
  *
  * Накапливает информацию (pty-параметры, user_id из аутентификации)
  * до тех пор, пока клиент не запросит shell — тогда создаётся
@@ -79,7 +79,7 @@ struct ssh_session_state
 /**
  * Внутреннее состояние tim::ssh_inetd (PIMPL).
  *
- * Содержит ssh_bind, ssh_event, фабрику сервисов и карту живых сессий.
+ * Содержит ssh_bind, ssh_event, фабрику сервисов и карту активных сессий.
  * Все статические методы — это callbacks libssh, принимающие userdata,
  * через который восстанавливается ssh_inetd-владелец.
  */
@@ -196,9 +196,9 @@ struct ssh_inetd
     /** Фабрика прикладных сервисов. */
     tim::ssh_inetd::service_factory _factory;
 
-    /** Карта живых сессий: ssh_session* → state. */
+    /** Карта активных сессий: ssh_session* → state. */
     using session_map = std::unordered_map<::ssh_session, std::unique_ptr<ssh_session_state>>;
-    /** Хранилище живых сессий. */
+    /** Хранилище активных сессий. */
     session_map _sessions;
 
     /**

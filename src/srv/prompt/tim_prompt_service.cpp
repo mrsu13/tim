@@ -60,13 +60,13 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
     // чтобы новый клиент видел контекст разговора.
     _d->load_post_history();
 
-    // Байты из SSH-протокола → on_data_ready → шелл.
+    // Байты из SSH-протокола → on_data_ready → командный интерпретатор.
     _d->_on_data_ready = _d->_proto->data_ready.connect(
         [d = _d.get()](const char *data, std::size_t size)
         { d->on_data_ready(data, size); });
 
-    // Введённый текст-не-команду шелл испускает posted; мы публикуем его
-    // в MQTT под свежим UUID-ом сообщения.
+    // Введённый текст, не являющийся командой, интерпретатор испускает
+    // сигналом posted; мы публикуем его в MQTT под новым UUID сообщения.
     _d->_on_posted = _d->_shell->posted.connect(
         [d = _d.get()](const std::string &text)
         {
@@ -175,7 +175,7 @@ void tim::p::prompt_service::load_post_history()
 
     // Берём последние HISTORY_LIMIT сообщений в обратном порядке, затем
     // выводим их в хронологическом — чтобы новые оказались внизу, ближе
-    // к приглашению. LEFT JOIN на reaction со сворачиванием по post.id
+    // к приглашению. LEFT JOIN на reaction с группировкой по post.id
     // даёт сумму весов и число реакций; для постов без реакций оба
     // значения нулевые.
     tim::sqlite_query q(&_db,
@@ -268,7 +268,7 @@ void tim::p::prompt_service::subscribe()
     if (!key.empty())
         _mqtt.publish(tim::topics::user_setpubkey(self_id), key);
 
-    // Подписка на все посты: отрисовываем плашку каждого входящего.
+    // Подписка на все посты: выводим карточку каждого входящего.
     _sub_post = _mqtt.subscribe(tim::topics::POST_FILTER,
         [this](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         { on_post(topic, data, size); });
@@ -317,8 +317,8 @@ void tim::p::prompt_service::subscribe()
 }
 
 /**
- * Передаёт сырые байты ввода в шелл. При ошибке записи (Ctrl+D
- * или I/O-сбой) закрывает соединение.
+ * Передаёт сырые байты ввода командному интерпретатору. При ошибке
+ * записи (Ctrl+D или сбой ввода-вывода) закрывает соединение.
  */
 void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
 {
@@ -330,8 +330,8 @@ void tim::p::prompt_service::on_data_ready(const char *data, std::size_t size)
 }
 
 /**
- * Обработчик POST_FILTER: парсит UUID-ы из топика, сохраняет как
- * "последний увиденный" (для /react) и отрисовывает плашку сообщения
+ * Обработчик POST_FILTER: разбирает UUID из топика, сохраняет пост как
+ * последний увиденный (для /react) и выводит карточку сообщения
  * через render_post().
  */
 void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *data, std::size_t size)
@@ -356,10 +356,10 @@ void tim::p::prompt_service::on_post(const tim::mqtt_topic &topic, const char *d
 }
 
 /**
- * Рисует "плашку" одного сообщения. Для своих сообщений — без фона,
- * заголовок Me/Я. Для чужих — цвет фона стабильно выводится из UUID
- * автора (одинаковый автор → одинаковая полоска), а если автор есть
- * в _subscriptions, в плашке появляется жёлтая звёздочка.
+ * Выводит карточку одного сообщения. Для своих сообщений — без фона,
+ * заголовок Me/Я. Для чужих цвет фона детерминированно выводится из
+ * UUID автора (одинаковый автор → одинаковый цвет), а если автор есть
+ * в _subscriptions, в карточке появляется жёлтая звёздочка.
  *
  * \param publisher_id UUID автора.
  * \param text Текст сообщения.

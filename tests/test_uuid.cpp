@@ -78,7 +78,7 @@ TIM_TEST_CASE(uuid_parse_invalid_too_short)
 
 TIM_TEST_CASE(uuid_parse_invalid_non_hex_yields_nil)
 {
-    // Особенность реализации: если from_string ловит ошибку внутри
+    // Особенность реализации: если from_string обнаруживает ошибку внутри
     // парсинга (а не на проверке длины), он вызывает clear(), который
     // выставляет _valid = true и обнуляет поля. Результат — "valid",
     // но is_null. Здесь пинаем это поведение, чтобы случайные правки

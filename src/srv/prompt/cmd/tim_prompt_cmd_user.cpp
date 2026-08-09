@@ -17,11 +17,10 @@
 
 
 // Static
-
 /**
  * Достаёт контекст сессии (prompt_service) из tcl->user_data() и
  * указатель на сам tim::tcl. Если контекст не выставлен — команда
- * не имеет смысла, шлёт сообщение об ошибке и возвращает nullptr.
+ * не имеет смысла, отправляет сообщение об ошибке и возвращает nullptr.
  *
  * \param lil LIL-сессия (для lil_get_data / lil_set_error).
  * \param tcl_out Сюда записывается указатель на tim::tcl.
@@ -340,7 +339,6 @@ static lil_value_t tim_tcl_cmd_subscribers(lil_t lil,
 
 
 // Public
-
 /**
  * Регистрирует "пользовательские" команды чата в указанной LIL-сессии:
  * /setnick, /seticon, /setmotto, /subscribe, /unsubscribe, /subscriptions,

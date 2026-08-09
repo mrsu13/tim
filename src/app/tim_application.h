@@ -20,8 +20,8 @@ struct application;
  * Корневой класс приложения TIM.
  *
  * Загружает настройки, поднимает подсистемы (MQTT-клиент, SQLite,
- * SSH inetd, серверные сервисы post/user/reaction) и крутит
- * event-loop через exec(). Конструируется один раз в main().
+ * SSH inetd, серверные сервисы post/user/reaction) и выполняет
+ * цикл событий через exec(). Конструируется один раз в main().
  */
 class application
 {

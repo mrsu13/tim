@@ -25,7 +25,6 @@
 
 
 // Public
-
 /**
  * Создаёт приложение и инициализирует все подсистемы.
  *
@@ -141,8 +140,8 @@ tim::application::application(const std::string &config_path)
  */
 tim::application::~application()
 {
-    // Сворачиваем подсистемы, пока mg_mgr/event-loop ещё жив:
-    // mqtt_client при уничтожении трогает таймеры из _mg.
+    // Завершаем подсистемы, пока mg_mgr (цикл событий) ещё существует:
+    // mqtt_client при уничтожении обращается к таймерам из _mg.
     _d->_reaction_service.reset();
     _d->_user_service.reset();
     _d->_post_service.reset();
@@ -193,8 +192,8 @@ void tim::application::set_org_name(const std::string &name)
 }
 
 /**
- * \return Каталог, в котором живут БД, SSH host-key, история шелла
- *         и TLS-сертификаты. Выставляется в конструкторе application
+ * \return Каталог, в котором размещаются БД, SSH host-key, история
+ *         команд и TLS-сертификаты. Выставляется в конструкторе application
  *         из tim::settings::load_or_create(); после этого доступен
  *         как глобальная константа времени жизни приложения.
  */
@@ -205,8 +204,8 @@ const std::filesystem::path &tim::application::data_dir()
 
 /**
  * Один шаг event-loop без блокировки. Вызывается из DISPATCH-обработчика
- * LIL между Tcl-операторами, чтобы внешние подсистемы продолжали тикать
- * во время работы скрипта.
+ * LIL между Tcl-операторами, чтобы внешние подсистемы продолжали
+ * работать во время выполнения скрипта.
  */
 void tim::application::dispatch()
 {
@@ -216,8 +215,8 @@ void tim::application::dispatch()
         _d->_ssh_inetd->dispatch(0);
         // Этот метод вызывается LIL-ом между Tcl-операторами через
         // DISPATCH-обработчик. Если в этот момент инициирован выход
-        // (SIGINT выставил _quit), прерываем все живые скрипты —
-        // иначе долгий `while 1 {}` блокировал бы возврат из exec().
+        // (SIGINT установил _quit), прерываем все выполняющиеся скрипты —
+        // иначе длительный `while 1 {}` блокировал бы возврат из exec().
         if (_d->_quit)
             _d->_ssh_inetd->interrupt_all();
     }
@@ -231,7 +230,7 @@ void tim::application::exec()
 {
     // Чередуем опрос mongoose (MQTT) и libssh (входящие SSH-соединения).
     // 50 мс на каждый — приемлемая задержка для чата и достаточный квант,
-    // чтобы не крутить бессмысленный busy-loop.
+    // чтобы не выполнять холостой цикл опроса.
     while (!_d->_quit)
     {
         mg_mgr_poll(&_d->_mg, 50);
@@ -251,7 +250,6 @@ void tim::application::quit()
 
 
 // Private
-
 #ifdef TIM_OS_LINUX
 
 void tim::p::application::signal_handler(int sig_num)

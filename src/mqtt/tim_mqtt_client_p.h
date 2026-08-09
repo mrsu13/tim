@@ -43,7 +43,7 @@ struct mqtt_client
 
     /**
      * Mongoose-обработчик таймера keep-alive: переподключается при
-     * отсутствии соединения, шлёт PING при наличии.
+     * отсутствии соединения, отправляет PING при наличии.
      *
      * \param data Указатель на p::mqtt_client.
      */
@@ -58,9 +58,9 @@ struct mqtt_client
     std::string _url;
     /** Активное mongoose-соединение к брокеру; nullptr если отсутствует. */
     mg_connection *_client = nullptr;
-    /** Mongoose-таймер для keep-alive/реконнекта. */
+    /** Mongoose-таймер для keep-alive и восстановления соединения. */
     mg_timer *_timer = nullptr;
-    /** true после успешного MQTT-handshake. */
+    /** true после успешного MQTT-рукопожатия. */
     bool _connected = false;
 
     /**

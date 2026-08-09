@@ -13,7 +13,7 @@ static const char COMMAND_PREFIX = '/';
 static const char APP_NAME[] = "tim";
 /** Имя организации; исторически хранилось вместе с APP_NAME. */
 static const char ORG_NAME[] = "mrsu";
-/** Имя файла истории шелла внутри data_dir. */
+/** Имя файла истории команд внутри data_dir. */
 static const char HISTORY_FNAME[] = "history.txt";
 /** Имя файла SSH host-key. Лежит в data_dir/SSH_DATA_SUBDIR. */
 static const char SSH_HOST_KEY_FNAME[] = "host_ed25519";
@@ -41,9 +41,9 @@ static const std::uint32_t EXPECTED_DB_SCHEMA_VERSION = 2;
 /**
  * Максимальная глубина рекурсивного вызова ssh_inetd::dispatch.
  * Защищает стек от бесконечной рекурсии, если Tcl-скрипт неправильно
- * пользуется DISPATCH-обработчиком (например, бесконечно дёргает dispatch
- * из обработчика события). При достижении лимита вложенный опрос
- * пропускается с предупреждением в лог.
+ * пользуется DISPATCH-обработчиком (например, бесконечно вызывает dispatch
+ * из обработчика события). При достижении предела вложенный опрос
+ * пропускается с предупреждением в журнале.
  */
 static const std::size_t MAX_DISPATCH_DEPTH = 8;
 }

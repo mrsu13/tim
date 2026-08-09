@@ -153,9 +153,9 @@ tim::mqtt_topic tim::operator/(tim::mqtt_topic lhs, std::string_view level)
 /**
  * Проверка соответствия MQTT-фильтру согласно семантике MQTT 3.1.1:
  * '+' — ровно один уровень, '#' — остаток (включая ноль уровней)
- * и должен быть последним токеном фильтра. Топик делится на уровни
+ * и должен быть последним элементом фильтра. Топик делится на уровни
  * по '/' — N слэшей дают N+1 уровней (включая пустые); поэтому
- * "post/" — это два уровня: "post" и "" и должен матчиться "post/+".
+ * "post/" — это два уровня: "post" и "", и он должен соответствовать "post/+".
  *
  * \param topic Конкретный топик публикации.
  * \param filter Фильтр подписки (могут быть метасимволы '+' и '#').
@@ -163,9 +163,9 @@ tim::mqtt_topic tim::operator/(tim::mqtt_topic lhs, std::string_view level)
  */
 bool tim::topic_matches(std::string_view topic, std::string_view filter)
 {
-    // Лямбда-токенайзер: откусывает один уровень от \a s, обновляя \a has_more.
-    // Возвращает текст уровня (string_view внутрь s — не пережил бы
-    // мутации s после этого вызова, но мы и не сохраняем).
+    // Лямбда-функция разбора: отделяет один уровень от \a s, обновляя \a has_more.
+    // Возвращает текст уровня (string_view на данные s — он стал бы
+    // недействителен при изменении s, однако мы его не сохраняем).
     auto take_level = [](std::string_view &s, bool &has_more)
     {
         const std::size_t slash = s.find('/');
@@ -194,7 +194,7 @@ bool tim::topic_matches(std::string_view topic, std::string_view filter)
         const std::string_view f = take_level(filter, filter_has_more);
 
         if (f == "#")
-            return !filter_has_more; // '#' должен быть последним токеном.
+            return !filter_has_more; // '#' должен быть последним элементом.
 
         if (!topic_has_more)
             return false;

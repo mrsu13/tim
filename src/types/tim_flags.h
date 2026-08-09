@@ -95,9 +95,7 @@ public:
 
 
 // Implementation
-
 // Public
-
 /**
  * Конструктор.
  * \param value Целочисленное значение флагов.

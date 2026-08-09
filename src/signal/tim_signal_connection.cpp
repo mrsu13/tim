@@ -8,7 +8,7 @@
 
 // Открытые
 
-/** Пустой токен: не связан ни с одним сигналом. */
+/** Пустой объект: не связан ни с одним сигналом. */
 tim::signal_connection::signal_connection()
     : tim::non_copyable()
     , _d()
@@ -16,7 +16,7 @@ tim::signal_connection::signal_connection()
 }
 
 /**
- * Конструирует токен, связанный с конкретным (signal, id).
+ * Конструирует объект, связанный с конкретным (signal, id).
  *
  * \param s_id Пара (указатель на сигнал, идентификатор слота).
  */
@@ -64,7 +64,7 @@ tim::signal_connection &tim::signal_connection::operator=(tim::signal_connection
     return *this;
 }
 
-/** \return true, если токен хранит активное подключение. */
+/** \return true, если объект хранит активное подключение. */
 bool tim::signal_connection::connected() const
 {
     return _d && _d->_signal;

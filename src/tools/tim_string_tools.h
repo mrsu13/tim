@@ -198,7 +198,6 @@ inline const char *na();
 
 
 // Implementation
-
 /**
  * Реализация split: используется и для vector, и для list-перегрузок.
  *

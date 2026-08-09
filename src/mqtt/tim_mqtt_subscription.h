@@ -20,7 +20,7 @@ struct mqtt_subscription;
 }
 
 /**
- * RAII-токен MQTT-подписки.
+ * RAII-объект MQTT-подписки.
  *
  * Возвращается mqtt_client::subscribe(); при разрушении автоматически
  * вызывает mqtt_client::unsubscribe(). Перемещаемый, не копируемый —

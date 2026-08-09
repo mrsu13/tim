@@ -133,7 +133,7 @@ TIM_TEST_CASE(topic_matches_hash_only)
 
 TIM_TEST_CASE(topic_matches_hash_must_be_last)
 {
-    // По спецификации '#' допустим только как последний токен.
+    // По спецификации '#' допустим только как последний элемент фильтра.
     TIM_CHECK(!tim::topic_matches("a/b", "#/b"));
     TIM_CHECK(!tim::topic_matches("a/b", "a/#/b"));
 }

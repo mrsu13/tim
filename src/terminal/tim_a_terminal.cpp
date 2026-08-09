@@ -9,7 +9,6 @@
 
 
 // Public
-
 /** Виртуальный деструктор. */
 tim::a_terminal::~a_terminal() = default;
 
@@ -38,7 +37,7 @@ void tim::a_terminal::set_theme(const tim::terminal_theme &theme)
 
 /**
  * Печатает форматированный текст (va_list-вариант). Форматирует через
- * tim::vsprintf и шлёт результат в протокол.
+ * tim::vsprintf и отправляет результат в протокол.
  *
  * \param format printf-формат.
  * \param args va_list аргументов.
@@ -114,7 +113,6 @@ int tim::a_terminal::cprintf(const tim::color &text_color,
 
 
 // Protected
-
 /**
  * Конструктор только для наследников: запоминает указатель на протокол.
  *

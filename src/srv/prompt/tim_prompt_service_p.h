@@ -64,14 +64,14 @@ struct prompt_service
 
     /**
      * Выдаёт MQTT-подписки сессии (POST, REACT_EVENT, user/subscribe|
-     * unsubscribe/&lt;self&gt;, session/notice/&lt;self&gt;) и зовёт _profiles.subscribe().
+     * unsubscribe/&lt;self&gt;, session/notice/&lt;self&gt;) и вызывает _profiles.subscribe().
      * Вызывается на каждом connect/reconnect.
      */
     void subscribe();
 
     /**
-     * Обработчик байтов, пришедших из SSH-протокола. Передаёт их шеллу;
-     * закрывает соединение при ошибке записи.
+     * Обработчик байтов, поступивших из SSH-протокола. Передаёт их
+     * командному интерпретатору; закрывает соединение при ошибке записи.
      *
      * \param data Сырые байты.
      * \param size Размер.
@@ -79,8 +79,8 @@ struct prompt_service
     void on_data_ready(const char *data, std::size_t size);
 
     /**
-     * Обработчик входящего post/&lt;author&gt;/&lt;post-id&gt;. Парсит UUID-ы,
-     * сохраняет как "последний увиденный" и отрисовывает плашку сообщения.
+     * Обработчик входящего post/&lt;author&gt;/&lt;post-id&gt;. Разбирает UUID,
+     * сохраняет пост как последний увиденный и выводит карточку сообщения.
      *
      * \param topic Полный топик публикации.
      * \param data Текст сообщения.
@@ -115,7 +115,7 @@ struct prompt_service
     std::unique_ptr<tim::vt>                    _terminal;
     /** Tcl-интерпретатор. */
     std::unique_ptr<tim::tcl>                   _tcl;
-    /** Чат-шелл (prompt_shell : vt_shell). */
+    /** Командный интерпретатор чата (prompt_shell : vt_shell). */
     std::unique_ptr<tim::prompt_shell>          _shell;
     /** UUID последнего увиденного сообщения (цель /react). */
     tim::uuid                                   _last_seen_post;
@@ -128,11 +128,11 @@ struct prompt_service
     // обработчики обращаются к этим полям. Перестановка проверяется
     // static_assert ниже.
 
-    /** Сигнал-токен: data_ready от ssh-протокола. */
+    /** Сигнальное соединение: data_ready от SSH-протокола. */
     tim::signal_connection                      _on_data_ready;
-    /** Сигнал-токен: posted от prompt_shell. */
+    /** Сигнальное соединение: posted от prompt_shell. */
     tim::signal_connection                      _on_posted;
-    /** Сигнал-токен: mqtt.connected для повторной выдачи подписок. */
+    /** Сигнальное соединение: mqtt.connected для повторного оформления подписок. */
     tim::signal_connection                      _on_connected;
     /** Подписка на POST_FILTER. */
     tim::mqtt_subscription                      _sub_post;

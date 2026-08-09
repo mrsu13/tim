@@ -13,7 +13,6 @@
 
 
 // Static
-
 /**
  * Команда `/clear`: очищает терминал (ANSI ESC [2J + перевод курсора).
  *
@@ -128,7 +127,6 @@ static lil_value_t tim_tcl_cmd_palette256(lil_t lil, size_t argc, lil_value_t *a
 
 
 // Public
-
 /**
  * Регистрирует Tcl-команды для управления терминалом (`clear`, `puts`,
  * `palette256` и подобные) в указанной LIL-сессии.

@@ -6,7 +6,6 @@
 
 
 // Public
-
 /** Виртуальный деструктор для полиморфного удаления. */
 tim::service::~service() = default;
 
@@ -24,7 +23,6 @@ const std::string &tim::service::name() const
 
 
 // Protected
-
 /**
  * Конструктор только для наследников.
  *
@@ -41,7 +39,6 @@ tim::service::service(const std::string &name)
 
 
 // Private
-
 /**
  * Возвращает следующий уникальный идентификатор. Статический счётчик
  * монотонно увеличивается на каждый вызов; не thread-safe (TIM однопоточен).

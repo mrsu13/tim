@@ -83,7 +83,7 @@ TIM_TEST_CASE(signal_raii_disconnect_on_scope_exit)
         sig();
         TIM_CHECK(calls == 1);
     }
-    // Out of scope → connection destroyed → slot disconnected.
+    // Выход из области видимости → соединение разрушено → слот отключён.
     sig();
     TIM_CHECK(calls == 1);
 }
@@ -93,7 +93,7 @@ TIM_TEST_CASE(signal_double_disconnect_is_idempotent)
     tim::signal<> sig;
     auto c = sig.connect(std::function<void()>([]{}));
     c.disconnect();
-    c.disconnect(); // не падает
+    c.disconnect(); // не приводит к ошибке
     TIM_CHECK(!c.connected());
 }
 
@@ -146,7 +146,7 @@ TIM_TEST_CASE(signal_connection_assign_to_default_keeps_alive)
 
 TIM_TEST_CASE(signal_slot_can_disconnect_another_slot)
 {
-    // Внутри одной эмиссии слот «a» отключает слот «b». Реализация
+    // Внутри одного испускания слот «a» отключает слот «b». Реализация
     // снимает копию списка id перед обходом, поэтому второй вызов
     // sig() уже не должен вызывать b.
     tim::signal<> sig;

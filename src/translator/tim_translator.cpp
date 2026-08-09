@@ -19,9 +19,8 @@
  */
 
 // Public
-
 /**
- * Возвращает живой singleton-переводчик.
+ * Возвращает единственный экземпляр переводчика (синглтон).
  *
  * \return Ссылка на единственный экземпляр.
  */
@@ -87,7 +86,6 @@ const char *tim::translator::translate(const tim::translations &translations,
 
 
 // Private
-
 /** Закрытый конструктор: только через instance(). */
 tim::translator::translator()
     : _d()

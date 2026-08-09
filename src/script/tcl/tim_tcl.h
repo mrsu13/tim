@@ -27,8 +27,8 @@ class a_terminal;
  * Реализация a_script_engine поверх LIL (Little Interpreted Language).
  *
  * Держит lil_t-сессию, переводит её ошибки на язык TIM (через таблицу
- * правил) и пробрасывает дисперс-обработчик в LIL_CALLBACK_DISPATCH —
- * чтобы внешние event-loop-ы продолжали тикать во время скриптов.
+ * правил) и передаёт dispatch-обработчик в LIL_CALLBACK_DISPATCH —
+ * чтобы внешние циклы событий продолжали работать во время скриптов.
  */
 class tcl : public tim::a_script_engine
 {

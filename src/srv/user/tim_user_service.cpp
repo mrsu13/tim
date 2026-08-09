@@ -15,7 +15,6 @@
 
 
 // Public
-
 /**
  * Конструирует сервис и подписывается на MQTT.
  *
@@ -39,7 +38,6 @@ tim::user_service::~user_service() = default;
 
 
 // Private
-
 /**
  * Выдаёт семь MQTT-подписок (user/connect, setnick/+, seticon/+,
  * setmotto/+, setpubkey/+, subscribe/+, unsubscribe/+). Каждая лямбда —
@@ -110,7 +108,7 @@ void tim::p::user_service::connect(const tim::mqtt_topic &topic,
 
 /**
  * Обработчик user/setnick/&lt;uuid&gt;: проверяет уникальность ника и пишет
- * UPDATE user SET nick. При коллизии шлёт уведомление через
+ * UPDATE user SET nick. При коллизии отправляет уведомление через
  * session/notice/&lt;uuid&gt; вместо тихого "не сработало".
  */
 void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
@@ -125,7 +123,7 @@ void tim::p::user_service::setnick(const tim::mqtt_topic &topic,
 
     // Предварительная проверка коллизии ника. Уникальность также
     // гарантируется UNIQUE(nick) в схеме; этот SELECT даёт более
-    // понятную ошибку до того, как UPDATE упадёт по ограничению.
+    // понятную ошибку до того, как UPDATE завершится нарушением ограничения.
     {
         tim::sqlite_query q(&_db,
                             "SELECT id FROM user WHERE nick = ? AND id != ?");

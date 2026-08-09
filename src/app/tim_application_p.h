@@ -32,7 +32,7 @@ namespace p
 struct application
 {
     /**
-     * Статический указатель на единственный живой экземпляр application.
+     * Статический указатель на единственный существующий экземпляр application.
      * Используется signal_handler(), который не может принимать аргументы.
      *
      * \return Ссылка на mutable указатель. Конструктор application выставляет
@@ -84,7 +84,7 @@ struct application
 
     /**
      * Обработчик SIGINT/SIGTERM. Через instance() запрашивает выход
-     * у живого application. Async-signal-safe: только проставляет
+     * у существующего application. Async-signal-safe: только устанавливает
      * атомарный флаг quit.
      *
      * \param sig_num Номер пришедшего сигнала.

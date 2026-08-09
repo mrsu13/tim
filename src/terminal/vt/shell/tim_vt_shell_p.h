@@ -22,7 +22,7 @@ struct vt_shell
     /** \return Текст bye-баннера TIM. */
     static const std::string &bye_banner();
 
-    /** Скрипт-движок, на который шелл отправляет команды. */
+    /** Скриптовый движок, которому интерпретатор передаёт команды. */
     tim::a_script_engine *_engine = nullptr;
     /** Редактор ввода (line_edit). */
     std::unique_ptr<tim::line_edit> _ledit;
