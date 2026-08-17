@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tim_mqtt_subscription.h"
-#include "tim_signal_connection.h"
 
 #include <cstddef>
 
@@ -116,8 +115,6 @@ struct user_service
     // и их обработчики обращаются к _mqtt/_db. Перестановка проверяется
     // static_assert ниже.
 
-    /** Сигнал mqtt.connected — повторно оформляет подписки при восстановлении соединения. */
-    tim::signal_connection _on_connected;
     /** Подписка на user/connect. */
     tim::mqtt_subscription _sub_connect;
     /** Подписка на user/setnick/+. */
@@ -136,7 +133,7 @@ struct user_service
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-static_assert(offsetof(user_service, _on_connected) > offsetof(user_service, _db),
+static_assert(offsetof(user_service, _sub_connect) > offsetof(user_service, _db),
               "MQTT-подписки и сигнал-соединения должны быть объявлены ПОСЛЕ "
               "полей-зависимостей (_mqtt, _db) — они уничтожаются первыми, и их "
               "обработчики читают эти ссылки.");

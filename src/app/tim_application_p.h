@@ -2,6 +2,7 @@
 
 #include "mongoose.h"
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
 
@@ -84,20 +85,38 @@ struct application
 
     /**
      * Обработчик SIGINT/SIGTERM. Через instance() запрашивает выход
-     * у существующего application. Async-signal-safe: только устанавливает
-     * атомарный флаг quit.
+     * у существующего application. Async-signal-safe: устанавливает
+     * только атомарные флаги (_quit и номер сигнала) — никакого
+     * вывода в журнал и других небезопасных вызовов; сообщение
+     * о причине выхода печатает exec() после завершения цикла.
      *
      * \param sig_num Номер пришедшего сигнала.
      */
     static void signal_handler(int sig_num);
+
+    /**
+     * Номер сигнала, вызвавшего выход; 0 — выход запрошен программно.
+     *
+     * \return Ссылка на атомарный номер сигнала. Хранится как static
+     *         по той же причине, что и instance(): обработчик сигналов
+     *         не имеет доступа к состоянию экземпляра.
+     */
+    static std::atomic<int> &exit_signal()
+    {
+        static std::atomic<int> sig{0};
+        return sig;
+    }
 
     /** Сохранённый обработчик SIGINT для восстановления в деструкторе. */
     struct sigaction _old_sig_int;
     /** Сохранённый обработчик SIGTERM для восстановления в деструкторе. */
     struct sigaction _old_sig_term;
 #endif
-    /** Флаг выхода из exec(). Выставляется quit(); читается циклом. */
-    bool _quit = false;
+    /**
+     * Флаг выхода из exec(). Выставляется quit() — в том числе из
+     * обработчика сигналов ОС, поэтому атомарный.
+     */
+    std::atomic<bool> _quit{false};
 
     /** Mongoose-менеджер: shared между mqtt_client и таймерами. */
     struct mg_mgr _mg;

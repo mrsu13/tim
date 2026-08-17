@@ -172,9 +172,10 @@ TIM_TEST_CASE(signal_slot_can_disconnect_another_slot)
 
 TIM_TEST_CASE(signal_slot_can_disconnect_itself)
 {
-    // Слот, отключающий сам себя во время вызова. Слот, выполняющийся
-    // в этот момент, удаляется из _slots вместе со своим std::function;
-    // тело лямбды после disconnect() уже не обращается к захватам.
+    // Слот, отключающий сам себя во время вызова. Во время испускания
+    // сигнал не уничтожает отключаемые слоты немедленно, а откладывает
+    // их до завершения обхода — поэтому выполняющийся std::function
+    // остаётся в памяти до конца собственного вызова.
     tim::signal<> sig;
     int self_calls = 0;
     int other_calls = 0;
@@ -196,4 +197,61 @@ TIM_TEST_CASE(signal_slot_can_disconnect_itself)
     sig();
     TIM_CHECK(self_calls == 1); // больше не вызывается
     TIM_CHECK(other_calls == 2);
+}
+
+
+// --- Сигнал разрушается раньше подключения ----------------------------------
+
+TIM_TEST_CASE(signal_connection_outlives_signal)
+{
+    // Объект подключения, переживший свой сигнал: деструктор и явный
+    // disconnect() не должны обращаться к разрушенной памяти —
+    // weak-ссылка на контрольный блок сигнала истекает вместе с ним.
+    tim::signal_connection c;
+    {
+        tim::signal<> sig;
+        c = sig.connect(std::function<void()>([]{}));
+        TIM_CHECK(c.connected());
+    }
+    // Сигнал разрушен — подключение автоматически стало пустым.
+    TIM_CHECK(!c.connected());
+    c.disconnect(); // не выполняет действий и не приводит к ошибке
+    TIM_CHECK(!c.connected());
+}
+
+TIM_TEST_CASE(signal_connection_destructor_after_signal_death)
+{
+    // Разрушение объекта подключения после разрушения сигнала.
+    auto sig = std::make_unique<tim::signal<>>();
+    auto c = std::make_unique<tim::signal_connection>(
+        sig->connect(std::function<void()>([]{})));
+    sig.reset();  // сигнал умирает первым
+    c.reset();    // деструктор подключения безопасен
+    TIM_CHECK(true);
+}
+
+TIM_TEST_CASE(signal_emit_after_slot_self_disconnect_in_nested_emit)
+{
+    // Вложенное испускание: слот испускает тот же сигнал повторно
+    // и отключает сам себя во вложенном обходе. Отложенные слоты
+    // уничтожаются только по завершении самого внешнего испускания.
+    tim::signal<> sig;
+    int calls = 0;
+
+    auto self_c = std::make_unique<tim::signal_connection>();
+    *self_c = sig.connect(std::function<void()>(
+        [&calls, &sig, c = self_c.get()]
+        {
+            ++calls;
+            if (calls == 1)
+            {
+                sig();          // вложенное испускание
+                c->disconnect(); // самоотключение во внешнем вызове
+            }
+        }));
+
+    sig();
+    TIM_CHECK(calls == 2);
+    sig();
+    TIM_CHECK(calls == 2); // слот отключён
 }

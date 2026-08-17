@@ -3,6 +3,7 @@
 #include "tim_non_copyable.h"
 
 #include <cstddef>
+#include <memory>
 
 #include "tim_pimpl.h"
 
@@ -25,6 +26,10 @@ struct mqtt_subscription;
  * Возвращается mqtt_client::subscribe(); при разрушении автоматически
  * вызывает mqtt_client::unsubscribe(). Перемещаемый, не копируемый —
  * подписка единственная.
+ *
+ * Хранит weak-ссылку на контрольный блок клиента, поэтому безопасен
+ * и в том случае, когда клиент разрушается раньше объекта подписки:
+ * unsubscribe() просто не выполняет действий.
  */
 class mqtt_subscription : private tim::non_copyable
 {
@@ -33,7 +38,7 @@ public:
 
     mqtt_subscription();
 
-    mqtt_subscription(tim::mqtt_client *client, std::size_t id);
+    mqtt_subscription(std::weak_ptr<tim::mqtt_client *> client_alive, std::size_t id);
 
     mqtt_subscription(mqtt_subscription &&other) noexcept;
 
@@ -47,7 +52,7 @@ public:
 
 private:
 
-    /** PIMPL: указатель на клиента и id подписки. */
+    /** PIMPL: weak-ссылка на клиента и id подписки. */
     tim::pimpl<tim::p::mqtt_subscription> _d;
 };
 

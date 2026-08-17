@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tim_mqtt_subscription.h"
-#include "tim_signal_connection.h"
 
 #include <cstddef>
 
@@ -59,15 +58,13 @@ struct post_service
     // обработчик увидит уже разрушенную ссылку. Перестановка проверяется
     // static_assert ниже.
 
-    /** Подключение к сигналу mqtt.connected для повторной выдачи подписки. */
-    tim::signal_connection _on_connected;
     /** Подписка на POST_FILTER. */
     tim::mqtt_subscription _sub_post;
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-static_assert(offsetof(post_service, _on_connected) > offsetof(post_service, _db),
+static_assert(offsetof(post_service, _sub_post) > offsetof(post_service, _db),
               "MQTT-подписки и сигнал-соединения должны быть объявлены ПОСЛЕ "
               "полей-зависимостей (_mqtt, _db) — они уничтожаются первыми, и их "
               "обработчики читают эти ссылки.");

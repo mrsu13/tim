@@ -26,6 +26,7 @@ tim::profile_cache::profile_cache(tim::mqtt_client &mqtt,
     : _d(mqtt, db)
 {
     _d->_self = _d->load_user(self_id);
+    subscribe();
 }
 
 /** Деструктор; RAII-объекты mqtt_subscription закрывают подписки автоматически. */
@@ -74,19 +75,11 @@ void tim::profile_cache::invalidate()
 
 /**
  * Оформляет подписки на wildcard-топики setnick/seticon/setmotto.
- * Вызывать при первом подключении и при каждом восстановлении
- * соединения. Прежние подписки (mqtt_subscription) сбрасываются
- * перед повторным оформлением.
+ * Вызывается однократно из конструктора: оформление подписок у брокера
+ * при каждом восстановлении соединения mqtt_client выполняет сам.
  */
 void tim::profile_cache::subscribe()
 {
-    // Сбрасываем прежние объекты перед повторным оформлением: при
-    // восстановлении соединения mqtt_client уже утратил прежние подписки,
-    // и хранить mqtt_subscription с устаревшими id незачем.
-    _d->_sub_setnick = {};
-    _d->_sub_seticon = {};
-    _d->_sub_setmotto = {};
-
     _d->_sub_setnick = _d->_mqtt.subscribe(tim::topics::USER_SETNICK_FILTER,
         [d = _d.get()](const tim::mqtt_topic &topic, const char *data, std::size_t size)
         {

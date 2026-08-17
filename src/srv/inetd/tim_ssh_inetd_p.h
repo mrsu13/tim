@@ -7,6 +7,7 @@
 #include <libssh/libssh.h>
 #include <libssh/server.h>
 
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -43,6 +44,15 @@ struct ssh_session_state
 
     /** Родительский ssh_inetd. */
     tim::p::ssh_inetd *_owner;
+
+    /**
+     * Момент приёма TCP-соединения. Сессия, не создавшая прикладной
+     * сервис за tim::SSH_SESSION_SETUP_TIMEOUT (рукопожатие,
+     * аутентификация, pty/shell), принудительно закрывается
+     * в ssh_inetd::dispatch().
+     */
+    std::chrono::steady_clock::time_point         _accepted_at =
+        std::chrono::steady_clock::now();
 
     /** libssh-сессия. */
     ::ssh_session                                 _session = nullptr;

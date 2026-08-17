@@ -51,9 +51,9 @@ public:
 
     void invalidate();
 
-    void subscribe();
-
 private:
+
+    void subscribe();
 
     /** PIMPL: всё состояние (включая подписки и кэш-карту). */
     tim::pimpl<tim::p::profile_cache> _d;

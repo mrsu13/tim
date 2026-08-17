@@ -1,7 +1,6 @@
 #pragma once
 
 #include "tim_mqtt_subscription.h"
-#include "tim_signal_connection.h"
 
 #include <cstddef>
 
@@ -56,15 +55,13 @@ struct reaction_service
     // и их обработчики обращаются к _mqtt/_db. Перестановка проверяется
     // static_assert ниже.
 
-    /** Сигнал mqtt.connected — повторно выдаёт подписку. */
-    tim::signal_connection _on_connected;
     /** Подписка на REACT_FILTER. */
     tim::mqtt_subscription _sub_react;
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-static_assert(offsetof(reaction_service, _on_connected) > offsetof(reaction_service, _db),
+static_assert(offsetof(reaction_service, _sub_react) > offsetof(reaction_service, _db),
               "MQTT-подписки и сигнал-соединения должны быть объявлены ПОСЛЕ "
               "полей-зависимостей (_mqtt, _db) — они уничтожаются первыми, и их "
               "обработчики читают эти ссылки.");

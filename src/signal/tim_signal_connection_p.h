@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
 
 namespace tim
@@ -16,8 +17,12 @@ namespace p
  */
 struct signal_connection
 {
-    /** Сигнал, к которому привязан слот. */
-    tim::a_signal *_signal = nullptr;
+    /**
+     * Weak-ссылка на контрольный блок сигнала. Пока блок существует,
+     * lock() возвращает указатель на сигнал; после разрушения сигнала
+     * подключение автоматически считается пустым.
+     */
+    std::weak_ptr<tim::a_signal *> _signal;
     /** Идентификатор слота внутри сигнала. */
     std::size_t _connection_id = 0;
 };

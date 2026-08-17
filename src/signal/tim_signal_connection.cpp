@@ -16,18 +16,21 @@ tim::signal_connection::signal_connection()
 }
 
 /**
- * Конструирует объект, связанный с конкретным (signal, id).
+ * Конструирует объект, связанный с конкретным подключением.
  *
- * \param s_id Пара (указатель на сигнал, идентификатор слота).
+ * \param signal_alive Weak-ссылка на контрольный блок сигнала
+ *                     (a_signal::alive()).
+ * \param id Идентификатор слота внутри сигнала.
  */
-tim::signal_connection::signal_connection(const std::pair<tim::a_signal *, std::size_t> &s_id)
+tim::signal_connection::signal_connection(std::weak_ptr<tim::a_signal *> signal_alive,
+                                          std::size_t id)
     : tim::non_copyable()
     , _d()
 {
-    assert(s_id.first);
+    assert(!signal_alive.expired());
 
-    _d->_signal = s_id.first;
-    _d->_connection_id = s_id.second;
+    _d->_signal = std::move(signal_alive);
+    _d->_connection_id = id;
 }
 
 /**
@@ -64,20 +67,25 @@ tim::signal_connection &tim::signal_connection::operator=(tim::signal_connection
     return *this;
 }
 
-/** \return true, если объект хранит активное подключение. */
+/**
+ * \return true, если объект хранит активное подключение и сигнал
+ *         ещё существует.
+ */
 bool tim::signal_connection::connected() const
 {
-    return _d && _d->_signal;
+    return _d && !_d->_signal.expired();
 }
 
 /**
- * Явно отзывает подключение. Идемпотентно.
+ * Явно отзывает подключение. Идемпотентно; если сигнал уже разрушен,
+ * не выполняет действий (weak-ссылка истекла).
  */
 void tim::signal_connection::disconnect()
 {
-    if (!_d || !_d->_signal)
+    if (!_d)
         return;
 
-    _d->_signal->disconnect(_d->_connection_id);
-    _d->_signal = nullptr;
+    if (const std::shared_ptr<tim::a_signal *> signal = _d->_signal.lock())
+        (*signal)->disconnect(_d->_connection_id);
+    _d->_signal.reset();
 }

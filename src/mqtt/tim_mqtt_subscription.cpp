@@ -16,18 +16,20 @@ tim::mqtt_subscription::mqtt_subscription()
 }
 
 /**
- * Конструирует объект, связанный с конкретной подпиской (client, id).
+ * Конструирует объект, связанный с конкретной подпиской.
  *
- * \param client MQTT-клиент, выдавший подписку.
- * \param id Идентификатор подписки внутри client.
+ * \param client_alive Weak-ссылка на контрольный блок клиента,
+ *                     выдавшего подписку.
+ * \param id Идентификатор подписки внутри клиента.
  */
-tim::mqtt_subscription::mqtt_subscription(tim::mqtt_client *client, std::size_t id)
+tim::mqtt_subscription::mqtt_subscription(std::weak_ptr<tim::mqtt_client *> client_alive,
+                                          std::size_t id)
     : tim::non_copyable()
     , _d()
 {
-    assert(client);
+    assert(!client_alive.expired());
 
-    _d->_client = client;
+    _d->_client = std::move(client_alive);
     _d->_id = id;
 }
 
@@ -65,22 +67,27 @@ tim::mqtt_subscription &tim::mqtt_subscription::operator=(tim::mqtt_subscription
     return *this;
 }
 
-/** \return true, если объект хранит активную подписку. */
+/**
+ * \return true, если объект хранит активную подписку и клиент
+ *         ещё существует.
+ */
 bool tim::mqtt_subscription::active() const
 {
-    return _d && _d->_client;
+    return _d && !_d->_client.expired();
 }
 
 /**
  * Явно отзывает подписку у клиента и помечает объект пустым.
  * Идемпотентно: повторный вызов на пустом или уже отозванном объекте
- * безопасен.
+ * безопасен; если клиент уже разрушен, не выполняет действий
+ * (weak-ссылка истекла).
  */
 void tim::mqtt_subscription::unsubscribe()
 {
-    if (!_d || !_d->_client)
+    if (!_d)
         return;
 
-    _d->_client->unsubscribe(_d->_id);
-    _d->_client = nullptr;
+    if (const std::shared_ptr<tim::mqtt_client *> client = _d->_client.lock())
+        (*client)->unsubscribe(_d->_id);
+    _d->_client.reset();
 }

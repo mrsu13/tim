@@ -19,7 +19,10 @@ namespace tim
  * Подписчики (слоты) подключаются через connect() и получают RAII-объект
  * tim::signal_connection — при его разрушении подписка автоматически
  * отзывается. Испускание через operator() допускает (от)подключение
- * слотов изнутри слота: перед обходом снимается снимок идентификаторов.
+ * слотов изнутри слота, в том числе отключение слотом самого себя:
+ * перед обходом снимается снимок идентификаторов, а уничтожение
+ * отключённых во время испускания слотов откладывается до завершения
+ * самого внешнего испускания.
  *
  * \tparam Args Типы аргументов, с которыми сигнал испускается.
  */
@@ -82,6 +85,15 @@ private:
     using slot_map = std::unordered_map<std::size_t, std::unique_ptr<tim::a_slot<Args...>>>;
     /** Хранилище подключённых слотов. */
     slot_map _slots;
+    /**
+     * Глубина вложенных испусканий. Пока не равна нулю, отключаемые
+     * слоты не уничтожаются, а перемещаются в _retired: слот может
+     * отключить сам себя из собственного обработчика, и уничтожение
+     * выполняющегося std::function было бы неопределённым поведением.
+     */
+    mutable std::size_t _emit_depth = 0;
+    /** Слоты, отключённые во время испускания; уничтожаются после него. */
+    mutable std::vector<std::unique_ptr<tim::a_slot<Args...>>> _retired;
 };
 
 }
@@ -103,15 +115,15 @@ tim::signal<Args...>::signal()
 
 /**
  * Создаёт slot<R, Args...>, помещает в _slots под новым id и возвращает
- * RAII-объект, привязанный к (this, id).
+ * RAII-объект, привязанный к контрольному блоку сигнала.
  */
 template<typename... Args>
 template<typename R>
 tim::signal_connection tim::signal<Args...>::connect(std::function<R (Args...)> fn)
 {
     const std::size_t id = next_id();
-    _slots[id] = std::move(std::make_unique<tim::slot<R, Args...>>(fn));
-    return tim::signal_connection(std::pair<tim::a_signal *, std::size_t>{ this, id });
+    _slots[id] = std::make_unique<tim::slot<R, Args...>>(fn);
+    return tim::signal_connection(alive(), id);
 }
 
 /**
@@ -124,18 +136,29 @@ tim::signal_connection tim::signal<Args...>::connect(std::function<void (Args...
 }
 
 /**
- * Удаляет слот из _slots; map::erase возвращает 0/1.
+ * Удаляет слот из _slots. Во время испускания сам объект слота
+ * не уничтожается, а перемещается в _retired до завершения самого
+ * внешнего operator(): слот мог отключить сам себя из собственного
+ * обработчика.
  */
 template<typename... Args>
 bool tim::signal<Args...>::disconnect(std::size_t connection_id)
 {
-    return _slots.erase(connection_id);
+    const typename slot_map::iterator it = _slots.find(connection_id);
+    if (it == _slots.end())
+        return false;
+
+    if (_emit_depth)
+        _retired.push_back(std::move(it->second));
+    _slots.erase(it);
+    return true;
 }
 
 /**
  * Снимает снимок id подключений (чтобы слот мог безопасно
  * (от)подключиться во время испускания), затем последовательно вызывает
- * слоты по id.
+ * слоты по id. По завершении самого внешнего испускания уничтожает
+ * слоты, отключённые во время него.
  */
 template<typename... Args>
 void tim::signal<Args...>::operator()(Args... args) const
@@ -145,12 +168,17 @@ void tim::signal<Args...>::operator()(Args... args) const
     for (const typename slot_map::value_type &pair: _slots)
         ids.push_back(pair.first);
 
+    ++_emit_depth;
     for (std::size_t id: ids)
     {
         const typename slot_map::const_iterator it = _slots.find(id);
         if (it != _slots.cend())
             it->second->invoke(args...);
     }
+    --_emit_depth;
+
+    if (!_emit_depth)
+        _retired.clear();
 }
 
 

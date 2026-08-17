@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
 
 namespace tim
@@ -16,8 +17,12 @@ namespace p
  */
 struct mqtt_subscription
 {
-    /** MQTT-клиент, выдавший подписку. */
-    tim::mqtt_client *_client = nullptr;
+    /**
+     * Weak-ссылка на контрольный блок клиента. Пока блок существует,
+     * lock() возвращает указатель на клиента; после разрушения клиента
+     * подписка автоматически считается пустой.
+     */
+    std::weak_ptr<tim::mqtt_client *> _client;
     /** Идентификатор подписки внутри клиента. */
     std::size_t _id = 0;
 };

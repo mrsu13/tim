@@ -224,19 +224,27 @@ void tim::application::dispatch()
 
 /**
  * Основной цикл приложения. Чередует mg_mgr_poll и ssh_inetd::dispatch
- * с квантом 50 мс. Возвращается, когда quit() выставил флаг выхода.
+ * с квантом tim::POLL_QUANTUM_MS. Возвращается, когда quit() выставил
+ * флаг выхода.
  */
 void tim::application::exec()
 {
     // Чередуем опрос mongoose (MQTT) и libssh (входящие SSH-соединения).
-    // 50 мс на каждый — приемлемая задержка для чата и достаточный квант,
-    // чтобы не выполнять холостой цикл опроса.
+    // Квант на каждый цикл — приемлемая задержка для чата, при этом
+    // холостой цикл опроса не выполняется.
     while (!_d->_quit)
     {
-        mg_mgr_poll(&_d->_mg, 50);
+        mg_mgr_poll(&_d->_mg, tim::POLL_QUANTUM_MS);
         if (_d->_ssh_inetd)
-            _d->_ssh_inetd->dispatch(50);
+            _d->_ssh_inetd->dispatch(tim::POLL_QUANTUM_MS);
     }
+
+    // Сообщение о причине выхода печатается здесь, а не в обработчике
+    // сигнала: журналирование не входит в список async-signal-safe
+    // операций.
+    const int sig = tim::p::application::exit_signal().load();
+    if (sig)
+        TIM_TRACE(debug, "Exiting on signal %d ...", sig);
 }
 
 /**
@@ -258,10 +266,12 @@ void tim::p::application::signal_handler(int sig_num)
     {
         case SIGTERM:
         case SIGINT:
-            if (tim::p::application::instance())
+            // Только атомарные записи: журналирование и любые вызовы
+            // с выделением памяти в обработчике сигнала недопустимы.
+            if (tim::application *app = tim::p::application::instance())
             {
-                TIM_TRACE(debug, "Exiting on signal %d ...", sig_num);
-                tim::p::application::instance()->quit();
+                tim::p::application::exit_signal().store(sig_num);
+                app->quit();
             }
             break;
 

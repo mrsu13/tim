@@ -9,6 +9,7 @@
 #include "tim_uuid.h"
 
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <system_error>
 
@@ -16,6 +17,7 @@
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 
 // Статические помощники
@@ -37,6 +39,14 @@ bool ensure_host_key(const std::filesystem::path &path)
         return true;
 
     std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec)
+    {
+        TIM_TRACE(error,
+                  TIM_TR("Failed to create directory for SSH host key '%s'."_en,
+                         "Не удалось создать каталог для SSH host-ключа '%s'."_ru),
+                  path.string().c_str());
+        return false;
+    }
 
     ::ssh_key key = nullptr;
     if (ssh_pki_generate(SSH_KEYTYPE_ED25519, 0, &key) != SSH_OK)
@@ -48,7 +58,13 @@ bool ensure_host_key(const std::filesystem::path &path)
         return false;
     }
 
+    // Закрытый ключ не должен быть доступен никому, кроме владельца,
+    // ни в один момент времени: сужаем umask до записи файла, иначе
+    // между созданием файла и последующим chmod существовало бы окно
+    // с правами по умолчанию.
+    const mode_t old_umask = ::umask(077);
     const int rc = ssh_pki_export_privkey_file(key, nullptr, nullptr, nullptr, path.string().c_str());
+    ::umask(old_umask);
     ssh_key_free(key);
 
     if (rc != SSH_OK)
@@ -95,7 +111,10 @@ std::string pubkey_to_openssh(::ssh_key pubkey)
 
 /**
  * Выводит UUID пользователя из открытого ключа: SHA-256(blob), первые
- * 16 байт, в которые проставлены биты версии 4 и варианта DCE.
+ * 16 байт, в которые проставлены биты версии 8 и варианта DCE.
+ * Версия 8 (RFC 9562) отведена для UUID с нестандартным способом
+ * построения — наш идентификатор детерминированно выводится из ключа,
+ * поэтому помечать его как случайный (версия 4) было бы некорректно.
  *
  * \param pubkey Открытый ключ libssh.
  * \return UUID; nil-UUID при ошибке хеширования.
@@ -117,8 +136,8 @@ tim::uuid uuid_from_pubkey(::ssh_key pubkey)
     std::memcpy(b, hash, 16);
     ssh_clean_pubkey_hash(&hash);
 
-    // Биты версии (v4) и варианта (DCE: 10xxxxxx).
-    b[6] = (b[6] & 0x0F) | 0x40;
+    // Биты версии (v8 — custom, RFC 9562) и варианта (DCE: 10xxxxxx).
+    b[6] = (b[6] & 0x0F) | 0x80;
     b[8] = (b[8] & 0x3F) | 0x80;
 
     const unsigned int  l = ((unsigned int)b[0] << 24) | ((unsigned int)b[1] << 16)
@@ -141,7 +160,18 @@ tim::ssh_inetd::~ssh_inetd()
     {
         for (auto &p: _d->_sessions)
         {
+            // Порядок повторяет сборку закрытых сессий в dispatch():
+            // сначала уничтожается сервис (его деструктор может писать
+            // в канал — прощальное сообщение, восстановление терминала),
+            // и лишь затем освобождаются ресурсы libssh.
+            p.second->_service.reset();
+
             ssh_event_remove_session(_d->_event, p.first);
+            if (p.second->_channel)
+            {
+                ssh_channel_free(p.second->_channel);
+                p.second->_channel = nullptr;
+            }
             ssh_disconnect(p.first);
             ssh_free(p.first);
         }
@@ -240,9 +270,25 @@ void tim::ssh_inetd::dispatch(int timeout_ms)
     if (_d->_dispatch_depth != 0)
         return;
 
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     for (tim::p::ssh_inetd::session_map::iterator it = _d->_sessions.begin();
          it != _d->_sessions.end(); )
     {
+        // Сессия, не создавшая прикладной сервис за отведённое время
+        // (не завершившая рукопожатие, аутентификацию или запросы
+        // pty/shell), закрывается принудительно: TCP keepalive
+        // распознаёт только разорванные соединения, а бездействующий
+        // клиент удерживал бы дескриптор неограниченно долго.
+        if (!it->second->_service
+                && !it->second->_pending_close
+                && now - it->second->_accepted_at > tim::SSH_SESSION_SETUP_TIMEOUT)
+        {
+            TIM_TRACE(warning, "%s",
+                      TIM_TR("Closing an SSH session that has not completed setup in time."_en,
+                             "Закрывается SSH-сессия, не завершившая установление в отведённое время."_ru));
+            it->second->_pending_close = true;
+        }
+
         if (!it->second->_pending_close)
         {
             ++it;
@@ -371,6 +417,25 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
     tim::p::ssh_inetd *self = (tim::p::ssh_inetd *)userdata;
     assert(self);
 
+    if (self->_sessions.size() >= tim::SSH_MAX_SESSIONS)
+    {
+        // Соединение необходимо принять и сразу закрыть: иначе слушающий
+        // сокет остался бы в состоянии готовности, а очередь ядра
+        // продолжила бы расти.
+        ::ssh_session excess = ssh_new();
+        if (excess)
+        {
+            if (ssh_bind_accept(self->_bind, excess) == SSH_OK)
+                ssh_disconnect(excess);
+            ssh_free(excess);
+        }
+        TIM_TRACE(warning,
+                  TIM_TR("SSH session limit (%zu) reached; a new connection was rejected."_en,
+                         "Достигнут предел одновременных SSH-сессий (%zu); новое соединение отклонено."_ru),
+                  tim::SSH_MAX_SESSIONS);
+        return 0;
+    }
+
     ::ssh_session session = ssh_new();
     if (!session)
     {
@@ -394,21 +459,21 @@ int tim::p::ssh_inetd::on_bind_ready(socket_t fd, int revents, void *userdata)
     // TCP keepalive на принятом сокете: без него исчезнувший клиент (обрыв
     // сети, отсутствие FIN) удерживает SSH-сессию открытой до системного
     // таймаута TCP (на Linux — часы). С keepalive разорванное соединение
-    // распознаётся за
-    // десятки секунд: ядро отправляет пробу через _IDLE секунд бездействия и
-    // повторяет _CNT раз с интервалом _INTVL; после чего сокет закрывается
+    // распознаётся за десятки секунд: ядро отправляет пробу после
+    // SSH_KEEPALIVE_IDLE_S секунд бездействия и повторяет SSH_KEEPALIVE_CNT
+    // раз с интервалом SSH_KEEPALIVE_INTVL_S; затем сокет закрывается,
     // и libssh штатно срабатывает по close-обработчику.
     const int sock_fd = ssh_get_fd(session);
     if (sock_fd >= 0)
     {
         const int yes = 1;
-        const int idle = 60;
-        const int intvl = 15;
-        const int cnt = 4;
         setsockopt(sock_fd, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(yes));
-        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
-        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPINTVL, &intvl, sizeof(intvl));
-        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPCNT, &cnt, sizeof(cnt));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPIDLE,
+                   &tim::SSH_KEEPALIVE_IDLE_S, sizeof(tim::SSH_KEEPALIVE_IDLE_S));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPINTVL,
+                   &tim::SSH_KEEPALIVE_INTVL_S, sizeof(tim::SSH_KEEPALIVE_INTVL_S));
+        setsockopt(sock_fd, IPPROTO_TCP, TCP_KEEPCNT,
+                   &tim::SSH_KEEPALIVE_CNT, sizeof(tim::SSH_KEEPALIVE_CNT));
     }
 
     auto state = std::make_unique<ssh_session_state>(self);

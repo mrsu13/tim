@@ -63,11 +63,24 @@ struct prompt_service
     void load_post_history();
 
     /**
-     * Выдаёт MQTT-подписки сессии (POST, REACT_EVENT, user/subscribe|
-     * unsubscribe/&lt;self&gt;, session/notice/&lt;self&gt;) и вызывает _profiles.subscribe().
-     * Вызывается на каждом connect/reconnect.
+     * Регистрирует MQTT-подписки сессии (POST, REACT_EVENT, user/subscribe|
+     * unsubscribe/&lt;self&gt;, session/notice/&lt;self&gt;). Вызывается однократно
+     * из конструктора; оформление у брокера mqtt_client выполняет сам.
      */
     void subscribe();
+
+    /**
+     * Обработчик восстановления соединения с брокером: сбрасывает кэши,
+     * перечитывает подписки из БД, повторно объявляет присутствие.
+     */
+    void on_broker_connected();
+
+    /**
+     * Выводит служебное уведомление сессии поверх строки ввода.
+     *
+     * \param text Текст уведомления.
+     */
+    void notice(const std::string &text);
 
     /**
      * Обработчик байтов, поступивших из SSH-протокола. Передаёт их
@@ -132,7 +145,7 @@ struct prompt_service
     tim::signal_connection                      _on_data_ready;
     /** Сигнальное соединение: posted от prompt_shell. */
     tim::signal_connection                      _on_posted;
-    /** Сигнальное соединение: mqtt.connected для повторного оформления подписок. */
+    /** Сигнальное соединение: mqtt.connected для обновления кэшей домена. */
     tim::signal_connection                      _on_connected;
     /** Подписка на POST_FILTER. */
     tim::mqtt_subscription                      _sub_post;

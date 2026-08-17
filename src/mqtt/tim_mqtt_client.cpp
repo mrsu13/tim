@@ -3,6 +3,7 @@
 #include "tim_mqtt_client_p.h"
 
 #include "tim_application.h"
+#include "tim_config.h"
 #include "tim_trace.h"
 #include "tim_translator.h"
 
@@ -110,58 +111,119 @@ bool tim::mqtt_client::is_connected() const
 }
 
 /**
- * Публикует сообщение в топик. Если соединение не установлено,
- * mg_mqtt_pub на nullptr-соединении тихо отбрасывает сообщение.
+ * Публикует сообщение в топик.
+ *
+ * Публикация с QoS > 0 помещается в очередь неподтверждённых (outbox)
+ * до прихода PUBACK; при отсутствии соединения она будет отправлена
+ * после его установления, при обрыве до подтверждения — отправлена
+ * повторно с тем же packet id (флаг DUP). Публикация с QoS 0 при
+ * отсутствии соединения отбрасывается.
  *
  * \param topic MQTT-топик публикации.
  * \param data Указатель на полезную нагрузку.
  * \param size Размер полезной нагрузки в байтах.
  * \param qos QoS уровень (0/1/2). По умолчанию 1.
  * \param retain Retain-флаг (брокер запомнит последнее сообщение).
+ * \return true, если публикация отправлена или поставлена в очередь;
+ *         false, если отброшена (QoS 0 без соединения либо переполнение
+ *         очереди).
  */
-void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
+bool tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                const char *data, std::size_t size,
                                std::uint8_t qos,
                                bool retain)
 {
     assert(!topic.empty() && "Topic must not be empty.");
 
-    const mg_mqtt_opts pub_opts =
+    if (!qos)
     {
-        .topic = mg_str_n(topic.data(), topic.size()),
-        .message = mg_str_n(data, size),
+        // QoS 0 — принципиально без гарантий: без соединения просто
+        // отбрасываем, с соединением отправляем без учёта в outbox.
+        if (!_d->_client || !_d->_connected)
+            return false;
+
+        const mg_mqtt_opts pub_opts =
+        {
+            .topic = mg_str_n(topic.data(), topic.size()),
+            .message = mg_str_n(data, size),
+            .qos = qos,
+            .retain = retain
+        };
+        mg_mqtt_pub(_d->_client, &pub_opts);
+
+        TIM_TRACE(debug, "Published to '%s': '%.*s'.",
+                  topic.c_str(),
+                  (int)size, data);
+        return true;
+    }
+
+    // QoS > 0 — до подтверждения PUBACK запись хранится в outbox.
+    if (_d->_outbox.size() >= tim::MQTT_OUTBOX_LIMIT)
+    {
+        // Отбрасываем самую старую неподтверждённую публикацию: свежие
+        // данные для чата ценнее давно ожидающих.
+        TIM_TRACE(warning,
+                  TIM_TR("MQTT outbox overflow (%zu entries); dropping the oldest publication."_en,
+                         "Переполнение очереди MQTT-публикаций (%zu записей); самая старая отброшена."_ru),
+                  _d->_outbox.size());
+        _d->_outbox.erase(_d->_outbox.begin());
+    }
+
+    tim::p::mqtt_client::outbox_entry entry =
+    {
+        .topic = topic,
+        .payload = std::string(data, size),
         .qos = qos,
-        .retain = retain
+        .retain = retain,
+        .packet_id = 0
     };
 
-    mg_mqtt_pub(_d->_client, &pub_opts);
+    if (_d->_client && _d->_connected)
+    {
+        const mg_mqtt_opts pub_opts =
+        {
+            .topic = mg_str_n(topic.data(), topic.size()),
+            .message = mg_str_n(data, size),
+            .qos = qos,
+            .retain = retain
+        };
+        entry.packet_id = mg_mqtt_pub(_d->_client, &pub_opts);
 
-    TIM_TRACE(debug, "Published to '%s': '%.*s'.",
-              topic.c_str(),
-              (int)size, data);
+        TIM_TRACE(debug, "Published to '%s': '%.*s'.",
+                  topic.c_str(),
+                  (int)size, data);
+    }
+    else
+        TIM_TRACE(debug, "Queued publication to '%s' until the broker connection is restored.",
+                  topic.c_str());
+
+    _d->_outbox.push_back(std::move(entry));
+    return true;
 }
 
 /**
  * Удобный перегруз publish() для string_view нагрузки; делегирует
- * на основной публишер.
+ * на основной вариант.
  *
  * \param topic MQTT-топик публикации.
  * \param payload Полезная нагрузка.
  * \param qos QoS уровень. По умолчанию 1.
  * \param retain Retain-флаг.
+ * \return См. основной publish().
  */
-void tim::mqtt_client::publish(const tim::mqtt_topic &topic,
+bool tim::mqtt_client::publish(const tim::mqtt_topic &topic,
                                std::string_view payload,
                                std::uint8_t qos,
                                bool retain)
 {
-    publish(topic, payload.data(), payload.size(), qos, retain);
+    return publish(topic, payload.data(), payload.size(), qos, retain);
 }
 
 /**
- * Подписывается на топик/фильтр у брокера: регистрирует подписчика
- * в списке и вызывает mg_mqtt_sub. Возвращает RAII-объект, который
- * отзовёт подписку при разрушении.
+ * Регистрирует подписчика в списке клиента и, при наличии соединения,
+ * оформляет подписку у брокера. При отсутствии соединения (и при каждом
+ * его восстановлении) подписка будет оформлена автоматически в момент
+ * MQTT-рукопожатия — повторный вызов subscribe() не требуется.
  *
  * \param topic_filter Фильтр (поддерживаются + и #).
  * \param mh Обработчик входящих сообщений, удовлетворяющих фильтру.
@@ -177,19 +239,21 @@ tim::mqtt_subscription tim::mqtt_client::subscribe(const tim::mqtt_topic &topic_
     assert(mh);
 
     const std::size_t id = _d->_next_subscriber_id++;
-    _d->_subscribers.push_back({ id, topic_filter, std::move(mh) });
+    _d->_subscribers.push_back({ id, topic_filter, std::move(mh), qos });
 
-    const mg_mqtt_opts sub_opts =
+    if (_d->_client && _d->_connected)
     {
-        .topic = mg_str_n(topic_filter.data(), topic_filter.size()),
-        .qos = qos
-    };
-
-    mg_mqtt_sub(_d->_client, &sub_opts);
+        const mg_mqtt_opts sub_opts =
+        {
+            .topic = mg_str_n(topic_filter.data(), topic_filter.size()),
+            .qos = qos
+        };
+        mg_mqtt_sub(_d->_client, &sub_opts);
+    }
 
     TIM_TRACE(debug, "Subscribed to '%s'.", topic_filter.c_str());
 
-    return tim::mqtt_subscription(this, id);
+    return tim::mqtt_subscription(_d->_alive, id);
 }
 
 /**
@@ -260,6 +324,11 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                       "MQTT handshake with broker '%s' succeeded.",
                       self->_url.c_str());
             self->_connected = true;
+            // Сначала восстанавливаем состояние на брокере (подписки,
+            // неподтверждённые публикации), затем уведомляем подсистемы:
+            // их обработчики connected должны видеть уже оформленные
+            // подписки.
+            self->restore_broker_state();
             self->_q->connected();
             break;
 
@@ -271,6 +340,19 @@ void tim::p::mqtt_client::handle_events(mg_connection *c, int ev, void *ev_data)
                 case MQTT_CMD_PINGREQ:
                     mg_mqtt_pong(c);
                     break;
+
+                case MQTT_CMD_PUBACK:
+                {
+                    // Брокер подтвердил публикацию с QoS 1 — исключаем её
+                    // из очереди неподтверждённых.
+                    const std::uint16_t id = msg->id;
+                    const std::vector<outbox_entry>::iterator it = std::find_if(
+                        self->_outbox.begin(), self->_outbox.end(),
+                        [id](const outbox_entry &e){ return e.packet_id == id; });
+                    if (it != self->_outbox.end())
+                        self->_outbox.erase(it);
+                    break;
+                }
 
                 default:
                     break;
@@ -369,4 +451,45 @@ void tim::p::mqtt_client::ping(void *data)
                   TIM_TR("Failed to connect to MQTT broker at '%s'; will retry."_en,
                          "Ошибка при подключении к брокеру MQTT '%s'; повторим попытку."_ru),
                   self->_url.c_str());
+}
+
+/**
+ * Восстанавливает состояние клиента на брокере после MQTT-рукопожатия.
+ *
+ * Клиент подключается с clean-сессией, поэтому брокер не помнит ни
+ * подписок, ни неподтверждённых публикаций. Повторно оформляем все
+ * зарегистрированные подписки, затем отправляем содержимое outbox:
+ * ранее отправленные записи — повторно с прежним packet id (флаг DUP),
+ * накопленные без соединения — как новые публикации.
+ */
+void tim::p::mqtt_client::restore_broker_state()
+{
+    assert(_client);
+
+    for (const subscriber_entry &e: _subscribers)
+    {
+        const mg_mqtt_opts sub_opts =
+        {
+            .topic = mg_str_n(e.filter.data(), e.filter.size()),
+            .qos = e.qos
+        };
+        mg_mqtt_sub(_client, &sub_opts);
+    }
+
+    for (outbox_entry &e: _outbox)
+    {
+        const mg_mqtt_opts pub_opts =
+        {
+            .topic = mg_str_n(e.topic.data(), e.topic.size()),
+            .message = mg_str_n(e.payload.data(), e.payload.size()),
+            .qos = e.qos,
+            .retransmit_id = e.packet_id, // 0 — новая публикация, иначе DUP.
+            .retain = e.retain
+        };
+        e.packet_id = mg_mqtt_pub(_client, &pub_opts);
+    }
+
+    if (!_outbox.empty())
+        TIM_TRACE(debug, "Re-sent %zu unacknowledged MQTT publication(s).",
+                  _outbox.size());
 }

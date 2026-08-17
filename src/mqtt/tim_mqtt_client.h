@@ -30,6 +30,12 @@ struct mqtt_client;
  * keep-alive, маршрутизирует входящие сообщения зарегистрированным
  * подпискам и публикует сигналы connected/disconnected для подсистем,
  * которые должны реагировать на смену состояния.
+ *
+ * Подписки регистрируются на стороне клиента и автоматически повторно
+ * оформляются у брокера при каждом восстановлении соединения — сервисам
+ * достаточно подписаться один раз. Публикации с QoS > 0 хранятся
+ * в очереди до подтверждения PUBACK и повторяются после восстановления
+ * соединения (см. tim::MQTT_OUTBOX_LIMIT).
  */
 class mqtt_client
 {
@@ -52,12 +58,12 @@ public:
 
     bool is_connected() const;
 
-    void publish(const tim::mqtt_topic &topic,
+    bool publish(const tim::mqtt_topic &topic,
                  const char *data, std::size_t size,
                  std::uint8_t qos = 1,
                  bool retain = false);
 
-    void publish(const tim::mqtt_topic &topic,
+    bool publish(const tim::mqtt_topic &topic,
                  std::string_view payload,
                  std::uint8_t qos = 1,
                  bool retain = false);

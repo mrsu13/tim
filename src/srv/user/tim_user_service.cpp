@@ -25,12 +25,9 @@ tim::user_service::user_service(tim::mqtt_client &mqtt, tim::sqlite_db &db)
     : tim::service("user")
     , _d(mqtt, db)
 {
-    // Повторная выдача подписок на каждом (ре)подключении.
-    _d->_on_connected = mqtt.connected.connect(
-        [d = _d.get()]{ d->subscribe(); });
-
-    if (mqtt.is_connected())
-        _d->subscribe();
+    // Подписки регистрируются однократно: их оформление у брокера при
+    // каждом восстановлении соединения mqtt_client выполняет сам.
+    _d->subscribe();
 }
 
 /** Деструктор. */

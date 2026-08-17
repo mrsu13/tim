@@ -2,6 +2,7 @@
 
 #include "tim_prompt_service_p.h"
 
+#include "tim_config.h"
 #include "tim_mqtt_client.h"
 #include "tim_mqtt_topics.h"
 #include "tim_prompt_cmd_post.h"
@@ -29,8 +30,8 @@
  * \param mqtt MQTT-клиент приложения; должен жить дольше сессии.
  * \param db Подключение к БД; должно жить дольше сессии.
  * \param dispatch_handler Обработчик, который Tcl-интерпретатор будет
- *                         вызывать между операторами для кручения
- *                         внешних event-loop-ов. Обычно
+ *                         вызывать между операторами для продвижения
+ *                         внешних циклов событий. Обычно
  *                         application::dispatch().
  */
 tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
@@ -70,22 +71,33 @@ tim::prompt_service::prompt_service(const tim::ssh_session_info &info,
     _d->_on_posted = _d->_shell->posted.connect(
         [d = _d.get()](const std::string &text)
         {
-            if (!d->_mqtt.is_connected())
-                return;
-
             // Каждый пост получает свой UUID и публикуется в
             // post/<publisher-uuid>/<post-uuid>; такой топик однозначно
             // адресует сообщение и используется реакциями.
             const tim::uuid post_uuid = tim::uuid::create();
             d->_mqtt.publish(tim::topics::post(d->_profiles.self().id, post_uuid), text);
+
+            // Без соединения публикация ушла в очередь mqtt_client
+            // и будет отправлена после восстановления соединения;
+            // предупреждаем пользователя о задержке доставки.
+            if (!d->_mqtt.is_connected())
+                d->notice(TIM_TR("No broker connection; the message will be delivered "
+                                 "after the connection is restored."_en,
+                                 "Нет соединения с брокером; сообщение будет доставлено "
+                                 "после восстановления соединения."_ru));
         });
 
-    // Повторная выдача подписок на каждом (ре)подключении к брокеру.
+    // Подписки сессии регистрируются однократно: их оформление у брокера
+    // при каждом восстановлении соединения mqtt_client выполняет сам.
+    _d->subscribe();
+
+    // Домен реагирует на восстановление соединения отдельно: кэши могли
+    // разойтись с реальным состоянием за время разрыва.
     _d->_on_connected = mqtt.connected.connect(
-        [d = _d.get()]{ d->subscribe(); });
+        [d = _d.get()]{ d->on_broker_connected(); });
 
     if (mqtt.is_connected())
-        _d->subscribe();
+        _d->on_broker_connected();
 }
 
 /** Деструктор. Останавливает Tcl, рвёт подписки. */
@@ -164,15 +176,13 @@ void tim::p::prompt_service::load_subscriptions()
 }
 
 /**
- * Загружает последние HISTORY_LIMIT сообщений из БД (с суммарным
+ * Загружает последние tim::POST_HISTORY_LIMIT сообщений из БД (с суммарным
  * весом и числом реакций) и печатает их в терминал в хронологическом
  * порядке — чтобы пользователь, только зашедший в чат, сразу видел
  * контекст разговора.
  */
 void tim::p::prompt_service::load_post_history()
 {
-    static const int HISTORY_LIMIT = 20;
-
     // Берём последние HISTORY_LIMIT сообщений в обратном порядке, затем
     // выводим их в хронологическом — чтобы новые оказались внизу, ближе
     // к приглашению. LEFT JOIN на reaction с группировкой по post.id
@@ -192,7 +202,7 @@ void tim::p::prompt_service::load_post_history()
                          "Не удалось подготовить запрос на загрузку истории сообщений."_ru));
         return;
     }
-    q.bind(1, HISTORY_LIMIT);
+    q.bind(1, tim::POST_HISTORY_LIMIT);
 
     /** Одна запись истории: post + агрегаты реакций. */
     struct entry
@@ -241,32 +251,13 @@ void tim::p::prompt_service::load_post_history()
 }
 
 /**
- * Повторно выдаёт все MQTT-подписки сессии и обнуляет/перезагружает
- * локальные кэши (profile_cache и _subscriptions). Вызывается на
- * каждом подключении к брокеру.
+ * Регистрирует все MQTT-подписки сессии. Вызывается однократно из
+ * конструктора: оформление подписок у брокера — в том числе после
+ * каждого восстановления соединения — mqtt_client выполняет сам.
  */
 void tim::p::prompt_service::subscribe()
 {
-    // Этот метод вызывается на каждом подключении и повторном подключении
-    // к брокеру. После повторного подключения локальные кэши могли
-    // разойтись с реальным состоянием: события setnick/seticon/setmotto
-    // и user/subscribe|unsubscribe, пришедшие в окно отказа брокера,
-    // потеряны (даже при QoS=1 — сессия клиента не персистентна).
-    // Сбрасываем оба кэша; profile_cache сам повторно выдаст свои подписки
-    // на wildcard-топики.
-    _profiles.invalidate();
-    _profiles.subscribe();
-
-    _subscriptions.clear();
-    load_subscriptions();
-
     const tim::uuid &self_id = _profiles.self().id;
-    _mqtt.publish(tim::topics::USER_CONNECT, self_id.to_string());
-
-    // Открытый ключ клиента — для аудита и привязки личности к ключу.
-    const std::string &key = _q->pub_key();
-    if (!key.empty())
-        _mqtt.publish(tim::topics::user_setpubkey(self_id), key);
 
     // Подписка на все посты: выводим карточку каждого входящего.
     _sub_post = _mqtt.subscribe(tim::topics::POST_FILTER,
@@ -304,16 +295,49 @@ void tim::p::prompt_service::subscribe()
     // Личные уведомления (ошибки сервера для своих действий — "ник занят" и т.п.).
     _sub_notice = _mqtt.subscribe(tim::topics::session_notice(self_id),
         [this](const tim::mqtt_topic &, const char *data, std::size_t size)
-        {
-            // Прячем строку ввода на время вывода: иначе уведомление
-            // ломает то, что пользователь набирает в этот момент.
-            _shell->hide_input();
-            const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::warning);
-            _terminal->cprintf(warning, tim::color::transparent(),
-                               "! %.*s\n", (int)size, data);
-            _shell->new_line();
-            _shell->show_input();
-        });
+        { notice(std::string(data, size)); });
+}
+
+/**
+ * Обработчик восстановления соединения с брокером. Локальные кэши могли
+ * разойтись с реальным состоянием: события setnick/seticon/setmotto и
+ * user/subscribe|unsubscribe, пришедшие в окно разрыва, утрачены (сессия
+ * клиента у брокера не персистентна). Сбрасываем кэш профилей,
+ * перечитываем подписки из БД и повторно объявляем присутствие
+ * пользователя.
+ */
+void tim::p::prompt_service::on_broker_connected()
+{
+    _profiles.invalidate();
+
+    _subscriptions.clear();
+    load_subscriptions();
+
+    const tim::uuid &self_id = _profiles.self().id;
+    _mqtt.publish(tim::topics::USER_CONNECT, self_id.to_string());
+
+    // Открытый ключ клиента — для аудита и привязки личности к ключу.
+    const std::string &key = _q->pub_key();
+    if (!key.empty())
+        _mqtt.publish(tim::topics::user_setpubkey(self_id), key);
+}
+
+/**
+ * Выводит служебное уведомление сессии поверх строки ввода
+ * (цветом warning текущей темы).
+ *
+ * \param text Текст уведомления.
+ */
+void tim::p::prompt_service::notice(const std::string &text)
+{
+    // Прячем строку ввода на время вывода: иначе уведомление ломает то,
+    // что пользователь набирает в этот момент.
+    _shell->hide_input();
+    const tim::color warning = _terminal->theme().colors.at(tim::terminal_color_index::warning);
+    _terminal->cprintf(warning, tim::color::transparent(),
+                       "! %s\n", text.c_str());
+    _shell->new_line();
+    _shell->show_input();
 }
 
 /**
